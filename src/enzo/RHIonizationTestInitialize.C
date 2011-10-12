@@ -64,7 +64,7 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   char *gammaName    = "PhotoGamma";
   char *kdissH2IName = "H2I_kdiss";
   char *DensName  = "Density";
-  char *TEName    = "Total_Energy";
+  char *TEName    = "TotalEnergy";
   char *IEName    = "Internal_Energy";
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
@@ -172,17 +172,21 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
     }
   }
 
-  // check AMR inputs
-  if (AMRNumberOfInitialPatches > MAX_INITIAL_PATCHES) {
-    ENZO_FAIL("Too many InitialPatches! increase MAX_INITIAL_PATCHES\n");
+  /* error checking */
+  if (Mu != DEFAULT_MU) {
+    if (MyProcessorNumber == ROOT_PROCESSOR)
+      fprintf(stderr, "warning: mu =%f assumed in initialization; setting Mu = %f for consistency.\n", DEFAULT_MU);
+    Mu = DEFAULT_MU;
   }
 
+  // check AMR inputs
+  if (AMRNumberOfInitialPatches > MAX_INITIAL_PATCHES) 
+    ENZO_FAIL("Too many InitialPatches! increase MAX_INITIAL_PATCHES\n");
 
   // if both an initially refined mesh and ParallelRootGridIO are enabled, issue 
   // an error message since that functionality is not currently supported
   if (ParallelRootGridIO && AMRNumberOfInitialPatches) 
     ENZO_FAIL("ParallelRootGridIO and initial refined mesh (AMRNumberOfInitialPatches) incompatible!\n");
-
 
   // set grid dimensions of each patch
   float dx;
@@ -193,7 +197,6 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
 	nint((AMRPatchRightEdge[patch][dim] - AMRPatchLeftEdge[patch][dim]) / 
 	     (DomainRightEdge[dim] - DomainLeftEdge[dim]) / dx);		
     }  
-
 
   // output requested initial AMR hierarchy structure
   if (debug && local && AMRNumberOfInitialPatches) {

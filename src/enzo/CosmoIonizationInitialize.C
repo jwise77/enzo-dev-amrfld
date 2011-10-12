@@ -170,6 +170,13 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
     }
   }
 
+  // make mu consistent
+  if (Mu != DEFAULT_MU) {
+    if (MyProcessorNumber == ROOT_PROCESSOR)
+      fprintf(stderr, "warning: mu =%f assumed in initialization; setting Mu = %f for consistency.\n", DEFAULT_MU);
+    Mu = DEFAULT_MU;
+  }
+
   // set up CoolData object if not already set up
   if (CoolData.ceHI == NULL) 
     if (InitializeRateData(MetaData.Time) == FAIL) {

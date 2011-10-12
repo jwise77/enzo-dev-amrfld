@@ -1,3 +1,5 @@
+#include "fortran.def"
+#include "phys_const.def"
 !=======================================================================
 !
 ! Copyright 2009 Daniel R. Reynolds
@@ -23,7 +25,6 @@ subroutine gFLDSplit_AnalyticChemistry(Er, ec, HI, HeI, HeII, Er0, ec0,  &
 !  PURPOSE: Driver to call the correct routine depending on 'model'
 !
 !=======================================================================
-#include "fortran.def"
   implicit none
     
 !--------------
@@ -177,7 +178,6 @@ subroutine gFLDSplit_AnalyticChemistry1(Er, ec, HI, HeI, HeII, Er0, ec0, &
 !  LOCALS:
 !
 !=======================================================================
-#include "fortran.def"
   implicit none
     
 !--------------
@@ -638,7 +638,6 @@ subroutine gFLDSplit_AnalyticChemistry4(Er, HI, Er0, HI0, dt, vx, vy, vz, &
 !  LOCALS:
 !
 !=======================================================================
-#include "fortran.def"
   implicit none
     
 !--------------
@@ -799,7 +798,6 @@ subroutine gFLDSplit_AnalyticChemistry10(Er, ec, Er0, ec0, dt, vx, vy,  &
 !  LOCALS:
 !
 !=======================================================================
-#include "fortran.def"
   implicit none
     
 !--------------
@@ -967,7 +965,6 @@ subroutine gFLDSplit_AnalyticInitGuess(Er, ec, HI, HeI, HeII, dt, vx,    &
 !  LOCALS:
 !
 !=======================================================================
-#include "fortran.def"
   implicit none
     
 !--------------
@@ -1533,7 +1530,6 @@ subroutine gFLDProblem_AnalyticLTEResid(Erres, ecres, Er, ec, Er0, ec0,    &
   !  LOCALS:
   !
   !=======================================================================
-#include "fortran.def"
   implicit none
 
   !--------------
@@ -1549,7 +1545,7 @@ subroutine gFLDProblem_AnalyticLTEResid(Erres, ecres, Er, ec, Er0, ec0,    &
 
   !--------------
   ! locals
-  real*8 :: afac, ev2erg, StBz, c, kb, mp, min_temp, min_rad, grey, eta
+  real*8 :: afac, StBz, c, kb, mp, min_temp, min_rad, grey, eta
   real*8 :: ecval, Erval, rhoval, Eranal, ecanal
   real*8 :: T, P1, Q1, P2, Q2
 
@@ -1562,11 +1558,10 @@ subroutine gFLDProblem_AnalyticLTEResid(Erres, ecres, Er, ec, Er0, ec0,    &
 
   ! initialize constants
   afac = adot/a
-  ev2erg = 1.60217653e-12      ! conversion constant from eV to ergs
   StBz  = 5.6704d-5            ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
-  c  = 2.99792458d10           ! speed of light [cm/s]
-  kb = 1.3806504e-16           ! boltzmann constant [erg/K]
-  mp = 1.67262171d-24          ! Mass of a proton [g]
+  c  = c_light                 ! speed of light [cm/s]
+  kb = kboltz                  ! boltzmann constant [erg/K]
+  mp = mass_h                  ! Mass of a proton [g]
   min_temp = 1.d0              ! minimum temperature [K]
   min_rad  = 0.d0              ! minimum radiation density [ergs/cm^3]
   grey = 1.d0                  ! grey vs monochromatic coeff for eqns
