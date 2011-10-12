@@ -56,7 +56,7 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   char *gammaName    = "PhotoGamma";
   char *kdissH2IName = "H2I_kdiss";
   char *DensName  = "Density";
-  char *TEName    = "Total_Energy";
+  char *TEName    = "TotalEnergy";
   char *IEName    = "Internal_Energy";
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
@@ -168,10 +168,16 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
     }
   }
 
-  // check AMR inputs
-  if (AMRNumberOfInitialPatches > MAX_INITIAL_PATCHES) {
-    ENZO_FAIL("Too many InitialPatches! increase MAX_INITIAL_PATCHES\n");
+  /* error checking */
+  if (Mu != DEFAULT_MU) {
+    if (MyProcessorNumber == ROOT_PROCESSOR)
+      fprintf(stderr, "warning: mu =%f assumed in initialization; setting Mu = %f for consistency.\n", DEFAULT_MU);
+    Mu = DEFAULT_MU;
   }
+
+  // check AMR inputs
+  if (AMRNumberOfInitialPatches > MAX_INITIAL_PATCHES) 
+    ENZO_FAIL("Too many InitialPatches! increase MAX_INITIAL_PATCHES\n");
 
   // output requested initial AMR hierarchy structure
   if (debug && local && AMRNumberOfInitialPatches) {
@@ -189,6 +195,10 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 	     AMRPatchRightEdge[patch][2]);
     }
   }
+
+  // ensure that we're performing only Hydrogen chemistry
+  if (RadHydroChemistry != 1) 
+    ENZO_FAIL("RHIonizationClumpInitialize error: RadHydroChemistry must equal 1!");
 
   // set up CoolData object if not already set up
   if (CoolData.ceHI == NULL) 

@@ -57,7 +57,7 @@ int RHIonizationSteepInitialize(FILE *fptr, FILE *Outfptr,
   char *gammaName    = "PhotoGamma";
   char *kdissH2IName = "H2I_kdiss";
   char *DensName  = "Density";
-  char *TEName    = "Total_Energy";
+  char *TEName    = "TotalEnergy";
   char *IEName    = "Internal_Energy";
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
@@ -175,6 +175,13 @@ int RHIonizationSteepInitialize(FILE *fptr, FILE *Outfptr,
 	     AMRPatchRightEdge[patch][0], AMRPatchRightEdge[patch][1], 
 	     AMRPatchRightEdge[patch][2]);
     }
+  }
+
+  /* error checking */
+  if (Mu != DEFAULT_MU) {
+    if (MyProcessorNumber == ROOT_PROCESSOR)
+      fprintf(stderr, "warning: mu =%f assumed in initialization; setting Mu = %f for consistency.\n", DEFAULT_MU);
+    Mu = DEFAULT_MU;
   }
 
   // set up CoolData object if not already set up
