@@ -18,27 +18,27 @@ cd FSRadPoint/nx64; \rm -rf DD* En* Ev* IO* Out* *.out Run* *.txt perf* *.pdf; c
 echo "  "
 echo "running nx=16 tests"
 cd FSRadWave/nx16; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 cd FSRadPoint/nx16; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 
 echo "running nx=32 tests"
 cd FSRadWave/nx32; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 cd FSRadPoint/nx32; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 
 echo "running nx=64 tests"
 cd FSRadWave/nx64; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 cd FSRadPoint/nx64; ./enzo -d *.enzo &> output.txt; 
-   /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+   python *.py &> /dev/null; cd ../..
 
 # echo "running nx=128 tests"
 # cd FSRadWave/nx128; ./enzo -d *.enzo &> output.txt; 
-#    /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+#    python *.py &> /dev/null; cd ../..
 # cd FSRadPoint/nx128; ./enzo -d *.enzo &> output.txt; 
-#    /sw/bin/python2.5 *.py &> /dev/null; cd ../..
+#    python *.py &> /dev/null; cd ../..
 
 echo "  "
 echo "finished!"
