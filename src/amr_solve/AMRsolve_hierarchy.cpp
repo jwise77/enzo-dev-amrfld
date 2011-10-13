@@ -129,6 +129,9 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
       // Save grid id's to determine parents
       enzo_id[enzo_grid] = id;
 
+      // Set owning processor for this grid
+      int ip = enzo_grid->ProcessorNumber;
+      
       // Collect required enzo grid data
       int id_parent;
       if (level == level_coarsest) {
@@ -138,13 +141,6 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	id_parent = enzo_id[enzo_parent];
       }
 
-      int ip = enzo_grid->ProcessorNumber;
-//       fprintf(fp_debug,"%s:%d %d enzo grid[%d] PotentialField = %p  GravitatingMassField = %p\n",
-// 	       __FILE__,__LINE__,pmpi->ip(),id,
-// 	       enzo_grid->PotentialField,
-// 	       enzo_grid->GravitatingMassField);
-
-      
       // Compute global grid size at this level
       long long nd[3];
       for (int dim=0; dim<3; dim++) {
@@ -152,93 +148,37 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 		       enzo_grid->CellWidth[dim][0] + 0.5);
       }
 	
+      // Compute active size of this grid, and location information
       Scalar xl[3],xu[3];
       int il[3],n[3];
-
       for (int dim=0; dim<3; dim++) {
 	xl[dim] = enzo_grid->GridLeftEdge[dim];
 	xu[dim] = enzo_grid->GridRightEdge[dim];
 	n[dim]  = enzo_grid->GridEndIndex[dim] - enzo_grid->GridStartIndex[dim] + 1;
 	il[dim] = int((xl[dim] - DomainLeftEdge[dim]) 
 		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
-	//	il[dim] = enzo_grid->GridStartIndex[dim];
       }
 	      
       // Create a new amr_solve grid
       AMRsolve_Grid* grid = new AMRsolve_Grid(id,id_parent,ip,xl,xu,il,n);
       insert_grid(grid);
 
+      // if this is a local grid, allocate data and set pointers to Enzo data
       if (grid->is_local()) {
 
-	// CREATE THE X VECTOR
+	// allocate the u and f arrays on this grid
+	grid->allocate();
 
-	// Compute the grid dimensions, with no ghost zones
-	int ndh3[3];
-	ndh3[0] = enzo_grid->GridEndIndex[0] - enzo_grid->GridStartIndex[0] + 1;
-	ndh3[1] = enzo_grid->GridEndIndex[1] - enzo_grid->GridStartIndex[1] + 1;
-	ndh3[2] = enzo_grid->GridEndIndex[2] - enzo_grid->GridStartIndex[2] + 1;
-	
-	int ndh = ndh3[0]*ndh3[1]*ndh3[2];
+	// Set pointers to the relevant Enzo data arrays for setting up the 
+	// linear system later on.
+	grid->set_phi(enzo_grid->AccessPotentialField());
+	grid->set_gmass(enzo_grid->AccessGravitatingMassField());
 
-	// Allocate X, warning if we're reallocating
-	if (enzo_grid->amrsolve_x != NULL) {
-	  WARNING_MESSAGE;
-	  delete [] enzo_grid->amrsolve_x;
-	  enzo_grid->amrsolve_x = NULL;
-	}
-	enzo_grid->amrsolve_x = new ENZO_FLOAT[ndh]; // Deleted and nulled- in detach
-
-	// Clear X
-	for (int i=0; i<ndh; i++)  enzo_grid->amrsolve_x[i] = 0;
-
-	// CREATE THE B VECTOR
-
-	// Allocate B, warning if we're reallocating
-	if (enzo_grid->amrsolve_b != NULL) {
-	  WARNING_MESSAGE;
-	  delete [] enzo_grid->amrsolve_b;
-	  enzo_grid->amrsolve_b = NULL;
-	}
-	enzo_grid->amrsolve_b = new ENZO_FLOAT[ndh]; // Deleted and nulled- in detach
-
-	// Get the gravitating mass field array dimensions
-	int nde3[3];
-	nde3[0] = enzo_grid->GravitatingMassFieldDimension[0];
-	nde3[1] = enzo_grid->GravitatingMassFieldDimension[1];
-	nde3[2] = enzo_grid->GravitatingMassFieldDimension[2];
-
-	// Compute the gravitating mass field array offsets
-	int il[3];
-	il[0]= nint((enzo_grid->GridLeftEdge[0] -  enzo_grid->GravitatingMassFieldLeftEdge[0])
-		    /enzo_grid->GravitatingMassFieldCellSize);
-	il[1]= nint((enzo_grid->GridLeftEdge[1] -  enzo_grid->GravitatingMassFieldLeftEdge[1])
-		    /enzo_grid->GravitatingMassFieldCellSize);
-	il[2]= nint((enzo_grid->GridLeftEdge[2] -  enzo_grid->GravitatingMassFieldLeftEdge[2])
-		    /enzo_grid->GravitatingMassFieldCellSize);
-
-
-	// Copy the gravitating mass field to B
-	double sum_temp = 0.0;
-	int k=0;
-	for (int i2=0; i2<ndh3[2]; i2++) {
-	  for (int i1=0; i1<ndh3[1]; i1++) {
-	    for (int i0=0; i0<ndh3[0]; i0++) {
-	      int k0 = i0 + il[0];
-	      int k1 = i1 + il[1];
-	      int k2 = i2 + il[2];
-	      int ih =  i0 + ndh3[0] * ( i1 + ndh3[1] * i2 );
-	      int ie =  k0 + nde3[0] * ( k1 + nde3[1] * k2 );
-	      sum_temp += (enzo_grid->amrsolve_b[ih] = enzo_grid->GravitatingMassField[ie]);
-	    }
-	  }
-	}
-
-	printf("%s:%d %d DEBUG sum = %g\n",__FILE__,__LINE__,pmpi->ip(),sum_temp);
-
-	// Set the amrsolve arrays to point to the corresponding enzo arrays
-	grid->set_u(enzo_grid->amrsolve_x, ndh3);
-	grid->set_f(enzo_grid->amrsolve_b, ndh3);
-	WRITE_B_SUM(grid);
+	// Set Enzo gravity ghost zone information for this grid
+	int enzo_ghosts[][2] = { {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE}, 
+				 {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE}, 
+				 {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE} };
+	grid->set_GravGhosts(enzo_ghosts);
       }
       id++;
     } // grids within level

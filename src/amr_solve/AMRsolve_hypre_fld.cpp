@@ -714,7 +714,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
   ItHierarchyGridsLocal itg (*hierarchy_);
   while (AMRsolve_Grid* grid = itg++) {
 
-    // for each local grid, use Enzo's "f" array to store RHS entries 
+    // for each local grid, use our "f" array to store RHS entries 
     // for the linear system.
     int n0,n1,n2;
     Scalar* values = grid->get_f(&n0,&n1,&n2);

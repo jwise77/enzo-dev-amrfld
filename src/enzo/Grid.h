@@ -165,11 +165,6 @@ class grid
   float *GravitatingMassFieldParticles;     // for particles only
   int    GravitatingMassFieldParticlesDimension[MAX_DIMENSION];
 
-#ifdef AMR_SOLVE
-  float *amrsolve_b;
-  float *amrsolve_x;
-#endif
-
   AMR_SOLVE_PRIVATE;
 
   FLOAT  GravitatingMassFieldParticlesLeftEdge[MAX_DIMENSION];
@@ -1265,6 +1260,8 @@ public:
    float* AccessRadiationFrequency7();
    float* AccessRadiationFrequency8();
    float* AccessRadiationFrequency9();
+   float* AccessPotentialField();
+   float* AccessGravitatingMassField();
 
 
 // -------------------------------------------------------------------------

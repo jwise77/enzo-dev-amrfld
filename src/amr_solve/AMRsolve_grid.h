@@ -89,9 +89,12 @@ class AMRsolve_Grid
   Scalar* HI_;              /// ptr to HI density array
   Scalar* HeI_;             /// ptr to HeI density array
   Scalar* HeII_;            /// ptr to HeII density array
+  Scalar* phi_;             /// ptr to PotentialField array
+  Scalar* gmass_;           /// ptr to GravitatingMassField array
 
   // optional integers describing grid relationship with Enzo data arrays
-  int Ghosts_[3][2];        /// number of ghost zones per grid face
+  int Ghosts_[3][2];        /// number of ghost zones per grid face (baryons)
+  int GravGhosts_[3][2];    /// number of ghost zones per grid face (gravity)
 
   //--------------------------------------------------------------------
   // STATIC MEMBER DATA
@@ -177,21 +180,25 @@ class AMRsolve_Grid
 
   /// Return a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
-  Scalar* get_E()    throw() { assert(E_);    return E_;    }; 
-  Scalar* get_E0()   throw() { assert(E0_);   return E0_;   }; 
-  Scalar* get_eta()  throw() { assert(eta_);  return eta_;  };
-  Scalar* get_HI()   throw() { assert(HI_);   return HI_;   };
-  Scalar* get_HeI()  throw() { assert(HeI_);  return HeI_;  };
-  Scalar* get_HeII() throw() { assert(HeII_); return HeII_; };
+  Scalar* get_E()     throw() { assert(E_);     return E_;     }; 
+  Scalar* get_E0()    throw() { assert(E0_);    return E0_;    }; 
+  Scalar* get_eta()   throw() { assert(eta_);   return eta_;   };
+  Scalar* get_HI()    throw() { assert(HI_);    return HI_;    };
+  Scalar* get_HeI()   throw() { assert(HeI_);   return HeI_;   };
+  Scalar* get_HeII()  throw() { assert(HeII_);  return HeII_;  };
+  Scalar* get_phi()   throw() { assert(phi_);   return phi_;   };
+  Scalar* get_gmass() throw() { assert(gmass_); return gmass_; };
 
   /// Set a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
-  void set_E(Scalar* E)       throw() { E_    = E;    };
-  void set_E0(Scalar* E0)     throw() { E0_    = E0;    };
-  void set_eta(Scalar* eta)   throw() { eta_  = eta;  };
-  void set_HI(Scalar* HI)     throw() { HI_   = HI;   };
-  void set_HeI(Scalar* HeI)   throw() { HeI_  = HeI;  };
-  void set_HeII(Scalar* HeII) throw() { HeII_ = HeII; };
+  void set_E(Scalar* E)         throw() { E_     = E;     };
+  void set_E0(Scalar* E0)       throw() { E0_    = E0;    };
+  void set_eta(Scalar* eta)     throw() { eta_   = eta;   };
+  void set_HI(Scalar* HI)       throw() { HI_    = HI;    };
+  void set_HeI(Scalar* HeI)     throw() { HeI_   = HeI;   };
+  void set_HeII(Scalar* HeII)   throw() { HeII_  = HeII;  };
+  void set_phi(Scalar* phi)     throw() { phi_   = phi;   };
+  void set_gmass(Scalar* gmass) throw() { gmass_ = gmass; };
 
   /// Get/Set routines for number of ghost zones in an Enzo grid (compared to current Grid)
   void get_Ghosts(int Ghosts[3][2]) throw() 
@@ -200,11 +207,23 @@ class AMRsolve_Grid
       for (int j=0; j<2; j++)
 	Ghosts[i][j] = Ghosts_[i][j];
   };
+  void get_GravGhosts(int Ghosts[3][2]) throw() 
+  {
+    for (int i=0; i<3; i++)
+      for (int j=0; j<2; j++)
+	Ghosts[i][j] = GravGhosts_[i][j];
+  };
   void set_Ghosts(int Ghosts[3][2]) throw() 
   { 
     for (int i=0; i<3; i++)
       for (int j=0; j<2; j++)
 	Ghosts_[i][j] = Ghosts[i][j];
+  };
+  void set_GravGhosts(int Ghosts[3][2]) throw() 
+  { 
+    for (int i=0; i<3; i++)
+      for (int j=0; j<2; j++)
+	GravGhosts_[i][j] = Ghosts[i][j];
   };
 
 
