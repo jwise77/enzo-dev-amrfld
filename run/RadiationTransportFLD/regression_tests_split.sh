@@ -7,7 +7,7 @@ echo "    "
 
 echo "    "
 echo "Running Turner & Stone 1 Split Test"
-cd TS1_sp
+cd TurnerStoneEquil1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -22,7 +22,7 @@ echo "    "
 
 echo "    "
 echo "Running Turner & Stone 2 Split Test"
-cd TS2_sp
+cd TurnerStoneEquil2_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -37,7 +37,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream X0 Split Test"
-cd RadStreamX0_sp
+cd RadiationStreamX0_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -52,7 +52,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream Y1 Split Test"
-cd RadStreamY1_sp
+cd RadiationStreamY1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -67,7 +67,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream Z0 Split Test"
-cd RadStreamZ0_sp
+cd RadiationStreamZ0_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -82,7 +82,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream 1D Split Test"
-cd RadStream1D_sp
+cd RadiationStream1D_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -97,7 +97,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiating Shock Lab Split Test"
-cd RadShockLab_sp
+cd RadiatingShockLab_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -112,7 +112,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiating Shock Lab 1D Split Test"
-cd RadShockLab1D_sp
+cd RadiatingShockLab1D_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -127,7 +127,7 @@ echo "    "
 
 echo "    "
 echo "Running Iliev et al. Split Test 1"
-cd IlievEtAl1_sp
+cd RHIonization1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -142,7 +142,7 @@ echo "    "
 
 echo "    "
 echo "Running Iliev et al. Split Test 2"
-cd IlievEtAl2_sp
+cd RHIonization2_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -157,7 +157,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=4 Split Test"
-cd SG_q5z4_sp
+cd CosmoIonization_q5z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -172,7 +172,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=4 Split Test"
-cd SG_q05z4_sp
+cd CosmoIonization_q05z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -187,7 +187,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=10 Split Test"
-cd SG_q5z10_sp
+cd CosmoIonization_q5z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -202,7 +202,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=10 Split Test"
-cd SG_q05z10_sp
+cd CosmoIonization_q05z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt

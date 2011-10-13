@@ -3,7 +3,7 @@
 echo "    "
 echo "    "
 echo "Turner & Stone 1 Test:"
-cd TS1
+cd TurnerStoneEquil1
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -11,7 +11,7 @@ echo "    "
 
 echo "    "
 echo "Turner & Stone 1 Split Test"
-cd TS1_sp
+cd TurnerStoneEquil1_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -19,7 +19,7 @@ echo "    "
 
 echo "    "
 echo "Turner & Stone 2 Test"
-cd TS2
+cd TurnerStoneEquil2
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -27,7 +27,7 @@ echo "    "
 
 echo "    "
 echo "Turner & Stone 2 Split Test"
-cd TS2_sp
+cd TurnerStoneEquil2_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -35,7 +35,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream X0 Test"
-cd RadStreamX0
+cd RadiationStreamX0
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -43,7 +43,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream X0 Split Test"
-cd RadStreamX0_sp
+cd RadiationStreamX0_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -51,7 +51,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream Y1 Test"
-cd RadStreamY1
+cd RadiationStreamY1
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -59,7 +59,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream Y1 Split Test"
-cd RadStreamY1_sp
+cd RadiationStreamY1_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -67,7 +67,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream Z0 Test"
-cd RadStreamZ0
+cd RadiationStreamZ0
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -75,7 +75,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream Z0 Split Test"
-cd RadStreamZ0_sp
+cd RadiationStreamZ0_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -83,7 +83,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream 1D Test"
-cd RadStream1D
+cd RadiationStream1D
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -91,7 +91,7 @@ echo "    "
 
 echo "    "
 echo "Radiation Stream 1D Split Test"
-cd RadStream1D_sp
+cd RadiationStream1D_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -99,7 +99,7 @@ echo "    "
 
 echo "    "
 echo "Radiating Shock Lab Test"
-cd RadShockLab
+cd RadiatingShockLab
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -107,7 +107,7 @@ echo "    "
 
 echo "    "
 echo "Radiating Shock Lab Split Test"
-cd RadShockLab_sp
+cd RadiatingShockLab_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -115,7 +115,7 @@ echo "    "
 
 echo "    "
 echo "Radiating Shock Lab 1D Test"
-cd RadShockLab1D
+cd RadiatingShockLab1D
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -123,7 +123,7 @@ echo "    "
 
 echo "    "
 echo "Radiating Shock Lab 1D Split Test"
-cd RadShockLab1D_sp
+cd RadiatingShockLab1D_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -131,7 +131,7 @@ echo "    "
 
 echo "    "
 echo "Iliev et al. Test 1"
-cd IlievEtAl1
+cd RHIonization1
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -139,7 +139,7 @@ echo "    "
 
 echo "    "
 echo "Iliev et al. Split Test 1"
-cd IlievEtAl1_sp
+cd RHIonization1_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -147,7 +147,7 @@ echo "    "
 
 echo "    "
 echo "Iliev et al. Test 2"
-cd IlievEtAl2
+cd RHIonization2
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -155,7 +155,7 @@ echo "    "
 
 echo "    "
 echo "Iliev et al. Split Test 2"
-cd IlievEtAl2_sp
+cd RHIonization2_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -163,7 +163,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.5 z0=4 Test"
-cd SG_q5z4
+cd CosmoIonization_q5z4
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -171,7 +171,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.5 z0=4 Split Test"
-cd SG_q5z4_sp
+cd CosmoIonization_q5z4_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -179,7 +179,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.05 z0=4 Test"
-cd SG_q05z4
+cd CosmoIonization_q05z4
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -187,7 +187,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.05 z0=4 Split Test"
-cd SG_q05z4_sp
+cd CosmoIonization_q05z4_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -195,7 +195,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.5 z0=10 Test"
-cd SG_q5z10
+cd CosmoIonization_q5z10
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -203,7 +203,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.5 z0=10 Split Test"
-cd SG_q5z10_sp
+cd CosmoIonization_q5z10_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -211,7 +211,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.05 z0=10 Test"
-cd SG_q05z10
+cd CosmoIonization_q05z10
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
@@ -219,7 +219,7 @@ echo "    "
 
 echo "    "
 echo "Shapiro & Giroux q0=0.05 z0=10 Split Test"
-cd SG_q05z10_sp
+cd CosmoIonization_q05z10_sp
 /sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
 cat PASS_FAIL.txt
 cd ../
