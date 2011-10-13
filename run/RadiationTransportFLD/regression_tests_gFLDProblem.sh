@@ -13,8 +13,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -28,8 +28,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -43,8 +43,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -58,8 +58,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -73,8 +73,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -88,8 +88,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -103,8 +103,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -118,8 +118,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -133,8 +133,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -148,8 +148,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -163,8 +163,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -178,8 +178,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -193,8 +193,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -208,8 +208,8 @@ ln -fs ../../../src/enzo/enzo.exe enzo
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
-/sw/bin/python2.5 ./*makeplots.py &> /dev/null
-/sw/bin/python2.5 ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py &> /dev/null
+python ./*check.py &> PASS_FAIL.txt
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
