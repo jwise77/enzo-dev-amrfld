@@ -420,3 +420,13 @@ float* grid::AccessEmissivity0() {
   return BaryonField[EtaNum];
 }
 
+// Potential field 
+float* grid::AccessPotentialField() {
+  return PotentialField;
+}
+
+// Gravitating Mass field 
+float* grid::AccessGravitatingMassField() {
+  return GravitatingMassField;
+}
+

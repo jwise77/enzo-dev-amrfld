@@ -32,17 +32,21 @@ private:
 
 public:
 
-  AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, AMRsolve_Parameters& parameters);
+  AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, 
+		      AMRsolve_Parameters& parameters);
 
   ~AMRsolve_Hypre_Grav();
 
   void init_hierarchy(AMRsolve_Mpi& mpi);
   void init_stencil();
   void init_graph();
-  void init_elements(std::vector<AMRsolve_Point *> points, 
-		     Scalar f_scale=1.0);
+  /*   void init_elements(std::vector<AMRsolve_Point *> points,
+                          Scalar f_scale=1.0); */
+  void init_elements(Scalar f_scale=1.0);  // can't we just get our RHS from Enzo directly?
   void solve();
-  void evaluate();
+  int  evaluate();
+  void update_enzo();
+  void abort_dump();
 
   int    iterations() { return iter_; };
   double residual() { return resid_; };
@@ -57,8 +61,9 @@ private:
 
   // init_elements() functions
   void init_elements_matrix_();
-  void init_elements_rhs_(std::vector<AMRsolve_Point *>& points, 
-			  Scalar f_scale=1.0);
+  /*  void init_elements_rhs_(std::vector<AMRsolve_Point *>& points, 
+      Scalar f_scale=1.0); */
+  void init_elements_rhs_(Scalar f_scale=1.0);
 
   void init_matrix_stencil_(AMRsolve_Grid& grid);
   void init_matrix_clear_(int part);
@@ -68,9 +73,9 @@ private:
   void init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase);
   
   // init_vector() functions
-  Scalar init_vector_points_(std::vector<AMRsolve_Point *>& points);
+  /*  Scalar init_vector_points_(std::vector<AMRsolve_Point *>& points);
   Scalar init_vector_file_(std::string file_prefix, bool is_packed);
-  Scalar init_vector_attach_(Scalar f_scale=1.0);
+  Scalar init_vector_attach_(Scalar f_scale=1.0); */
 
   // solve() functions
   void solve_fac_(int itmax, double restol);
