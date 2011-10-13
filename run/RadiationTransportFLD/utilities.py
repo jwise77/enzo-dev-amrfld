@@ -96,7 +96,7 @@ def load_vals(tdump):
         hfile = pfile + '.cpu' + pstring
         f = h5py.File(hfile,'r')
         Eg = f.get(pstring2 + '/Grey_Radiation_Energy')
-        energy = f.get(pstring2 + '/Total_Energy')
+        energy = f.get(pstring2 + '/TotalEnergy')
         HI = f.get(pstring2 + '/HI_Density')
         HII = f.get(pstring2 + '/HII_Density')
         rho = f.get(pstring2 + '/Density')
@@ -153,7 +153,7 @@ def load_vals_hydro(tdump):
         hfile = pfile + '.cpu' + pstring
         f = h5py.File(hfile,'r')
         Eg  = f.get(pstring2 + '/Grey_Radiation_Energy')
-        tE  = f.get(pstring2 + '/Total_Energy')
+        tE  = f.get(pstring2 + '/TotalEnergy')
         HI  = f.get(pstring2 + '/HI_Density')
         HII = f.get(pstring2 + '/HII_Density')
         rho = f.get(pstring2 + '/Density')
