@@ -7,7 +7,7 @@ echo "    "
 
 echo "    "
 echo "Running Turner & Stone 1 Test"
-cd TS1
+cd TurnerStoneEquil1
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -22,7 +22,7 @@ echo "    "
 
 echo "    "
 echo "Running Turner & Stone 2 Test"
-cd TS2
+cd TurnerStoneEquil2
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -37,7 +37,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream X0 Test"
-cd RadStreamX0
+cd RadiationStreamX0
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -52,7 +52,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream Y1 Test"
-cd RadStreamY1
+cd RadiationStreamY1
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -67,7 +67,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream Z0 Test"
-cd RadStreamZ0
+cd RadiationStreamZ0
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -82,7 +82,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiation Stream 1D Test"
-cd RadStream1D
+cd RadiationStream1D
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -97,7 +97,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiating Shock Lab Test"
-cd RadShockLab
+cd RadiatingShockLab
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -112,7 +112,7 @@ echo "    "
 
 echo "    "
 echo "Running Radiating Shock Lab 1D Test"
-cd RadShockLab1D
+cd RadiatingShockLab1D
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -127,7 +127,7 @@ echo "    "
 
 echo "    "
 echo "Running Iliev et al. Test 1"
-cd IlievEtAl1
+cd RHIonization1
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -142,7 +142,7 @@ echo "    "
 
 echo "    "
 echo "Running Iliev et al. Test 2"
-cd IlievEtAl2
+cd RHIonization2
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -157,7 +157,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=4 Test"
-cd SG_q5z4
+cd CosmoIonization_q5z4
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -172,7 +172,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=4 Test"
-cd SG_q05z4
+cd CosmoIonization_q05z4
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -187,7 +187,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=10 Test"
-cd SG_q5z10
+cd CosmoIonization_q5z10
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
@@ -202,7 +202,7 @@ echo "    "
 
 echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=10 Test"
-cd SG_q05z10
+cd CosmoIonization_q05z10
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
