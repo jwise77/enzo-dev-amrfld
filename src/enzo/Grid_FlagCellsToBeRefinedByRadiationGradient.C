@@ -82,7 +82,7 @@ int grid::FlagCellsToBeRefinedByRadiationGradient()
 	  max(fabs(RadField[index]), atol);
 	gradnorm = sqrt(gradx*gradx + grady*grady + gradz*gradz);
 	maxgrad = (gradnorm > maxgrad) ? gradnorm : maxgrad;
-	mingrad = (gradnorm < mingrad) ? gradnorm : maxgrad;
+	mingrad = (gradnorm < mingrad) ? gradnorm : mingrad;
 	avggrad += gradnorm;
 	if (gradnorm > MinRefinementSlope) {
 	  FlaggingField[index] += 1;
