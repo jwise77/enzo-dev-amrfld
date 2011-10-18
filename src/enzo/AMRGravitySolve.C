@@ -71,8 +71,7 @@ void AMRGravitySolve
   amrsolve.init_hierarchy(*pmpi);
   amrsolve.init_stencil();
   amrsolve.init_graph();
-  std::vector<AMRsolve_Point *> points; // ignored
-  amrsolve.init_elements(points, f_scale);
+  amrsolve.init_elements(f_scale);
   LCAPERF_STOP("amrsolve_matrix");
 
   // Solve the linear system
