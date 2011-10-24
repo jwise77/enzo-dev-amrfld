@@ -1,5 +1,5 @@
 #!/bin/sh
-yt_activate
+source /usr/local/yt_dev/bin/activate
 
 echo "    "
 echo "    "

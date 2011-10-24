@@ -1,5 +1,5 @@
 #!/bin/bash
-yt_activate
+source /usr/local/yt_dev/bin/activate
 
 echo "  "
 echo "cleaning up old tests"
