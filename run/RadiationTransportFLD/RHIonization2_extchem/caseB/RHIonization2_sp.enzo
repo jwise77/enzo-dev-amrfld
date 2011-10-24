@@ -18,7 +18,6 @@ UseHydro                   = 0             // no hydro
 Unigrid                    = 1             // unigrid run
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
 RadHydroParamfile = RHIonization2_sp.gfld
-CoolDataParameterFile = CoolDataParameters
 #
 # grid and boundary 
 #

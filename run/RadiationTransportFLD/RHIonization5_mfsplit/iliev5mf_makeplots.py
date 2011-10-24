@@ -39,7 +39,7 @@ def load_vals(tdump):
     E1 = f.get('/Grid00000001/Radiation_Energy1')
     E2 = f.get('/Grid00000001/Radiation_Energy2')
     E3 = f.get('/Grid00000001/Radiation_Energy3')
-    tE = f.get('/Grid00000001/TotalEnergy')
+    tE = f.get('/Grid00000001/Total_Energy')
     HI = f.get('/Grid00000001/HI_Density')
     HII = f.get('/Grid00000001/HII_Density')
     rho = f.get('/Grid00000001/Density')
