@@ -7,7 +7,7 @@ from yt.mods import *
 from os import *
 
 # set the total number of snapshots
-te = 20
+te = 19
 
 # set the solution tolerance
 tol = 0.01
