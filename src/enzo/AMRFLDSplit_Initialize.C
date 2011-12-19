@@ -438,6 +438,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   if (this->ComputeRadiationIntegrals() == FAIL) 
     ENZO_FAIL("AMRFLDSplit::Initialize Error in radiation spectrum integrals");
 
+  // set radiation integrals into global_data for opacity-based refinement
+  IntegralRadiationSpectrum       = intSigE;
+  IntegralRadiationSpectrumHI     = intSigESigHI;
+  IntegralRadiationSpectrumHeI    = intSigESigHeI;
+  IntegralRadiationSpectrumHeII   = intSigESigHeII;
+  IntegralRadiationSpectrumHINu   = intSigESigHInu;
+  IntegralRadiationSpectrumHeINu  = intSigESigHeInu;
+  IntegralRadiationSpectrumHeIINu = intSigESigHeIInu;
 
 #ifdef USE_HYPRE
 
