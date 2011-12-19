@@ -233,6 +233,20 @@ int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level)
     }
 #endif /* TRANSFER */
     break;
+ 
+ 
+    /* ==== METHOD 19: BY GRADIENT OF THE OPACITY ==== */
+  case 20:
+
+#ifdef TRANSFER
+    if (RadiativeTransferFLD) {
+      NumberOfFlaggedCells = this->FlagCellsToBeRefinedByOpacity();
+      if (NumberOfFlaggedCells < 0) {
+	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedByOpacity.");
+      }
+    }
+#endif /* TRANSFER */
+    break;
 
  
     /* ==== METHOD 100: UNDO REFINEMENT IN SOME REGIONS ==== */
