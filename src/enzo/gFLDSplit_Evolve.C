@@ -914,10 +914,6 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   HYPRE_StructPCGDestroy(solver);
   HYPRE_StructPFMGDestroy(preconditioner);
   
-#else
-  ENZO_FAIL("gFLDSplit_RadStep ERROR: module requires USE_HYPRE to be set!");
-#endif
-    
   // enforce a solution floor on radiation
   float epsilon=1.0;      // radiation floor
   while (epsilon*0.25 > 0.0)  epsilon*=0.5;
@@ -930,6 +926,11 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   tnew /= TimeUnits;
 
   return recompute_step;
+
+#else
+  ENZO_FAIL("gFLDSplit_RadStep ERROR: module requires USE_HYPRE to be set!");
+#endif
+
 }
 
 
