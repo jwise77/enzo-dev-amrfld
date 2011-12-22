@@ -109,7 +109,80 @@ subroutine MFProb_SetupSystem(mat11, mat12, mat13, mat21, mat22, mat23, &
   !=======================================================================
 #include "fortran.def"
   implicit none
-  
+
+  !--------------
+  ! interfaces
+  interface
+     subroutine MFProb_SetupSystem_3D(mat1, mat2, mat3, rhs, E, E0, HI, HI0, HeI, &
+          HeI0, HeII, HeII0, adj1, adj2, adj3, LType, LImp, dt, theta, sHI,    &
+          sHeI, sHeII, a, lUn, rUn, nUn, nUn0, dx, dy, dz, BCValsXl, BCValsXr,    &
+          BCValsYl, BCValsYr, BCValsZl, BCValsZr, BCXl, BCXr, BCYl, BCYr, BCZl,   &
+          BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx, Ny, Nz, NGxl, NGxr, NGyl, NGyr, &
+          NGzl, NGzr, xlface, xrface, ylface, yrface, zlface, zrface, ier)
+       integer, intent(in)  :: LType, LImp
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
+       integer,  intent(in) :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a
+       real, intent(in) :: dx, dy, dz, dt, theta, sHI, sHeI, sHeII
+       real, intent(in) :: lUn, rUn, nUn, nUn0
+       real, intent(in) :: BCValsXl(Ny,Nz), BCValsXr(Ny,Nz)
+       real, intent(in) :: BCValsYl(Nx,Nz), BCValsYr(Nx,Nz)
+       real, intent(in) :: BCValsZl(Nx,Ny), BCValsZr(Nx,Ny)
+       real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr), &
+            intent(in), target :: E, E0, HI, HI0, HeI, HeI0, HeII, HeII0
+       real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr), &
+            intent(in) :: adj1, adj2, adj3
+       real*8, intent(out), dimension(7,x0s:x0e,x1s:x1e,x2s:x2e) :: mat1
+       real*8, intent(out), dimension(x0s:x0e,x1s:x1e,x2s:x2e) :: mat2
+       real*8, intent(out), dimension(x0s:x0e,x1s:x1e,x2s:x2e) :: mat3
+       real*8 :: rhs(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr)
+     end subroutine MFProb_SetupSystem_3D
+     subroutine MFProb_SetupSystem_2D(mat1, mat2, mat3, rhs, E, E0, HI, HI0,     &
+          HeI, HeI0, HeII, HeII0, adj1, adj2, adj3, LType, LImp, dt, theta, sHI, &
+          sHeI, sHeII, a, lUn, rUn, nUn, nUn0, dx, dy, BCValsXl, BCValsXr,       &
+          BCValsYl, BCValsYr, BCXl, BCXr, BCYl, BCYr, x0s, x0e, x1s, x1e, Nx,    &
+          Ny, NGxl, NGxr, NGyl, NGyr, xlface, xrface, ylface, yrface, ier)
+       integer, intent(in)  :: LType, LImp
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a
+       real, intent(in) :: dx, dy, dt, theta, sHI, sHeI, sHeII
+       real, intent(in) :: lUn, rUn, nUn, nUn0
+       real, intent(in) :: BCValsXl(Ny), BCValsXr(Ny)
+       real, intent(in) :: BCValsYl(Nx), BCValsYr(Nx)
+       real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr), &
+            intent(in), target :: E, E0, HI, HI0, HeI, HeI0, HeII, HeII0
+       real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr), &
+            intent(in) :: adj1, adj2, adj3
+       real*8, intent(out), dimension(5,x0s:x0e,x1s:x1e) :: mat1
+       real*8, intent(out), dimension(x0s:x0e,x1s:x1e) :: mat2
+       real*8, intent(out), dimension(x0s:x0e,x1s:x1e) :: mat3
+       real*8 :: rhs(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr)
+     end subroutine MFProb_SetupSystem_2D
+     subroutine MFProb_SetupSystem_1D(mat1, mat2, mat3, rhs, E, E0, HI, HI0,   &
+          HeI, HeI0, HeII, HeII0, adj1, adj2, adj3, LType, LImp, dt, theta,    &
+          sHI, sHeI, sHeII, a, lUn, rUn, nUn, nUn0, dx, BCValsXl, BCValsXr,    &
+          BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface, ier)
+       integer, intent(in)  :: LType, LImp
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a
+       real, intent(in) :: dx, dt, theta, sHI, sHeI, sHeII
+       real, intent(in) :: lUn, rUn, nUn, nUn0
+       real, intent(in) :: BCValsXl(1), BCValsXr(1)
+       real, dimension(1-NGxl:Nx+NGxr), intent(in), target :: E, E0, HI, HI0, &
+            HeI, HeI0, HeII, HeII0
+       real, dimension(1-NGxl:Nx+NGxr), intent(in) :: adj1, adj2, adj3
+       real*8, intent(out), dimension(3,x0s:x0e) :: mat1
+       real*8, intent(out), dimension(x0s:x0e) :: mat2
+       real*8, intent(out), dimension(x0s:x0e) :: mat3
+       real*8 :: rhs(1-NGxl:Nx+NGxr)
+     end subroutine MFProb_SetupSystem_1D
+  end interface
+ 
   !--------------
   ! argument declarations
   integer, intent(in)  :: LType, LImp, Nchem
