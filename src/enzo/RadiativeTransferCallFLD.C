@@ -47,7 +47,7 @@ int RadiativeTransferCallFLD(LevelHierarchyEntry *LevelArray[], int level,
 {
 
   LevelHierarchyEntry *Temp;
-  int l, CallLevel;
+  int l, CallLevel=-1;
   float dtLocal, dtGrid;
   FLOAT LevelTime;
   Star *cstar;
