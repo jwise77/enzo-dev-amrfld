@@ -329,7 +329,7 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 	xu[dim] = enzo_grid->GridRightEdge[dim];
 	n[dim]  = enzo_grid->GridEndIndex[dim] - enzo_grid->GridStartIndex[dim] + 1;
 	il[dim] = int((xl[dim] - DomainLeftEdge[dim]) 
-		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
+		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim] + 0.5);
       }
 
       // Create a new amr_solve grid
