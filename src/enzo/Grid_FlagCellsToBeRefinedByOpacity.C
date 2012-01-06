@@ -122,10 +122,10 @@ int grid::FlagCellsToBeRefinedByOpacity()
   avgkappa /= ((GridEndIndex[2]-GridStartIndex[2]+1) *
 	       (GridEndIndex[1]-GridStartIndex[1]+1) * 
 	       (GridEndIndex[0]-GridStartIndex[0]+1) );
-  printf("FlagCellsOpacity: grad max = %g, min = %g, avg = %g, NFlagCells = %i\n",
-	 maxgrad,mingrad,avggrad,NumberOfFlaggedCells);
-  printf("FlagCellsOpacity: kappa max = %g, min = %g, avg = %g, atol = %g\n",
-	 maxkappa,minkappa,avgkappa,atol);
+  // printf("FlagCellsOpacity: grad max = %g, min = %g, avg = %g, NFlagCells = %i\n",
+  // 	 maxgrad,mingrad,avggrad,NumberOfFlaggedCells);
+  // printf("FlagCellsOpacity: kappa max = %g, min = %g, avg = %g, atol = %g\n",
+  // 	 maxkappa,minkappa,avgkappa,atol);
 	  
   return NumberOfFlaggedCells;
 }
