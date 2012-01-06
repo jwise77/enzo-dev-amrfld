@@ -432,6 +432,9 @@ void AMRsolve_Hypre_FLD::solve()
   if (solver == "pfmg" && levels == 1) {
     solve_pfmg_(itmax,restol);
 
+  } else if (solver == "fac"  && levels == 1) {
+    solve_pfmg_(itmax,restol);      // if only one level, use standard geometric multigrid
+
   } else if (solver == "fac"  && levels > 1) {
     solve_fac_(itmax,restol);
 
@@ -670,9 +673,11 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
     bool l0 = (index_global[axis1][0]/r_factor_)*r_factor_ == index_global[axis1][0];
     bool l1 = (index_global[axis1][1]/r_factor_)*r_factor_ == index_global[axis1][1];
 
-    if (!l0) printf("index_global[%d][0] = %d\n",axis1,index_global[axis1][0]);
+    if (!l0) printf("grid %i,  index_global[%d][0] = %d,  r_factor = %i\n",
+		    grid.id(),axis1,index_global[axis1][0], r_factor_);
     assert(l0);
-    if (!l1) printf("index_global[%d][1] = %d\n",axis1,index_global[axis1][1]);
+    if (!l1) printf("grid %i,  index_global[%d][1] = %d,  r_factor = %i\n",
+		    grid.id(),axis1,index_global[axis1][1], r_factor_);
     assert(l1);
 
     for (int face=0; face<2; face++) {
@@ -711,9 +716,9 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
  	      index_coarse[axis0] = (index_coarse[axis0] + period) % period;
  	    }
 
-	    //--------------------------------------------------
-	    // GRAPH ENTRY: FINE-TO-COARSE 
-	    //--------------------------------------------------
+	    //-------------------------------------------------------
+	    // GRAPH ENTRY: FINE-TO-COARSE (ADJUSTS FINE GRID MATRIX)
+	    //-------------------------------------------------------
 
 	    if (discret_type == discret_type_const) {
 
@@ -721,9 +726,9 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
 					level_fine,level_coarse,
 					index_fine,index_coarse);
 
-	      //--------------------------------------------------
-	      // GRAPH ENTRY: COARSE-TO-FINE
-	      //--------------------------------------------------
+	      //-------------------------------------------------------
+	      // GRAPH ENTRY: COARSE-TO-FINE (ADJUSTS FINE GRID MATRIX)
+	      //-------------------------------------------------------
 	      
 	      if (adjacent->is_local()) {
 
@@ -2017,12 +2022,6 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
   Scalar Rmin = 1.0e-20;
   Scalar c = 2.99792458e10;
 
-  // access relevant arrays from this grid to compute RHS
-  Scalar* E    = grid_fine.get_E();
-  Scalar* HI   = grid_fine.get_HI();
-  Scalar* HeI  = grid_fine.get_HeI();
-  Scalar* HeII = grid_fine.get_HeII();
-  
   // get active enzo grid size
   int n3[3];
   grid_fine.get_size(n3);
@@ -2087,6 +2086,12 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
       } // for k = 1:4
 
     } else if (phase == phase_matrix) {
+
+      // access relevant arrays from this grid to compute RHS
+      Scalar* E    = grid_fine.get_E();
+      Scalar* HI   = grid_fine.get_HI();
+      Scalar* HeI  = grid_fine.get_HeI();
+      Scalar* HeII = grid_fine.get_HeII();
 
       // fine->coarse off-diagonal scaling
       double val_s = 2.0 / 3.0;
