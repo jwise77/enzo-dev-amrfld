@@ -81,6 +81,10 @@ class AMRsolve_Grid
   int* counters_;           /// Counters for nonstencil entries.  Required by
                             ///   hypre to maintain state between nonstencil 
                             ///   and matrix initialization.
+  int  counters_init_;      /// Initial value for counters_ array; may be set
+                            ///   without allocation of counters_ array, but 
+                            /// if/when counters_ is allocated, it will use 
+                            /// the value held here.
   
   // optional pointers to Enzo data arrays (if used; set using set_* routines)
   Scalar* E_;               /// ptr to Radiation energy density array
@@ -426,20 +430,36 @@ class AMRsolve_Grid
     int i0=i3[0]-il_[0];
     int i1=i3[1]-il_[1];
     int i2=i3[2]-il_[2];
-    assert(counters_);
+    // if counters_ has not yet been allocated, allocate it now that it
+    // is actually needed for this grid, and set stored initial value.  
+    // This should only happen once, when the counters_ array on this 
+    // grid is first needed, and it will not happen at all if this grid 
+    // does not interact with this MPI process.
+    if (counters_ == NULL) {
+      /* printf("AMRsolve_Grid: allocating counters_ for grid %i, owned by proc %i, on proc %i\n", */
+      /* 	     id_, ip_, pmpi->ip()); */
+      counters_ = new int[n_[0]*n_[1]*n_[2]];
+      for (int i2=0; i2<n_[2]; i2++) 
+	for (int i1=0; i1<n_[1]; i1++) 
+	  for (int i0=0; i0<n_[0]; i0++) 
+	    counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = counters_init_;
+    }
+    // now return desired memory reference
     return counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])]; 
   }
 
-  /// Initialize the counters_ array to given value
+  /// Initialize the counters_init_ value
   void init_counter(int value)
   {
-    for (int i2=0; i2<n_[2]; i2++) {
-      for (int i1=0; i1<n_[1]; i1++) {
-	for (int i0=0; i0<n_[0]; i0++) {
-	  counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = value;
-	}
-      }
-    }
+    // store the desired counters_ initialization value
+    counters_init_ = value;
+
+    // if counters_ already exists, re-initialize it with the new value
+    if (counters_ != NULL) 
+      for (int i2=0; i2<n_[2]; i2++) 
+	for (int i1=0; i1<n_[1]; i1++) 
+	  for (int i0=0; i0<n_[0]; i0++) 
+	    counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = value;
   }
 
   //--------------------------------------------------------------------
