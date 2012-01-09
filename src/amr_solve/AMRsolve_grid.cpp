@@ -38,8 +38,9 @@ AMRsolve_Domain AMRsolve_Grid::domain_;
 //======================================================================
 
 AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
-  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), is_u_allocated_(false),
-    f_(NULL), offset_f_(0), is_f_allocated_(false), counters_(NULL), counters_init_(0),
+  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), 
+    is_u_allocated_(false), f_(NULL), offset_f_(0), 
+    is_f_allocated_(false), counters_(NULL), counters_init_(0),
     E_(NULL), E0_(NULL), eta_(NULL), HI_(NULL), HeI_(NULL), HeII_(NULL)
 {
   // Initialize 0-sentinels in arrays
@@ -52,9 +53,6 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
   // Allocate AMRsolve_Faces was here.
   faces_ = new AMRsolve_Faces(n_);
 
-  // Allocate counters_ here. (not anymore)
-  //  counters_ = new int[n_[0]*n_[1]*n_[2]];
-
   // initialize Enzo Ghost zone information
   for (int i=0; i<3; i++)
     for (int j=0; j<2; j++)
@@ -65,8 +63,9 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
 
 AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 			     Scalar* xu, int* il, int* n) throw()
-  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), is_u_allocated_(false),
-    f_(NULL), offset_f_(0), is_f_allocated_(false), counters_(NULL), counters_init_(0),
+  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), 
+    is_u_allocated_(false), f_(NULL), offset_f_(0), 
+    is_f_allocated_(false), counters_(NULL), counters_init_(0),
     E_(NULL), E0_(NULL), eta_(NULL), HI_(NULL), HeI_(NULL), HeII_(NULL)
 {
   // Initialize 0-sentinels in arrays
@@ -79,9 +78,6 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
   // Allocate AMRsolve_Faces was here.
   faces_ = new AMRsolve_Faces(n_);
 
-  // Allocate counters_ here. (not anymore)
-  //  counters_ = new int[n_[0]*n_[1]*n_[2]];
-
   // initialize Enzo Ghost zone information
   for (int i=0; i<3; i++)
     for (int j=0; j<2; j++)
@@ -91,9 +87,9 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 //======================================================================
 
 AMRsolve_Grid::AMRsolve_Grid(std::string field, FILE* fp) throw()
-  : id_(-1), id_parent_(-1), ip_(-1), faces_(NULL), level_(-1),
-    u_(NULL), offset_u_(0), is_u_allocated_(false), f_(NULL),
-    offset_f_(0), is_f_allocated_(false), counters_(NULL), counters_init_(0),
+  : id_(-1), id_parent_(-1), ip_(-1), faces_(NULL), level_(-1), u_(NULL), 
+    offset_u_(0), is_u_allocated_(false), f_(NULL), offset_f_(0), 
+    is_f_allocated_(false), counters_(NULL), counters_init_(0),
     E_(NULL), E0_(NULL), eta_(NULL), HI_(NULL), HeI_(NULL), HeII_(NULL)
 {
   // read grid information from file

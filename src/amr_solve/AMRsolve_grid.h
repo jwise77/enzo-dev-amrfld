@@ -191,7 +191,7 @@ class AMRsolve_Grid
   /// Set a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
   void set_E(Scalar* E)       throw() { E_    = E;    };
-  void set_E0(Scalar* E0)     throw() { E0_    = E0;    };
+  void set_E0(Scalar* E0)     throw() { E0_   = E0;   };
   void set_eta(Scalar* eta)   throw() { eta_  = eta;  };
   void set_HI(Scalar* HI)     throw() { HI_   = HI;   };
   void set_HeI(Scalar* HeI)   throw() { HeI_  = HeI;  };
@@ -430,14 +430,12 @@ class AMRsolve_Grid
     int i0=i3[0]-il_[0];
     int i1=i3[1]-il_[1];
     int i2=i3[2]-il_[2];
-    // if counters_ has not yet been allocated, allocate it now that it
-    // is actually needed for this grid, and set stored initial value.  
+    // DRR: if counters_ has not yet been allocated, allocate it now that 
+    // it's actually needed for this grid, using stored initial value.  
     // This should only happen once, when the counters_ array on this 
     // grid is first needed, and it will not happen at all if this grid 
     // does not interact with this MPI process.
     if (counters_ == NULL) {
-      /* printf("AMRsolve_Grid: allocating counters_ for grid %i, owned by proc %i, on proc %i\n", */
-      /* 	     id_, ip_, pmpi->ip()); */
       counters_ = new int[n_[0]*n_[1]*n_[2]];
       for (int i2=0; i2<n_[2]; i2++) 
 	for (int i1=0; i1<n_[1]; i1++) 

@@ -24,7 +24,6 @@ OBJS_CONFIG_LIB = \
 	AMRFLDSplit_constructor.o \
 	AMRFLDSplit_CrossSections.o \
 	AMRFLDSplit_destructor.o \
-	AMRFLDSplit_Dump.o \
 	AMRFLDSplit_EnforceBoundary.o \
 	AMRFLDSplit_Evolve.o \
 	AMRFLDSplit_FillRates.o \
@@ -409,6 +408,7 @@ OBJS_CONFIG_LIB = \
 	Grid_FlagBufferZones.o \
         Grid_FlagCellsToAvoidRefinement.o \
 	Grid_FlagCellsToBeRefinedByCoolingTime.o \
+	Grid_FlagCellsToBeRefinedByIonizedFraction.o \
 	Grid_FlagCellsToBeRefinedByJeansLength.o \
 	Grid_FlagCellsToBeRefinedByMass.o \
 	Grid_FlagCellsToBeRefinedByMetallicity.o \
