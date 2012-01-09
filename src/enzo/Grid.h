@@ -839,6 +839,11 @@ public:
 
    int FlagCellsToBeRefinedByOpacity();
 
+/* Flag all points that require refining by their ionization fraction slope.
+     Returns the number of flagged cells. */
+
+   int FlagCellsToBeRefinedByIonizedFraction();
+
 /* Flag all points that require refinging by the presence of shocks.
      Returns the number of flagged cells.  Returns the number of flagged cells
      (gg #4) */
