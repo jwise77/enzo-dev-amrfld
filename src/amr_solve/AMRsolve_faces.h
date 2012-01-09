@@ -62,15 +62,12 @@ class AMRsolve_Faces
  private:
 
   /// Arrays for face-zone types
-
   Label* label_[3][2];
 
   /// Arrays for adjacent grids (including those in coarser level)
-
   pGrid* adjacent_[3][2];
 
   /// Leading dimension of arrays
-
   int n1_[3]; 
   int n2_[3]; 
   int n_[3]; 

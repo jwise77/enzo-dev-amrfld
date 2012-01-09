@@ -184,9 +184,6 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   // Write module parameters to file
   int WriteParameters(FILE *fptr);
 
-  // Problem debug (for output upon failure)
-  int Dump(EnzoVector *ucur);
-  
   // Problem Boundary Condition setup (called once or at each time step, 
   //    must be called for each locally-owned external face separately)
   int SetupBoundary(int Dimension, int Face, int BdryConst, float *BdryData);

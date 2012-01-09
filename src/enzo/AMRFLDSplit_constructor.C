@@ -27,7 +27,6 @@
 AMRFLDSplit::AMRFLDSplit()
 {
 
-//   if (debug)  printf("\nEntering AMRFLDSplit::constructor routine\n");
   int dim, face;
 #ifndef MPI_INT
   int MPI_PROC_NULL = -3;

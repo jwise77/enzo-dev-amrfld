@@ -135,8 +135,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   for (dim=0; dim<rank; dim++) 
     location[dim] = ThisGrid->GridData->GetProcessorLocation(dim);
 
-//   if (debug)  printf("  Initialize: setting default parameters\n");
-
   // set default module parameters
   Nchem  = 1;           // hydrogen only
   int Model = 1;        // standard non-LTE, non-isothermal model
@@ -356,8 +354,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
   if ((theta < 0.0) || (theta > 1.0)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal theta = %g\n",
-	    theta);
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal theta = %g\n",theta);
     fprintf(stderr,"   re-setting theta to 1.0 (Backwards Euler)\n");
     theta = 1.0;  // default is backwards Euler
   }
@@ -406,18 +403,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
   }
   if (debug){
-    printf("AMRFLDSplit::Initialize p%"ISYM": rank = %"ISYM", Nchem = %"ISYM"\n",
-	   MyProcessorNumber, rank, Nchem);
-    printf("AMRFLDSplit::Initialize p%"ISYM": layout = (%"ISYM",%"ISYM",%"ISYM")\n",MyProcessorNumber,layout[0],layout[1],layout[2]);
-  }
-  if (debug) {
-    printf("AMRFLDSplit::Initialize p%"ISYM": BdryType = (%i:%i,%i:%i,%i:%i)\n",
-	   MyProcessorNumber, BdryType[0][0], BdryType[0][1], BdryType[1][0], 
+    printf("AMRFLDSplit::Initialize: rank = %"ISYM", Nchem = %"ISYM"\n",
+	   rank, Nchem);
+    printf("AMRFLDSplit::Initialize: layout = (%"ISYM",%"ISYM",%"ISYM")\n",
+	   layout[0],layout[1],layout[2]);
+    printf("AMRFLDSplit::Initialize: BdryType = (%i:%i,%i:%i,%i:%i)\n",
+	   BdryType[0][0], BdryType[0][1], BdryType[1][0], 
 	   BdryType[1][1], BdryType[2][0], BdryType[2][1]);
   }
 
   // dt* gives the time step sizes for each piece of physics
-  dtrad = initdt;                        // use the input value (scaled units)
+  dtrad = initdt;            // use the input value (scaled units)
 
   // set a bound on the global initial dt as a factor of the radiation timestep
   dt = initdt*maxsubcycles;
@@ -458,7 +454,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   //    initialize the diagnostic information
   totIters = 0;
 
-  // set amrsolve parameters
+  //    set amrsolve parameters
   amrsolve_params = new AMRsolve_Parameters();
   amrsolve_params->set_defaults();
   if (sol_type == 0)  amrsolve_params->set_parameter("solver","fac");
@@ -482,17 +478,10 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   sprintf(numstr, "%i", sol_npost);
   amrsolve_params->set_parameter("solver_npost",numstr);
  
-
-//   amrsolve_params->set_parameter("dump_x","true");
-//   amrsolve_params->set_parameter("dump_b","true");
-//   amrsolve_params->set_parameter("dump_a","true");
-
-
   if (debug) {
     printf("AMRFLDSplit::Initialize, customized amrsolve parameters:\n");
     amrsolve_params->print();
   }
-
 
 
 #ifdef USE_MPI
@@ -507,8 +496,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   ENZO_FAIL("AMRFLDSplit_Initialize ERROR: module requires USE_HYPRE to be set!");
   
 #endif
-
-//   if (debug)  printf("  Initialize: calling local problem initializers\n");
 
   ////////////////////////////////
   // set up the boundary conditions on the radiation field, 
@@ -824,7 +811,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     break;
     
     
-    
   // Ionization test 14: periodic boundary conditions on all faces (store no data).
   case 414:
     // first call local problem initializer (to allocate/setup local data)
@@ -833,7 +819,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     
     break;
     
-
 
   // Ionization test 15: set zero-gradient (homogeneous Neumann)
   // boundary conditions on all faces.
@@ -875,6 +860,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   // Insert new problem intializers here...
 
 
+
   default:
     // set BCs based on inputs, for non periodic set to 0-valued
     if (BdryType[0][0] != 0)
@@ -910,7 +896,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       ENZO_FAIL("Error in FreezeRateData.");
 
 
-  if (debug)  printf("  Initialize: outputting parameters to log file\n");
+  //  if (debug) printf("  AMRFLDSplit_Initialize: outputting parameters to log file\n");
 
   // output RadHydro solver parameters to output log file 
   if (MyProcessorNumber == ROOT_PROCESSOR) {

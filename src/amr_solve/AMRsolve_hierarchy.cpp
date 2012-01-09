@@ -161,7 +161,6 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	n[dim]  = enzo_grid->GridEndIndex[dim] - enzo_grid->GridStartIndex[dim] + 1;
 	il[dim] = nint((xl[dim] - DomainLeftEdge[dim]) 
 		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
-	//	il[dim] = enzo_grid->GridStartIndex[dim];
       }
 	      
       // Create a new amr_solve grid
@@ -272,7 +271,7 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 
   // Set defaults for level_coarsest and level_finest:
   //    if no levels specified: default to entire hierarchy
-  //    if one level specified: default to just that level
+  //    if only one level specified: default to just that level
   if (level_coarsest == LEVEL_UNKNOWN && level_finest == LEVEL_UNKNOWN) {
     level_coarsest = 0;
     level_finest   = INT_MAX;

@@ -151,7 +151,6 @@ protected:
 
   /// Return lower and upper global indices of the root-grid.  Upper
   /// indices are incremented by one.
-
   void indices0(int ind[3][2]) throw ()
   { 
     ind[0][0] = il0_[0];

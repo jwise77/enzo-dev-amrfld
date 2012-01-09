@@ -45,15 +45,13 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
 
   fprintf(fptr, "RadiationBoundaryX0Faces = %"ISYM" %"ISYM"\n", 
 	  BdryType[0][0], BdryType[0][1]);
-  if (rank > 1) {
+  if (rank > 1) 
     fprintf(fptr, "RadiationBoundaryX1Faces = %"ISYM" %"ISYM"\n", 
 	    BdryType[1][0], BdryType[1][1]);
-    if (rank > 2) {
-      fprintf(fptr, "RadiationBoundaryX2Faces = %"ISYM" %"ISYM"\n", 
-	      BdryType[2][0], BdryType[2][1]);
-    }
-  }
-
+  if (rank > 2) 
+    fprintf(fptr, "RadiationBoundaryX2Faces = %"ISYM" %"ISYM"\n", 
+	    BdryType[2][0], BdryType[2][1]);
+  
   fprintf(fptr, "RadHydroNewtTolerance = %22.16e\n", sol_tolerance);
   fprintf(fptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
   fprintf(fptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
