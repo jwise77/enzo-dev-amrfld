@@ -481,9 +481,9 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   // Initialize the amrsolve FLD solver
   AMRsolve_Hypre_FLD amrfldsolve(*hierarchy, *amrsolve_params);
   amrfldsolve.init_hierarchy(*pmpi);
+  // if (debug)   hierarchy->print();
   amrfldsolve.init_stencil();
   amrfldsolve.init_graph();
-//  hierarchy->print();
 
   //    initialize amrfldsolve system
   Eflt64 HIconst   = intSigESigHI   / intSigE;
