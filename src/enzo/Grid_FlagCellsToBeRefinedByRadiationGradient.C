@@ -5,7 +5,11 @@
 /  written by: Daniel R. Reynolds
 /  date:       September, 2011
 /
-/  PURPOSE:
+/  PURPOSE: Cell flagging routine for mesh refinement, that computes 
+/           the magnitude of the gradient of the radiation energy 
+/           density.  This value is compared against a threshold, held 
+/           in the first entry in MinimumSlopeForRefinement array.  A 
+/           typical value for this threshold is 1.3
 /
 /  RETURNS:
 /    number of flagged cells, or -1 on failure
