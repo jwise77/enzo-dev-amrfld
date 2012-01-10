@@ -310,16 +310,20 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   // size and radiation time step size (dt_rad <= dt_hydro)
   // ***warn if subcycling radiation***
   if (maxsubcycles < 1.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroMaxSubcycles = %g\n",maxsubcycles);
-    fprintf(stderr,"   re-setting to 1.0\n");
+    if (debug) {
+      fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroMaxSubcycles = %g\n",maxsubcycles);
+      fprintf(stderr,"   re-setting to 1.0\n");
+    }
     maxsubcycles = 1.0;    // default is to synchronize steps
   }
   if (maxsubcycles > 1.0) {
-    fprintf(stderr,"\n**************************************************************\n");
-    fprintf(stderr," WARNING: radiation subcycling (RadHydroMaxSubcycles = %g > 1.0)\n",
-	    maxsubcycles);
-    fprintf(stderr,"          may not work properly with Enzo chemistry module!\n");
-    fprintf(stderr,"**************************************************************\n\n");
+    if (debug) {
+      fprintf(stderr,"\n**************************************************************\n");
+      fprintf(stderr," WARNING: radiation subcycling (RadHydroMaxSubcycles = %g > 1.0)\n",
+	      maxsubcycles);
+      fprintf(stderr,"          may not work properly with Enzo chemistry module!\n");
+      fprintf(stderr,"**************************************************************\n\n");
+    }
   }
 
   // a, adot give cosmological expansion & rate
@@ -361,9 +365,9 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   //   check linear solver parameters
   if (sol_maxit < 0) {
-    fprintf(stderr,"Illegal RadHydroMaxMGIters = %i. Setting to 20\n",
+    fprintf(stderr,"Illegal RadHydroMaxMGIters = %i. Setting to 200\n",
 	    sol_maxit);
-    sol_maxit = 20;
+    sol_maxit = 200;
   }
   if ((sol_type < 0) || (sol_type) > 4) {
     fprintf(stderr,"Illegal RadHydroSolType = %i.  Setting to 1 (BiCGStab)\n", 
@@ -386,9 +390,9 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     sol_npost = 1;
   }
   if ((sol_tolerance < 1.0e-15) || (sol_tolerance > 1.0)) {
-    fprintf(stderr,"Illegal RadHydroSolTolerance = %g. Setting to 1e-4\n",
+    fprintf(stderr,"Illegal RadHydroSolTolerance = %g. Setting to 1e-8\n",
 	    sol_tolerance);
-    sol_tolerance = 1.0e-4;
+    sol_tolerance = 1.0e-8;
   }
 
 

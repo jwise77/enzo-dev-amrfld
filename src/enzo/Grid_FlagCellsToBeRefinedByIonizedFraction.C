@@ -9,7 +9,7 @@
 /           the magnitude of the gradient of the ionized fraction.  This 
 /           value is compared against a threshold, held in the third 
 /           entry in MinimumSlopeForRefinement array.  A typical value 
-/           for this threshold is 1.0
+/           for this threshold is 1.25
 /
 /  RETURNS:
 /    number of flagged cells, or -1 on failure
