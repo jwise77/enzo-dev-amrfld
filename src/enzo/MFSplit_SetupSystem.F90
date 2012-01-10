@@ -101,7 +101,66 @@ subroutine MFSplit_SetupSystem(mat, rhs, rhsnorm, freq, E, E0, HI, HI0, &
   !=======================================================================
 #include "fortran.def"
   implicit none
-  
+
+  !--------------
+  ! interfaces
+  interface
+     subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
+          HeI0, HeII, HeII0, src, LType, dt, theta, sHI, sHeI, sHeII, a, a0,   &
+          aUn, lUn, lUn0, nUn, nUn0, dx, dy, dz, BCXl, BCXr, BCYl, BCYr, BCZl, &
+          BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx, Ny, Nz, NGxl, NGxr, NGyl,    &
+          NGyr, NGzl, NGzr, xlface, xrface, ylface, yrface, zlface, zrface, ier)
+       integer, intent(in)  :: LType
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
+       integer,  intent(in) :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a, a0
+       REAL, intent(in) :: dx, dy, dz, dt, theta, sHI, sHeI, sHeII
+       REAL, intent(in) :: aUn, lUn, lUn0, nUn, nUn0
+       REAL, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr), &
+            intent(in), target :: E, E0, HI, HI0, HeI, HeI0, HeII, HeII0, src
+       real*8, intent(out) :: mat(7,x0s:x0e,x1s:x1e,x2s:x2e)
+       real*8, intent(out) :: rhs(x0s:x0e,x1s:x1e,x2s:x2e)
+       REAL, intent(out) :: rhsnorm
+     end subroutine MFSplit_SetupSystem_3D
+     subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
+          HeI0, HeII, HeII0, src, LType, dt, theta, sHI, sHeI, sHeII, a, a0,   &
+          aUn, lUn, lUn0, nUn, nUn0, dx, dy, BCXl, BCXr, BCYl, BCYr, x0s, x0e, &
+          x1s, x1e, Nx, Ny, NGxl, NGxr, NGyl, NGyr, xlface, xrface, ylface,    &
+          yrface, ier)
+       integer, intent(in)  :: LType
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a, a0
+       REAL, intent(in) :: dx, dy, dt, theta, sHI, sHeI, sHeII
+       REAL, intent(in) :: aUn, lUn, lUn0, nUn, nUn0
+       REAL, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr), &
+            intent(in), target :: E, E0, HI, HI0, HeI, HeI0, HeII, HeII0, src
+       real*8, intent(out) :: mat(5,x0s:x0e,x1s:x1e)
+       real*8, intent(out) :: rhs(x0s:x0e,x1s:x1e)
+       REAL, intent(out) :: rhsnorm
+     end subroutine MFSplit_SetupSystem_2D
+     subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
+          HeI0, HeII, HeII0, src, LType, dt, theta, sHI, sHeI, sHeII, a, a0,   &
+          aUn, lUn, lUn0, nUn, nUn0, dx, BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, &
+          xlface, xrface, ier)
+       integer, intent(in)  :: LType
+       integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
+       integer, intent(out) :: ier
+       REALSUB, intent(in)  :: a, a0
+       REAL, intent(in) :: dx, dt, theta, sHI, sHeI, sHeII
+       REAL, intent(in) :: aUn, lUn, lUn0, nUn, nUn0
+       REAL, dimension(1-NGxl:Nx+NGxr), intent(in), target :: E, E0, HI, HI0, &
+            HeI, HeI0, HeII, HeII0, src
+       real*8, intent(out) :: mat(3,x0s:x0e)
+       real*8, intent(out) :: rhs(x0s:x0e)
+       REAL, intent(out) :: rhsnorm
+     end subroutine MFSplit_SetupSystem_1D
+  end interface
+
+
   !--------------
   ! interfaces
   interface

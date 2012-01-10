@@ -47,7 +47,7 @@ int RadiativeTransferCallFLD(LevelHierarchyEntry *LevelArray[], int level,
 {
 
   LevelHierarchyEntry *Temp;
-  int l, CallLevel;
+  int l, CallLevel=-1;
   float dtLocal, dtGrid;
   FLOAT LevelTime;
   Star *cstar;
@@ -113,10 +113,6 @@ int RadiativeTransferCallFLD(LevelHierarchyEntry *LevelArray[], int level,
 					   MetaData->dtFLD);
       
       /* Call FLD solver */
-      
-//       for (Temp = LevelArray[0]; Temp; Temp = Temp->NextGridThisLevel)
-// 	ImplicitSolver->Evolve(Temp->GridHierarchyEntry, MetaData->dtFLD);
-//      ImplicitSolver->Evolve(LevelArray, level, MetaData->dtFLD);
       ImplicitSolver->Evolve(LevelArray, level, Grids, NumberOfGrids, 
 			     MetaData, Exterior, 
 #ifdef FAST_SIB
@@ -190,9 +186,6 @@ int RadiativeTransferCallFLD(LevelHierarchyEntry *LevelArray[], int level,
 
       
       // Call FLD solver
-//       for (Temp = LevelArray[0]; Temp; Temp = Temp->NextGridThisLevel)
-// 	ImplicitSolver->Evolve(Temp->GridHierarchyEntry, MetaData->dtFLD);
-//      ImplicitSolver->Evolve(LevelArray, level, MetaData->dtFLD);
       ImplicitSolver->Evolve(LevelArray, level, Grids, NumberOfGrids, 
 			     MetaData, Exterior, 
 #ifdef FAST_SIB

@@ -38,10 +38,10 @@ AMRsolve_Domain AMRsolve_Grid::domain_;
 //======================================================================
 
 AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
-  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), is_u_allocated_(false),
-    f_(NULL), offset_f_(0), is_f_allocated_(false), counters_(NULL),
-    E_(NULL), E0_(NULL), eta_(NULL), HI_(NULL), HeI_(NULL), HeII_(NULL), 
-    phi_(NULL), gmass_(NULL)
+  : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), 
+    is_u_allocated_(false), f_(NULL), offset_f_(0), 
+    is_f_allocated_(false), counters_(NULL), counters_init_(0),
+    E_(NULL), E0_(NULL), eta_(NULL), HI_(NULL), HeI_(NULL), HeII_(NULL)
 {
   // Initialize 0-sentinels in arrays
   neighbors0_.push_back(0);

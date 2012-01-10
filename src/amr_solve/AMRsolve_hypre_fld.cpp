@@ -429,8 +429,12 @@ void AMRsolve_Hypre_FLD::solve()
   itmax  = atoi(sitmax.c_str());
   restol = atof(srestol.c_str());
 
+  // call solver
   if (solver == "pfmg" && levels == 1) {
     solve_pfmg_(itmax,restol);
+
+  } else if (solver == "fac"  && levels == 1) {
+    solve_pfmg_(itmax,restol);     // if only one level, FAC defaults to standard MG
 
   } else if (solver == "fac"  && levels > 1) {
     solve_fac_(itmax,restol);
@@ -525,13 +529,6 @@ int AMRsolve_Hypre_FLD::evaluate()
       printf("Stalled: %d >= %d\n", iter_,itmax);
     err_flag = 1;
   }
-
-//   // Appears to have completed successfully
-//   if (err_flag == 0)  
-//     if (pmpi->is_root()) {
-//       printf("AMRsolve_Hypre_FLD Success!\n"); 
-//       fflush(stdout); 
-//     }
 
   return err_flag;
 
@@ -669,12 +666,14 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
     // test r_factor_ here.
     bool l0 = (index_global[axis1][0]/r_factor_)*r_factor_ == index_global[axis1][0];
     bool l1 = (index_global[axis1][1]/r_factor_)*r_factor_ == index_global[axis1][1];
-
-    if (!l0) printf("index_global[%d][0] = %d\n",axis1,index_global[axis1][0]);
+    if (!l0) printf("grid %i,  index_global[%d][0] = %d,  r_factor = %i\n",
+		    grid.id(),axis1,index_global[axis1][0], r_factor_);
     assert(l0);
-    if (!l1) printf("index_global[%d][1] = %d\n",axis1,index_global[axis1][1]);
+    if (!l1) printf("grid %i,  index_global[%d][1] = %d,  r_factor = %i\n",
+		    grid.id(),axis1,index_global[axis1][1], r_factor_);
     assert(l1);
 
+    // loop over faces orthogonal to this axis
     for (int face=0; face<2; face++) {
 
       // Loop over face zones that are aligned with coarse zones (hence "+= r")
@@ -711,9 +710,9 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
  	      index_coarse[axis0] = (index_coarse[axis0] + period) % period;
  	    }
 
-	    //--------------------------------------------------
-	    // GRAPH ENTRY: FINE-TO-COARSE 
-	    //--------------------------------------------------
+	    //-------------------------------------------------------
+	    // GRAPH ENTRY: FINE-TO-COARSE (ADJUSTS FINE GRID MATRIX)
+	    //-------------------------------------------------------
 
 	    if (discret_type == discret_type_const) {
 
@@ -721,9 +720,9 @@ void AMRsolve_Hypre_FLD::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase)
 					level_fine,level_coarse,
 					index_fine,index_coarse);
 
-	      //--------------------------------------------------
-	      // GRAPH ENTRY: COARSE-TO-FINE
-	      //--------------------------------------------------
+	      //-------------------------------------------------------
+	      // GRAPH ENTRY: COARSE-TO-FINE (ADJUSTS FINE GRID MATRIX)
+	      //-------------------------------------------------------
 	      
 	      if (adjacent->is_local()) {
 
@@ -969,10 +968,11 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 		      + dtfac*dyi*dyi*(D_yr*Ed_yr-D_yl*Ed_yl)
 		      + dtfac*dzi*dzi*(D_zr*Ed_zr-D_zl*Ed_zl) );
 
-	  // check that value is legal
+	  // check that value is legal, otherwise output an error message
 	  if (isinf(values[i]) || isnan(values[i])) {
 	    fprintf(stderr,"init_elements_rhs_ ERROR: encountered illegal value (%g)\n   eta = %g, E = %g, dtfac = %g, dtfac0 = %g, afac = %g, kap = %g\n   D* = %g, %g, %g, %g, %g, %g\n   Ed* = %g %g %g %g %g %g\n\n",
 		    values[i], eta[k_000], E[k_000], dtfac, dtfac0, afac, kap, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, Ed_xl, Ed_xr, Ed_yl, Ed_yr, Ed_zl, Ed_zr);
+	    ERROR("NaN error in init_elements_rhs_\n");
 	  }
 
 	}
@@ -1329,41 +1329,41 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	v0[i] = 1.0 + dtfac*(afac + c*kap + dxi*dxi*(D_xl+D_xr) 
 		    + dyi*dyi*(D_yl+D_yr) + dzi*dzi*(D_zl+D_zr));  // self
 
-	// check that value is legal
+	// check that value is legal, if not issue an error message
 	badvalue = 0;
 	vtmp = v1[2][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dzi = %g, D_zl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dzi = %g, D_zl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zl, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v1[1][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dyi = %g, D_yl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dyi = %g, D_yl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yl, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v1[0][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dxi = %g, D_xl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dxi = %g, D_xl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xl, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v1[0][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dxi = %g, D_xr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dxi = %g, D_xr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xr, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v1[1][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dyi = %g, D_yr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dyi = %g, D_yr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yr, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v1[2][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, dzi = %g, D_zr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dzi = %g, D_zr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zr, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	vtmp = v0[i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil ERROR: encountered illegal value (%g)\n   dtfac = %g, afac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i \n\n", vtmp, dtfac, afac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, afac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i \n\n", vtmp, dtfac, afac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	if (badvalue == 1)
@@ -1373,7 +1373,6 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
     } // for i1
   } // for i2
 
-//   WHERE; printf("v0[0]=%g\n",v0[0]);
 
   //-----------------------------------------------------------
   // Adjust stencil at grid boundaries
@@ -1598,10 +1597,10 @@ void AMRsolve_Hypre_FLD::solve_pfmg_(int itmax, double restol)
 
   //   if not defined, then define them
   if (srlxtype == "")  srlxtype = "1";
-  if (snpre == "")     snpre = "1";
-  if (snpost == "")    snpost = "1";
-  if (sprintl == "")   sprintl = "1";
-  if (slog == "")      slog = "1";
+  if (snpre    == "")  snpre    = "1";
+  if (snpost   == "")  snpost   = "1";
+  if (sprintl  == "")  sprintl  = "1";
+  if (slog     == "")  slog     = "1";
 
   //   set local variables
   int rlxtype = atoi(srlxtype.c_str());
@@ -1616,18 +1615,18 @@ void AMRsolve_Hypre_FLD::solve_pfmg_(int itmax, double restol)
     if (ierr != 0) ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
-    ierr = HYPRE_SStructSysPFMGSetTol(solver_,    restol);
+    ierr = HYPRE_SStructSysPFMGSetTol(solver_,restol);
     if (ierr != 0) ERROR("could not set restol\n");
   }
-  ierr = HYPRE_SStructSysPFMGSetRelaxType(solver_,    rlxtype);
+  ierr = HYPRE_SStructSysPFMGSetRelaxType(solver_,rlxtype);
   if (ierr != 0) ERROR("could not set rlxtype\n");
-  ierr = HYPRE_SStructSysPFMGSetNumPreRelax(solver_,  npre);
+  ierr = HYPRE_SStructSysPFMGSetNumPreRelax(solver_,npre);
   if (ierr != 0) ERROR("could not set npre\n");
-  ierr = HYPRE_SStructSysPFMGSetNumPostRelax(solver_, npost);
+  ierr = HYPRE_SStructSysPFMGSetNumPostRelax(solver_,npost);
   if (ierr != 0) ERROR("could not set npost\n");
-  ierr = HYPRE_SStructSysPFMGSetPrintLevel(solver_,   printl);
+  ierr = HYPRE_SStructSysPFMGSetPrintLevel(solver_,printl);
   if (ierr != 0) ERROR("could not set printl\n");
-  ierr = HYPRE_SStructSysPFMGSetLogging(solver_,      log);
+  ierr = HYPRE_SStructSysPFMGSetLogging(solver_,log);
   if (ierr != 0) ERROR("could not set log\n");
 
   // setup solver 
@@ -1700,50 +1699,50 @@ void AMRsolve_Hypre_FLD::solve_fac_(int itmax, double restol)
 
   //   if not defined, then define them
   if (srlxtype == "")  srlxtype = "2";
-  if (snpre == "")     snpre = "2";
-  if (snpost == "")    snpost = "2";
-  if (scsolve == "")   scsolve = "1";
-  if (sprintl == "")   sprintl = "1";
-  if (slog == "")      slog = "1";
+  if (snpre    == "")  snpre    = "2";
+  if (snpost   == "")  snpost   = "2";
+  if (scsolve  == "")  scsolve  = "1";
+  if (sprintl  == "")  sprintl  = "1";
+  if (slog     == "")  slog     = "1";
 
   //   set local variables
-  int relax   = atoi(srlxtype.c_str());
-  int npre    = atoi(snpre.c_str());
-  int npost   = atoi(snpost.c_str());
-  int printl  = atoi(sprintl.c_str());
-  int log     = atoi(slog.c_str());
-  int csolve  = atoi(scsolve.c_str());
+  int relax  = atoi(srlxtype.c_str());
+  int npre   = atoi(snpre.c_str());
+  int npost  = atoi(snpost.c_str());
+  int printl = atoi(sprintl.c_str());
+  int log    = atoi(slog.c_str());
+  int csolve = atoi(scsolve.c_str());
 
   // solver parameters
-  ierr = HYPRE_SStructFACSetNumPreRelax(solver_,      npre);
+  ierr = HYPRE_SStructFACSetNumPreRelax(solver_,npre);
   if (ierr != 0) ERROR("could not set npre\n");
-  ierr = HYPRE_SStructFACSetNumPostRelax(solver_,     npost);
+  ierr = HYPRE_SStructFACSetNumPostRelax(solver_,npost);
   if (ierr != 0) ERROR("could not set npost\n");
-  ierr = HYPRE_SStructFACSetCoarseSolverType(solver_, csolve);
+  ierr = HYPRE_SStructFACSetCoarseSolverType(solver_,csolve);
   if (ierr != 0) ERROR("could not set csolve\n");
-  ierr = HYPRE_SStructFACSetRelaxType(solver_,        relax);
+  ierr = HYPRE_SStructFACSetRelaxType(solver_,relax);
   if (ierr != 0) ERROR("could not set relax\n");
 
   // stopping criteria
   if (itmax != 0 ) {
-    ierr = HYPRE_SStructFACSetMaxIter(solver_, itmax);
+    ierr = HYPRE_SStructFACSetMaxIter(solver_,itmax);
     if (ierr != 0) ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
-    ierr = HYPRE_SStructFACSetTol(solver_,     restol);
+    ierr = HYPRE_SStructFACSetTol(solver_,restol);
     if (ierr != 0) ERROR("could not set restol\n");
   }
 
   // output amount
-  ierr = HYPRE_SStructFACSetLogging(solver_, 1);
+  ierr = HYPRE_SStructFACSetLogging(solver_,1);
   if (ierr != 0) ERROR("could not set logging\n");
 
   // prepare for solve
-  ierr = HYPRE_SStructFACSetup2(solver_, A_, B_, X_);
+  ierr = HYPRE_SStructFACSetup2(solver_,A_,B_,X_);
   if (ierr != 0) ERROR("could not setup FAC solver_\n");
 
   // Solve the linear system
-  ierr = HYPRE_SStructFACSolve3(solver_, A_, B_, X_);
+  ierr = HYPRE_SStructFACSolve3(solver_,A_,B_,X_);
   if (ierr != 0) {
     fprintf(stderr, "Error %i detected, printing current hierarchy:\n",ierr);
     hierarchy_->print();
@@ -1866,7 +1865,7 @@ void AMRsolve_Hypre_FLD::solve_bicgstab_boomer_(int itmax, double restol)
   // extract some additional solver parameters
   std::string slog    = parameters_->value("solver_log");
   std::string sprintl = parameters_->value("solver_printl");
-  if (slog == "")      slog = "1";
+  if (slog    == "")   slog    = "1";
   if (sprintl == "")   sprintl = "1";
   int log    = atoi(slog.c_str());
   int printl = atoi(sprintl.c_str());
@@ -2017,12 +2016,6 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
   Scalar Rmin = 1.0e-20;
   Scalar c = 2.99792458e10;
 
-  // access relevant arrays from this grid to compute RHS
-  Scalar* E    = grid_fine.get_E();
-  Scalar* HI   = grid_fine.get_HI();
-  Scalar* HeI  = grid_fine.get_HeI();
-  Scalar* HeII = grid_fine.get_HeII();
-  
   // get active enzo grid size
   int n3[3];
   grid_fine.get_size(n3);
@@ -2088,6 +2081,12 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 
     } else if (phase == phase_matrix) {
 
+      // access relevant arrays from this grid to compute RHS
+      Scalar* E    = grid_fine.get_E();
+      Scalar* HI   = grid_fine.get_HI();
+      Scalar* HeI  = grid_fine.get_HeI();
+      Scalar* HeII = grid_fine.get_HeII();
+
       // fine->coarse off-diagonal scaling
       double val_s = 2.0 / 3.0;
       int entry;
@@ -2106,10 +2105,6 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 	k2 = index_fine[2] - index_global[2][0] + ghosts[2][0];
 	k_row = k0 + en0*(k1 + en1*k2);
 	k_col = k0 + adj0 + en0*(k1 + adj1 + en1*(k2 + adj2));
-
-//       printf("phase_matrix: index_fine = %i %i %i,  index_global = %i %i %i,  n3 = %i %i %i,  k* = %i %i %i %i %i, bounds = (%g:%g, %g:%g, %g:%g)\n",
-// 	     index_fine[0],index_fine[1],index_fine[2],index_global[0][0],index_global[1][0],index_global[2][0],n3[0],n3[1],n3[2],k0,k1,k2,k_row,k_col,xl0,xu0,xl1,xu1,xl2,xu2);
-
 
 	// Compute limiter at this face
 	Ed = E[k_row] - E[k_col];
@@ -2286,6 +2281,7 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
     double val = -val_s * dtfac * dxi * dxi * D;
     if (isnan(val) || isinf(val)) {
       fprintf(stderr,"update_coarse_fine_const ERROR: encountered NaN/Inf value (%g)\n   val_s = %g, dtfac = %g, dxi = %g, D = %g, k_row = %i, k_col = %i\n\n", val, val_s, dtfac, dxi, D, k_row, k_col);
+      ERROR("NaN or Inf value in setting matrix entries\n");
     }
     int    entry;
     double value;

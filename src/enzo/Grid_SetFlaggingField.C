@@ -55,7 +55,7 @@ int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level)
  
   case 1:
  
-    /* flag all points needing extra resolution (FlagCellsToBeRefinedBySlop
+    /* flag all points needing extra resolution (FlagCellsToBeRefinedBySlope
        returns the number of flagged cells). */
  
     NumberOfFlaggedCells = this->FlagCellsToBeRefinedBySlope();
@@ -239,6 +239,34 @@ int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level)
       NumberOfFlaggedCells = this->FlagCellsToBeRefinedByRadiationGradient();
       if (NumberOfFlaggedCells < 0) {
 	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedByRadSlope.");
+      }
+    }
+#endif /* TRANSFER */
+    break;
+ 
+ 
+    /* ==== METHOD 20: BY GRADIENT OF THE OPACITY ==== */
+  case 20:
+
+#ifdef TRANSFER
+    if (RadiativeTransferFLD) {
+      NumberOfFlaggedCells = this->FlagCellsToBeRefinedByOpacity();
+      if (NumberOfFlaggedCells < 0) {
+	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedByOpacity.");
+      }
+    }
+#endif /* TRANSFER */
+    break;
+
+ 
+    /* ==== METHOD 21: BY GRADIENT OF THE IONIZED FRACTION ==== */
+  case 21:
+
+#ifdef TRANSFER
+    if (RadiativeTransferFLD) {
+      NumberOfFlaggedCells = this->FlagCellsToBeRefinedByIonizedFraction();
+      if (NumberOfFlaggedCells < 0) {
+	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedByIonizedFraction.");
       }
     }
 #endif /* TRANSFER */
