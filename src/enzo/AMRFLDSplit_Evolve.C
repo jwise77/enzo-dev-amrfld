@@ -39,15 +39,6 @@ int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
 #endif
 			  int level, TopGridData *MetaData,
 			  ExternalBoundary *Exterior, LevelHierarchyEntry * Level);
-int SetFieldBoundaryConditions(int Field, HierarchyEntry *Grids[], 
-			       int NumberOfGrids,
-#ifdef FAST_SIB
-			       SiblingGridList SiblingList[],
-#endif
-			       int level, TopGridData *MetaData,
-			       ExternalBoundary *Exterior, 
-			       LevelHierarchyEntry * Level);
-int FindField(int f, int farray[], int n);
 
 
 
@@ -440,6 +431,8 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
     }
     else {
       fprintf(stderr,"AMRFLDSplit_RadStep: could not achieve prescribed tolerance!\n");
+      fprintf(stderr, "Printing current hierarchy:\n");
+      if (debug)   hierarchy->print();
       
       // dump amrsolve matrices, module parameters to disk
       amrfldsolve.abort_dump();
