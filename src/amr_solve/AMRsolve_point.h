@@ -17,9 +17,7 @@ class AMRsolve_Point
 private:
 
   // AMRsolve_Point attributes known when created
-
   static int d_;
-
   Scalar m_;
   Scalar *x_;
   int igrid_;

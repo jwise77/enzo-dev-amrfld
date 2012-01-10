@@ -155,7 +155,7 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	xl[dim] = enzo_grid->GridLeftEdge[dim];
 	xu[dim] = enzo_grid->GridRightEdge[dim];
 	n[dim]  = enzo_grid->GridEndIndex[dim] - enzo_grid->GridStartIndex[dim] + 1;
-	il[dim] = int((xl[dim] - DomainLeftEdge[dim]) 
+	il[dim] = nint((xl[dim] - DomainLeftEdge[dim]) 
 		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
       }
 	      
@@ -212,7 +212,7 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 
   // Set defaults for level_coarsest and level_finest:
   //    if no levels specified: default to entire hierarchy
-  //    if one level specified: default to just that level
+  //    if only one level specified: default to just that level
   if (level_coarsest == LEVEL_UNKNOWN && level_finest == LEVEL_UNKNOWN) {
     level_coarsest = 0;
     level_finest   = INT_MAX;
@@ -268,7 +268,7 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 	xl[dim] = enzo_grid->GridLeftEdge[dim];
 	xu[dim] = enzo_grid->GridRightEdge[dim];
 	n[dim]  = enzo_grid->GridEndIndex[dim] - enzo_grid->GridStartIndex[dim] + 1;
-	il[dim] = int((xl[dim] - DomainLeftEdge[dim]) 
+	il[dim] = nint((xl[dim] - DomainLeftEdge[dim]) 
 		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
       }
 
@@ -284,12 +284,43 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 
 	// Set pointers to the relevant Enzo data arrays for setting up the 
 	// linear system later on.
-	grid->set_E(enzo_grid->AccessRadiationFrequency0());
-	grid->set_E0(enzo_grid->AccessKPhHI());
-	grid->set_eta(enzo_grid->AccessEmissivity0());
-	grid->set_HI(enzo_grid->AccessHIDensity());
-	grid->set_HeI(enzo_grid->AccessHeIDensity());
-	grid->set_HeII(enzo_grid->AccessHeIIDensity());
+	Scalar *ptr;
+	ptr = enzo_grid->AccessRadiationFrequency0();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get E from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_E(ptr);
+	ptr = enzo_grid->AccessKPhHI();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get E0 from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_E0(ptr);
+	ptr = enzo_grid->AccessEmissivity0();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get eta from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_eta(ptr);
+	ptr = enzo_grid->AccessHIDensity();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get HI from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_HI(ptr);
+	ptr = enzo_grid->AccessHeIDensity();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get HeI from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_HeI(ptr);
+	ptr = enzo_grid->AccessHeIIDensity();  
+	if (!ptr) {
+	  printf("grid %i, proc %i: cannot get HeII from Enzo!\n",grid->id(),grid->ip());
+	  assert(ptr);
+	}
+	grid->set_HeII(ptr);
 
 	// Set Enzo ghost zone information for this grid
 	int enzo_ghosts[][2] = { {DEFAULT_GHOST_ZONES, DEFAULT_GHOST_ZONES}, 

@@ -27,8 +27,6 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 				   int level, float time)
 {
 
-//   if (debug)  printf("    AMRFLDSplit RadiationSource, initializing local variables\n");
-
   // initialize local variables to be reused
   int i, j, k;
   float SpecConst = (ESpectrum == 1) ? 1.52877652583602 : 1.0;
@@ -37,8 +35,6 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
   float etaconst;
   float cellZl, cellZr, cellYl, cellYr, cellXl, cellXr, cellXc, cellYc, cellZc;
   
-//   if (debug)  printf("    AMRFLDSplit RadiationSource, iterating over processor grids\n");
-
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 

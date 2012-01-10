@@ -81,6 +81,7 @@ private:
   void init_elements_matrix_();
   void init_elements_rhs_();
 
+  // init_matrix() functions
   void init_matrix_stencil_(AMRsolve_Grid& grid);
   void init_matrix_clear_(int part);
   void init_matrix_nonstencil_(AMRsolve_Grid& grid)

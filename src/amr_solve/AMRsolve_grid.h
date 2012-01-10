@@ -81,6 +81,10 @@ class AMRsolve_Grid
   int* counters_;           /// Counters for nonstencil entries.  Required by
                             ///   hypre to maintain state between nonstencil 
                             ///   and matrix initialization.
+  int  counters_init_;      /// Initial value for counters_ array; may be set
+                            ///   without allocation of counters_ array, but 
+                            /// if/when counters_ is allocated, it will use 
+                            /// the value held here.
   
   // optional pointers to Enzo data arrays (if used; set using set_* routines)
   Scalar* E_;               /// ptr to Radiation energy density array
