@@ -243,15 +243,17 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
            Ed_zl  = E(i,j,k) - E(i,j,k-1)
            E0avg  = (E0(i,j,k) + E0(i,j,k-1))*0.5d0
 
-           !    compute R for limiters
-           R  = max(dzi *abs(E0d_zl)/E0avg, Rmin)
-           R0 = max(dzi0*abs(E0d_zl)/E0avg, Rmin)
 
            !    compute average opacity over face
            kap = (kappa(i,j,k) + kappa(i,j,k-1))*0.5d0*nUn
            kap0 = (kappa(i,j,k) + kappa(i,j,k-1))*0.5d0*nUn0
 !           kap = sqrt(kappa(i,j,k))*sqrt(kappa(i,j,k-1))*nUn
 !           kap0 = sqrt(kappa(i,j,k))*sqrt(kappa(i,j,k-1))*nUn0
+
+           !    compute R for limiters
+           R  = max(dzi *abs(E0d_zl)/E0avg, Rmin)
+           R0 = max(dzi0*abs(E0d_zl)/E0avg, Rmin)
+
            
            !    compute limiter
 !!$           D_zl = c*(2.d0*kap+R)/(6.d0*kap*kap+3.d0*kap*R+R*R)
@@ -384,14 +386,15 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
 
            ! set the matrix entries.  Note: the diffusive component 
            ! need not be rescaled, since scaling and chain rule cancel 
-           matentries(1,i,j,k) = -dtfac*dzi*dzi*D_zl    ! z-left
-           matentries(2,i,j,k) = -dtfac*dyi*dyi*D_yl    ! y-left
-           matentries(3,i,j,k) = -dtfac*dxi*dxi*D_xl    ! x-left
-           matentries(4,i,j,k) = 1.d0 + dtfac*(afac + c*kap + dxi*dxi*(D_xl+D_xr) &
-                      + dyi*dyi*(D_yl+D_yr) + dzi*dzi*(D_zl+D_zr))      ! self
-           matentries(5,i,j,k) = -dtfac*dxi*dxi*D_xr    ! x-right
-           matentries(6,i,j,k) = -dtfac*dyi*dyi*D_yr    ! y-right
-           matentries(7,i,j,k) = -dtfac*dzi*dzi*D_zr    ! z-right
+           matentries(1,i,j,k) = -dtfac*dzi*dzi*D_zl         ! z-left
+           matentries(2,i,j,k) = -dtfac*dyi*dyi*D_yl         ! y-left
+           matentries(3,i,j,k) = -dtfac*dxi*dxi*D_xl         ! x-left
+           matentries(4,i,j,k) = &
+                 1.d0 + dtfac*(afac + c*kap + dxi*dxi*(D_xl+D_xr)   &   ! self
+                      + dyi*dyi*(D_yl+D_yr) + dzi*dzi*(D_zl+D_zr))
+           matentries(5,i,j,k) = -dtfac*dxi*dxi*D_xr         ! x-right
+           matentries(6,i,j,k) = -dtfac*dyi*dyi*D_yr         ! y-right
+           matentries(7,i,j,k) = -dtfac*dzi*dzi*D_zr         ! z-right
 
            ! set the rhs entries
            rhsentries(i,j,k) = ( (dtfac/rUn + dtfac0/rUn0)*src(i,j,k)          &
@@ -726,12 +729,12 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
 
         ! set the matrix entries.  Note: the diffusive component 
         ! need not be rescaled, since scaling and chain rule cancel 
-        matentries(1,i,j) = -dtfac*dyi*dyi*D_yl     ! y-left
-        matentries(2,i,j) = -dtfac*dxi*dxi*D_xl     ! x-left
-        matentries(3,i,j) = 1.d0 + dtfac*(afac + c*kap  &
-              + dxi*dxi*(D_xl+D_xr)+dyi*dyi*(D_yl+D_yr))   ! self
-        matentries(4,i,j) = -dtfac*dxi*dxi*D_xr     ! x-right
-        matentries(5,i,j) = -dtfac*dyi*dyi*D_yr     ! y-right
+        matentries(1,i,j) = -dtfac*dyi*dyi*D_yl         ! y-left
+        matentries(2,i,j) = -dtfac*dxi*dxi*D_xl         ! x-left
+        matentries(3,i,j) = 1.d0 + dtfac*(afac + c*kap     &         ! self
+              + dxi*dxi*(D_xl+D_xr)+dyi*dyi*(D_yl+D_yr))
+        matentries(4,i,j) = -dtfac*dxi*dxi*D_xr         ! x-right
+        matentries(5,i,j) = -dtfac*dyi*dyi*D_yr         ! y-right
 
         ! set the rhs entries
         rhsentries(i,j) = ( (dtfac/rUn + dtfac0/rUn0)*src(i,j)            &
@@ -948,10 +951,10 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
 
      ! set the matrix entries.  Note: the diffusive component 
      ! need not be rescaled, since scaling and chain rule cancel 
-     matentries(1,i) = -dtfac*dxi*dxi*D_xl        ! x-left
-     matentries(2,i) = 1.d0 + dtfac*(afac + c*kap &
-                       + dxi*dxi*(D_xl+D_xr))     ! self
-     matentries(3,i) = -dtfac*dxi*dxi*D_xr        ! x-right
+     matentries(1,i) = -dtfac*dxi*dxi*D_xl            ! x-left
+     matentries(2,i) = 1.d0 + dtfac*(afac + c*kap  &  ! self
+                            + dxi*dxi*(D_xl+D_xr))
+     matentries(3,i) = -dtfac*dxi*dxi*D_xr            ! x-right
 
      ! set the rhs entries
      rhsentries(i) = ( (dtfac/rUn + dtfac0/rUn0)*src(i)              &

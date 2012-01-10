@@ -13,6 +13,7 @@
 /              Assemble group file in-core
 /  modified2:  Robert Harkness
 /  date:       April 2008
+/  modified3:  Michael Kuhlen, October 2010, HDF5 hierarchy
 /
 /  PURPOSE:
 /
@@ -51,7 +52,6 @@
 #ifdef TRANSFER
 #include "ImplicitProblemABC.h"
 #endif
-#include "BinaryHierarchy.h"
 
 void my_exit(int status);
  
@@ -69,6 +69,7 @@ int WriteDataCubes(HierarchyEntry *TopGrid, int TDdims[], char *gridbasename, in
 int Group_WriteDataHierarchy(FILE *fptr, TopGridData &MetaData, HierarchyEntry *TopGrid,
 		       char *gridbasename, int &GridID, FLOAT WriteTime, hid_t file_id,
                int CheckpointDump = FALSE);
+int WriteHDF5HierarchyFile(char *base_name, HierarchyEntry *TopGrid, TopGridData MetaData, LevelHierarchyEntry *LevelArray[]);
 int WriteMemoryMap(FILE *fptr, HierarchyEntry *TopGrid,
 		   char *gridbasename, int &GridID, FLOAT WriteTime);
 int WriteConfigure(FILE *optr);
@@ -85,10 +86,8 @@ int CommunicationCombineGrids(HierarchyEntry *OldHierarchy,
 void DeleteGridHierarchy(HierarchyEntry *GridEntry);
 void ContinueExecution(void);
 int CreateSmoothedDarkMatterFields(TopGridData &MetaData, HierarchyEntry *TopGrid);
-  
-void InitializeHierarchyArrayStorage(int grid_count);
-void WriteHierarchyArrayStorage(const char* name);
-void FinalizeHierarchyArrayStorage();
+ 
+int CreateGriddedStarParticleFields(TopGridData &MetaData, HierarchyEntry *TopGrid); 
 
 #ifndef FAST_SIB
 int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
@@ -660,49 +659,53 @@ int Group_WriteAllData(char *basename, int filenumber,
   /* Combine the top level grids into a single grid for output
      (TempTopGrid is the top of an entirely new hierarchy). */
  
+  int level;
   HierarchyEntry *TempTopGrid;
   CommunicationCombineGrids(TopGrid, &TempTopGrid, WriteTime, CheckpointDump);
  
+  LevelHierarchyEntry *LevelArray[MAX_DEPTH_OF_HIERARCHY];
+  for (level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++)
+    LevelArray[level] = NULL;
+
+#ifndef FAST_SIB
+    if (VelAnyl==1 || BAnyl==1) {
+      AddLevel(LevelArray, TempTopGrid, 0);
+      for (level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++) {
+	HierarchyEntry **Grids;
+	int NumberOfGrids = GenerateGridArray(LevelArray, level, &Grids);
+	if (LevelArray[level] != NULL)
+	  SetBoundaryConditions(Grids, NumberOfGrids, level, &MetaData, 
+				Exterior, LevelArray[level]);
+      }
+    }
+#endif
+  
   // Output Data Hierarchy
 
-  if (WriteBinaryHierarchy == TRUE  || VelAnyl==1 || BAnyl==1){
-    /* If this is true, we have to count up the number of grids. */
-    int level;
-    LevelHierarchyEntry *LevelArray[MAX_DEPTH_OF_HIERARCHY];
-    for (level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++)
-        LevelArray[level] = NULL;
-    AddLevel(LevelArray, TempTopGrid, 0);
-    int num_grids = 0;
-    LevelHierarchyEntry *Temp;
-    for (level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++){
-        Temp = LevelArray[level];
-        while (Temp!=NULL) {
-          num_grids++;
-          Temp = Temp->NextGridThisLevel; 
-        }
+  if (MyProcessorNumber == ROOT_PROCESSOR) {
+
+    if( HierarchyFileOutputFormat % 2 == 0 ) {
+      AddLevel(LevelArray, TempTopGrid, 0);
+      WriteHDF5HierarchyFile(name, TempTopGrid, MetaData, LevelArray);      
     }
-    InitializeHierarchyArrayStorage(num_grids);
     
-#ifndef FAST_SIB
-    if(VelAnyl==1||BAnyl==1){
-    for (int level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++) {
-      HierarchyEntry **Grids;
-      int NumberOfGrids = GenerateGridArray(LevelArray, level, &Grids);
-      if (LevelArray[level] != NULL) {
-	
-	if (SetBoundaryConditions(Grids, NumberOfGrids, level, &MetaData, 
-				  Exterior, LevelArray[level]) == FAIL) {
-	  printf("error setboundary");
-	}}}}
-#endif
+    if (HierarchyFileOutputFormat > 0)
+      if ((fptr = fopen(hierarchyname, "w")) == NULL) 
+	ENZO_VFAIL("Error opening hierarchy file %s\n", hierarchyname);
   }
 
-  if (MyProcessorNumber == ROOT_PROCESSOR)
-    if ((fptr = fopen(hierarchyname, "w")) == NULL) 
-      ENZO_VFAIL("Error opening hierarchy file %s\n", hierarchyname);
-  
- 
-	
+  /* Clean-up LevelArray */
+
+  if (LevelArray[0] != NULL) {
+    LevelHierarchyEntry *Temp;
+    for (level = 0; level < MAX_DEPTH_OF_HIERARCHY; level++)
+      while (LevelArray[level] != NULL) {
+	Temp = LevelArray[level]->NextGridThisLevel;
+	delete LevelArray[level];
+	LevelArray[level] = Temp;
+      } // ENDWHILE
+  } // ENDIF
+
   if (Group_WriteDataHierarchy(fptr, MetaData, TempTopGrid,
             gridbasename, GridID, WriteTime, file_id, CheckpointDump) == FAIL)
     ENZO_FAIL("Error in Group_WriteDataHierarchy");
@@ -783,15 +786,6 @@ int Group_WriteAllData(char *basename, int filenumber,
     if (WriteDataCubes(TempTopGrid, TGdims, name, GridJD, WriteTime) == FAIL)
       ENZO_FAIL("Error in WriteDataCubes");
 
-  // Write the binary hierarchy if we want it
-
-  if (WriteBinaryHierarchy == TRUE)
-  {
-    strcpy(bhierarchyname, name);
-    strcat(bhierarchyname, BHierarchySuffix);
-    WriteHierarchyArrayStorage(bhierarchyname);
-    FinalizeHierarchyArrayStorage();
-  }
  
   // Clean up combined top level grid, and first two levels of hierarchy
  
@@ -807,6 +801,28 @@ int Group_WriteAllData(char *basename, int filenumber,
   if (WriteStarParticleData(fptr, MetaData) == FAIL)
     ENZO_FAIL("Error in WriteStarParticleData");
  
+  // Output MBH particle data
+  
+  if (MBHParticleIO == TRUE && MyProcessorNumber == ROOT_PROCESSOR) {
+    FILE *MBHfptr;
+
+    if ((MBHfptr = fopen(MBHParticleIOFilename, "a")) == NULL) {
+      ENZO_VFAIL("Error opening file %s\n", MBHParticleIOFilename)
+    }
+    
+    // printing order: time, regular star count, MBH id, MBH mass, MBH angular momentum
+    for (int i = 0; i < G_TotalNumberOfStars; i++) { 
+      fprintf(MBHfptr, " %"FSYM"  %"ISYM"  %"ISYM"  %lf  %"FSYM"  %"FSYM"  %"FSYM"  %lf\n", 
+	      MetaData.Time, NumberOfStarParticles, (int)(MBHParticleIOTemp[i][0]), 
+	      MBHParticleIOTemp[i][1], (float)(MBHParticleIOTemp[i][2]), 
+	      (float)(MBHParticleIOTemp[i][3]), (float)(MBHParticleIOTemp[i][4]),
+	      MBHParticleIOTemp[i][5]);
+    }
+    
+    fclose(MBHfptr);
+    
+  }
+
   // Create radiation name and write radiation data
  
   if (((RadiationFieldType >= 10 && RadiationFieldType <= 11) ||
@@ -829,7 +845,8 @@ int Group_WriteAllData(char *basename, int filenumber,
   }
  
   if (MyProcessorNumber == ROOT_PROCESSOR) {
-    fclose(fptr);
+    if (HierarchyFileOutputFormat  > 0)
+      fclose(fptr);
     fclose(mptr);
   }
 
