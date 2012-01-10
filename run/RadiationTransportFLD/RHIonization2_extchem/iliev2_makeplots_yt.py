@@ -104,9 +104,9 @@ for tstep in range(0,te+1):
         
         # set time label
         if (tstep == 1):
-            Myr = '10'
+            Myr = '010'
         elif (tstep == 5):
-            Myr = '50'
+            Myr = '050'
         elif (tstep == 10):
             Myr = '100'
         elif (tstep == 20):
