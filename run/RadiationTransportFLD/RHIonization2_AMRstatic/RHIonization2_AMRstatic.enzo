@@ -18,14 +18,14 @@ UseHydro                   = 0             // no hydro
 SelfGravity                = 0             // no gravity
 ComovingCoordinates        = 0             // fixed-space
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
-RadHydroParamfile = RHIonization2.amrfld
+RadHydroParamfile = RHIonization2_AMRstatic.amrfld
 #
 # grid and boundary 
 #
 TopGridRank                =  3
 TopGridDimensions          =  16 16 16
-LeftFaceBoundaryCondition  =  3 3 3         // periodic
-RightFaceBoundaryCondition =  3 3 3
+LeftFaceBoundaryCondition  =  0 0 0        // reflecting
+RightFaceBoundaryCondition =  0 0 0
 DomainLeftEdge             = -1.0 -1.0 -1.0   // (scaled units)
 DomainRightEdge            =  1.0  1.0  1.0
 RefineBy                   =  2
@@ -35,7 +35,7 @@ RefineBy                   =  2
 StopTime                   = 1.57788e0     // 500 Myr
 StopCycle                  = 99999
 dtDataDump                 = 3.15576e-2    // 10 Myr
-ParallelRootGridIO         = 1
+ParallelRootGridIO         = 0
 # 
 # units
 #
