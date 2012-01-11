@@ -9,7 +9,7 @@ from yt.mods import *
 te = 50
 
 # set the solution tolerance
-tol = 0.002
+tol = 0.025
 
 # load the reference solution
 r_sol = np.load('r_sol.npy')
