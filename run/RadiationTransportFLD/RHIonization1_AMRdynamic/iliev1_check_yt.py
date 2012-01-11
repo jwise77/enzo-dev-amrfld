@@ -10,7 +10,7 @@ import numpy as np
 te = 50
 
 # set the solution tolerance
-tol = 0.004
+tol = 0.02
 
 # set some constants
 Ngammadot = 5.0e48     # ionization source strength [photons/sec]
