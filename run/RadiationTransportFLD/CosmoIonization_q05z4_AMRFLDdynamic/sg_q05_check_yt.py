@@ -9,9 +9,8 @@ from os import *
 # set the total number of snapshots
 te = 17
 
-# set the graphics output type
-#pictype = 'pdf'
-pictype = 'png'
+# set the solution tolerance
+tol = 0.01
 
 # set some constants
 q0 = 0.05              # deceleration parameter
@@ -42,8 +41,9 @@ add_field("logE", take_log=True, function=_logE,
 
 #   Radius from domain center
 def _radius(field, data):
-    return (np.sqrt(data["x"]*data["x"] + data["y"]*data["y"] +
-                    data["z"]*data["z"]))
+    return (np.sqrt((data["x"]-0.5)*(data["x"]-0.5) + 
+                    (data["y"]-0.5)*(data["y"]-0.5) +
+                    (data["z"]-0.5)*(data["z"]-0.5)))
 def _convertradius(data):
     return (data.convert("cm"))
 add_field("radius", take_log=False, function=_radius, 
@@ -126,7 +126,7 @@ def analytical_solution(q0,Nph,pf0,pf):
     # Here, a' is the variable of integration, not the time-derivative of a.
     F1 = (2.0*(1.0-2.0*q0) - 2.0*q0*(1.0+z0))*sqrt(1.0-2.0*q0+2.0*q0*(1.0+z0))
     xi = H0*t0*(1.0+z0)
-
+    
     # set integration nodes/values (lots)
     inodes = 1000001
     a = linspace(1,aval,inodes)  # uniformly spaced nodes
@@ -193,14 +193,9 @@ for tstep in range(0,te+1):
     yC = 0.5*(pf["DomainLeftEdge"][1] + pf["DomainRightEdge"][1])
     zC = 0.5*(pf["DomainLeftEdge"][2] + pf["DomainRightEdge"][2])
 
-    # determine if simulation was run with source in center or corner
-    spherical = (2.0**(pf.domain_left_edge[0]/pf.domain_right_edge[0]+1.0) 
-               * 2.0**(pf.domain_left_edge[1]/pf.domain_right_edge[1]+1.0) 
-               * 2.0**(pf.domain_left_edge[2]/pf.domain_right_edge[2]+1.0))
-
     # compute I-front radius (assuming spherical)
-    sp = pf.h.sphere([0.0, 0.0, 0.0], 1.0)
-    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()*spherical
+    sp = pf.h.sphere([xC, yC, zC], 0.5)
+    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()
     rloc = (3.0/4.0*HIIvolume/pi)**(1.0/3.0)
 
     # get analytical solutions for i-front position and velocity
@@ -214,132 +209,24 @@ for tstep in range(0,te+1):
     rdata[4][tstep] = ranal
     rdata[5][tstep] = vanal
     
-    # generate 2D plots at certain times
-    if (tstep == 1) or (tstep == 5) or (tstep == 10):
-        
-        # set time label
-        tout = repr(tstep).zfill(2)
-        
-        # begin plot collection (center at (xC,yC,0))
-        pc = PlotCollection(pf, [xC,yC,0.0])
-        
-        # xHI slice through z=0
-        p = pc.add_slice("xHI",'z')
-        p.modify["title"]('HI fraction, tstep =' + tout)
 
-        p = pc.add_slice("xHII",'z')
-        p.modify["title"]('HII fraction, tstep =' + tout)
-
-        p = pc.add_slice("logE",'z')
-        p.modify["title"]('radiation density, tstep =' + tout)
-
-        pc.save('tstep' + tout, format=pictype)
-
-        # rename generated files
-        f1 = 'tstep' + tout + '_Slice_z_logE.' + pictype
-        f2 = 'Econtour_' + tout + '.' + pictype
-        rename(f1,f2)
-        f1 = 'tstep' + tout + '_Slice_z_xHI.' + pictype
-        f2 = 'HIcontour_' + tout + '.' + pictype
-        rename(f1,f2)
-        f1 = 'tstep' + tout + '_Slice_z_xHII.' + pictype
-        f2 = 'HIIcontour_' + tout + '.' + pictype
-        rename(f1,f2)
-
-        # generate profile plots by averaging results from multiple rays
-#         rays = np.array( ((1.0,0.0,0.0), (0.0,1.0,0.0), (0.0,0.0,1.0), 
-#                           (-1.0,0.0,0.0), (0.0,-1.0,0.0), (0.0,0.0,-1.0), 
-#                           (1.0,1.0,0.0), (1.0,0.0,1.0), (0.0,1.0,1.0), 
-#                           (-1.0,1.0,0.0), (-1.0,0.0,1.0), (0.0,-1.0,1.0), 
-#                           (1.0,-1.0,0.0), (1.0,0.0,-1.0), (0.0,1.0,-1.0), 
-#                           (-1.0,-1.0,0.0), (-1.0,0.0,-1.0), (0.0,-1.0,-1.0), 
-#                           (1.0,1.0,1.0), (-1.0,1.0,1.0), (1.0,-1.0,1.0), 
-#                           (1.0,1.0,-1.0), (-1.0,-1.0,1.0), (-1.0,1.0,-1.0), 
-#                           (1.0,-1.0,-1.0), (-1.0,-1.0,-1.0)) )
-#         nrays = 26
-        rays = np.array( ((1.0,0.0,0.0), (0.0,1.0,0.0), (0.0,0.0,1.0), 
-                          (1.0,1.0,0.0), (1.0,0.0,1.0), (0.0,1.0,1.0), 
-                          (1.0,1.0,1.0)) )
-        nrays = 7
-        nradii = 200
-        rvals = np.linspace(0.0,1.0*pf["cm"]/rsi,nradii)
-        HIprofile  = np.zeros(rvals.shape, dtype=float)
-        HIIprofile = np.zeros(rvals.shape, dtype=float)
-
-        # generate 1D profiles from ray emanating out from box center to corner
-        for iray in range(0,nrays):
-            rvec = rays[iray,:]
-            rvec = rvec / sqrt(rvec[0]**2 + rvec[1]**2 + rvec[2]**2)
-            r = pf.h.ray([0.0, 0.0, 0.0], rvec)
-            HIprof  = log10(r["xHI"])
-            HIIprof = log10(r["xHII"])
-            Hradii  = r["radius"]/xR
-        
-            # sort results by radius (since that isn't quite working correctly from yt)
-            ptype = [('r', float), ('xHI', float), ('xHII', float)]
-            pdata = np.zeros(Hradii.shape, dtype=ptype);
-            nrad = (Hradii.shape)[0]
-            for irad in range(0,nrad):
-                pdata[irad] = (Hradii[irad], HIprof[irad], HIIprof[irad])
-            pdata = np.sort(pdata, order='r')
-            
-            # interpolate results into output arrays
-            tmp = np.interp(rvals, pdata['r'], pdata['xHI'])
-            HIprofile += tmp
-            tmp = np.interp(rvals, pdata['r'], pdata['xHII'])
-            HIIprofile += tmp
-        HIprofile  /= nrays
-        HIIprofile /= nrays
-        
-        # chemistry profiles
-        figure()
-        plot(rvals,HIprofile,'b-',rvals,HIIprofile,'r--')
-        grid()
-        xlabel('$r/L_{box}$')
-        ylabel('log(xHI), log(xHII)')
-        title('HI, HII Profiles, z = ' + repr(z))
-        legend( ('xHI','xHII'), 'lower right' )
-        axis([ 0.0, 1.2, -7.0, 1.0 ])
-        savefig('profiles_' + tout + '.' + pictype)
-        
-
+    
 # I-front radius/velocity plots vs analytical solutions
-#   scaled I-front velocity
-v_ratio = (rdata[0][2:te+1]-rdata[0][1:te])/(rdata[3][2:te+1]-rdata[3][1:te])/(rsi/ti)
-vanal_ratio = (rdata[5][2:te+1]+rdata[5][1:te])*0.5
-
 #   scaled i-front position
 r_ratio = rdata[0]/rdata[1]
 ranal_ratio = rdata[4]
 
-#   scaled redshift (cell centsteprs)
-z_ratio = (1.0 + rdata[2])/(1.0+zi)
+#   i-front position comparison
+r_err = []
+for it in range(0, te+1):
+    r_err.append( (r_ratio[it]-ranal_ratio[it])/(ranal_ratio[it]+r_ratio[it]+0.1) )
 
-#   scaled redshift2 (cell faces)
-z_ratio2 = (1.0 + rdata[2][2:te+1])/(1.0+zi)
+# compute the error norm
+err_norm = (np.sum(np.multiply(r_err,r_err))/te)**(0.5)
+if (err_norm < tol):
+    print 'Error of ',err_norm,' is below tolerance ',tol
+    print 'PASS'
+else:
+    print 'Error of ',err_norm,' is above tolerance ',tol
+    print 'FAIL'
 
-#   i-front position vs redshift plot
-figure()
-xdata = -log10(z_ratio)
-plot(xdata,r_ratio,'b-',xdata,ranal_ratio,'r--')
-xlabel('$-log[(1+z)/(1+z_i)]$')
-ylabel('$r_I/r_S$')
-title('r_i(t)/r_s(t) vs redshift, q_0 =' + repr(q0))
-legend( ('computed', 'analytical'), loc=4 )
-grid()
-axis([ 0.0, 3.0, 0.0, 1.0 ])
-savefig('radius.' + pictype)
-
-#   i-front velocity vs redshift plot
-figure()
-xdata = -log10(z_ratio2)
-ydata1 = log10(v_ratio)
-ydata2 = log10(vanal_ratio)
-plot(xdata,ydata1,'b-',xdata,ydata2,'r--')
-xlabel('$-log[(1+z)/(1+z_i)]$')
-ylabel('$log[v/(r_{s,i}/t_i)]$')
-title('v_{pec}(t)/(r_{s,i}/t_i) vs redshift, q_0 =' + repr(q0))
-legend( ('computed', 'analytical') )
-grid()
-axis([ 0.0, 3.0, -0.5, 1.0 ])
-savefig('velocity.' + pictype)
