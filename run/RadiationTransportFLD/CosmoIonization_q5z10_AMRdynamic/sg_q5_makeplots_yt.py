@@ -7,7 +7,7 @@ from yt.mods import *
 from os import *
 
 # set the total number of snapshots
-te = 19
+te = 17
 
 # set the graphics output type
 #pictype = 'pdf'
@@ -42,8 +42,9 @@ add_field("logE", take_log=True, function=_logE,
 
 #   Radius from domain center
 def _radius(field, data):
-    return (np.sqrt(data["x"]*data["x"] + data["y"]*data["y"] +
-                    data["z"]*data["z"]))
+    return (np.sqrt((data["x"]-0.5)*(data["x"]-0.5) + 
+                    (data["y"]-0.5)*(data["y"]-0.5) +
+                    (data["z"]-0.5)*(data["z"]-0.5)))
 def _convertradius(data):
     return (data.convert("cm"))
 add_field("radius", take_log=False, function=_radius, 
@@ -193,14 +194,9 @@ for tstep in range(0,te+1):
     yC = 0.5*(pf["DomainLeftEdge"][1] + pf["DomainRightEdge"][1])
     zC = 0.5*(pf["DomainLeftEdge"][2] + pf["DomainRightEdge"][2])
 
-    # determine if simulation was run with source in center or corner
-    spherical = (2.0**(pf.domain_left_edge[0]/pf.domain_right_edge[0]+1.0) 
-               * 2.0**(pf.domain_left_edge[1]/pf.domain_right_edge[1]+1.0) 
-               * 2.0**(pf.domain_left_edge[2]/pf.domain_right_edge[2]+1.0))
-
     # compute I-front radius (assuming spherical)
-    sp = pf.h.sphere([0.0, 0.0, 0.0], 1.0)
-    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()*spherical
+    sp = pf.h.sphere([xC, yC, zC], 0.5)
+    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()
     rloc = (3.0/4.0*HIIvolume/pi)**(1.0/3.0)
 
     # get analytical solutions for i-front position and velocity
@@ -220,8 +216,8 @@ for tstep in range(0,te+1):
         # set time label
         tout = repr(tstep).zfill(2)
         
-        # begin plot collection (center at (xC,yC,0))
-        pc = PlotCollection(pf, [xC,yC,0.0])
+        # begin plot collection (center at (xC,yC,zC))
+        pc = PlotCollection(pf, [xC,yC,zC])
         
         # xHI slice through z=0
         p = pc.add_slice("xHI",'z')
@@ -257,23 +253,27 @@ for tstep in range(0,te+1):
 #                           (1.0,1.0,-1.0), (-1.0,-1.0,1.0), (-1.0,1.0,-1.0), 
 #                           (1.0,-1.0,-1.0), (-1.0,-1.0,-1.0)) )
 #         nrays = 26
-        rays = np.array( ((1.0,0.0,0.0), (0.0,1.0,0.0), (0.0,0.0,1.0), 
-                          (1.0,1.0,0.0), (1.0,0.0,1.0), (0.0,1.0,1.0), 
-                          (1.0,1.0,1.0)) )
-        nrays = 7
+        rays = np.array( ((0.0,0.0,0.0), (1.0,0.0,0.0), (0.0,1.0,0.0), 
+                          (0.0,0.0,1.0), (1.0,1.0,0.0), (1.0,0.0,1.0), 
+                          (0.0,1.0,1.0), (1.0,1.0,1.0), (1.0,0.5,0.5), 
+                          (0.5,1.0,0.5), (0.5,0.5,1.0), (1.0,1.0,0.5), 
+                          (1.0,0.5,1.0), (0.5,1.0,1.0), (0.0,0.5,0.5), 
+                          (0.0,0.5,0.5), (0.5,0.0,0.5), (0.5,0.5,0.0), 
+                          (0.0,0.0,0.5), (0.0,0.5,0.0), (0.5,0.0,0.0), 
+                          (0.0,0.5,0.5) ) )
+        nrays = 22
         nradii = 200
         rvals = np.linspace(0.0,1.0*pf["cm"]/rsi,nradii)
         HIprofile  = np.zeros(rvals.shape, dtype=float)
         HIIprofile = np.zeros(rvals.shape, dtype=float)
 
-        # generate 1D profiles from ray emanating out from box center to corner
+        # generate 1D profiles from ray, emanating out from box center
         for iray in range(0,nrays):
             rvec = rays[iray,:]
-            rvec = rvec / sqrt(rvec[0]**2 + rvec[1]**2 + rvec[2]**2)
-            r = pf.h.ray([0.0, 0.0, 0.0], rvec)
+            r = pf.h.ray([xC, yC, zC], rvec)
             HIprof  = log10(r["xHI"])
             HIIprof = log10(r["xHII"])
-            Hradii  = r["radius"]/xR
+            Hradii  = abs(r["radius"]-0.5)/(xR/2.0)
         
             # sort results by radius (since that isn't quite working correctly from yt)
             ptype = [('r', float), ('xHI', float), ('xHII', float)]
@@ -303,11 +303,7 @@ for tstep in range(0,te+1):
         savefig('profiles_' + tout + '.' + pictype)
         
 
-# I-front radius/velocity plots vs analytical solutions
-#   scaled I-front velocity
-v_ratio = (rdata[0][2:te+1]-rdata[0][1:te])/(rdata[3][2:te+1]-rdata[3][1:te])/(rsi/ti)
-vanal_ratio = (rdata[5][2:te+1]+rdata[5][1:te])*0.5
-
+# I-front radius plot vs analytical solution
 #   scaled i-front position
 r_ratio = rdata[0]/rdata[1]
 ranal_ratio = rdata[4]
@@ -315,10 +311,7 @@ ranal_ratio = rdata[4]
 #   scaled redshift (cell centsteprs)
 z_ratio = (1.0 + rdata[2])/(1.0+zi)
 
-#   scaled redshift2 (cell faces)
-z_ratio2 = (1.0 + rdata[2][2:te+1])/(1.0+zi)
-
-#   i-front position vs redshift plot
+#   scaled redshift2 #   i-front position vs redshift plot
 figure()
 xdata = -log10(z_ratio)
 plot(xdata,r_ratio,'b-',xdata,ranal_ratio,'r--')
@@ -330,16 +323,4 @@ grid()
 axis([ 0.0, 3.0, 0.0, 1.0 ])
 savefig('radius.' + pictype)
 
-#   i-front velocity vs redshift plot
-figure()
-xdata = -log10(z_ratio2)
-ydata1 = log10(v_ratio)
-ydata2 = log10(vanal_ratio)
-plot(xdata,ydata1,'b-',xdata,ydata2,'r--')
-xlabel('$-log[(1+z)/(1+z_i)]$')
-ylabel('$log[v/(r_{s,i}/t_i)]$')
-title('v_{pec}(t)/(r_{s,i}/t_i) vs redshift, q_0 =' + repr(q0))
-legend( ('computed', 'analytical') )
-grid()
-axis([ 0.0, 3.0, -0.5, 1.0 ])
-savefig('velocity.' + pictype)
+#   i-front velocity 

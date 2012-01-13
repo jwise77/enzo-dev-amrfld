@@ -303,11 +303,7 @@ for tstep in range(0,te+1):
         savefig('profiles_' + tout + '.' + pictype)
         
 
-# I-front radius/velocity plots vs analytical solutions
-#   scaled I-front velocity
-v_ratio = (rdata[0][2:te+1]-rdata[0][1:te])/(rdata[3][2:te+1]-rdata[3][1:te])/(rsi/ti)
-vanal_ratio = (rdata[5][2:te+1]+rdata[5][1:te])*0.5
-
+# I-front radius plot vs analytical solution
 #   scaled i-front position
 r_ratio = rdata[0]/rdata[1]
 ranal_ratio = rdata[4]
@@ -315,10 +311,7 @@ ranal_ratio = rdata[4]
 #   scaled redshift (cell centsteprs)
 z_ratio = (1.0 + rdata[2])/(1.0+zi)
 
-#   scaled redshift2 (cell faces)
-z_ratio2 = (1.0 + rdata[2][2:te+1])/(1.0+zi)
-
-#   i-front position vs redshift plot
+#   scaled redshift2 #   i-front position vs redshift plot
 figure()
 xdata = -log10(z_ratio)
 plot(xdata,r_ratio,'b-',xdata,ranal_ratio,'r--')
@@ -330,16 +323,4 @@ grid()
 axis([ 0.0, 3.0, 0.0, 1.0 ])
 savefig('radius.' + pictype)
 
-#   i-front velocity vs redshift plot
-figure()
-xdata = -log10(z_ratio2)
-ydata1 = log10(v_ratio)
-ydata2 = log10(vanal_ratio)
-plot(xdata,ydata1,'b-',xdata,ydata2,'r--')
-xlabel('$-log[(1+z)/(1+z_i)]$')
-ylabel('$log[v/(r_{s,i}/t_i)]$')
-title('v_{pec}(t)/(r_{s,i}/t_i) vs redshift, q_0 =' + repr(q0))
-legend( ('computed', 'analytical') )
-grid()
-axis([ 0.0, 3.0, -0.5, 1.0 ])
-savefig('velocity.' + pictype)
+#   i-front velocity 

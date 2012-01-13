@@ -1,1 +1,0 @@
-../sg_q5z10_makeplots.py
