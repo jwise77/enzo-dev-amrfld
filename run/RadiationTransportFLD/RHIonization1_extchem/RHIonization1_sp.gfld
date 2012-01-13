@@ -26,7 +26,7 @@ RadHydroModel           = 4          // isothermal, case-B HII recomb coeff
 RadHydroMaxDt           = 1.0e-2
 RadHydroMinDt           = 1.0e-8
 RadHydroInitDt          = 1.0e-8
-RadHydroDtRadFac        = 0.001      // 0.1% desired change/step
+RadHydroDtRadFac        = 0.0001     // 0.01% desired change/step
 RadHydroMGPreRelax      = 2          // MG pre-relaxation sweeps
 RadHydroMGPostRelax     = 2          // MG post-relaxation sweeps
 
