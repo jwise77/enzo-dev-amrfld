@@ -7,17 +7,17 @@ from yt.mods import *
 from os import *
 
 # set the total number of snapshots
-te = 19
+te = 17
 
 # set the solution tolerance
-tol = 0.01
+tol = 0.03
 
 # set some constants
 q0 = 0.5               # deceleration parameter
 Nph = 5.0e48           # ionization source strength [photons/sec]
 alpha2 = 2.52e-13      # recombination rate coefficient
 mp = 1.67262171e-24    # proton mass [g]
-Myr = 3.15576e13       # duration of a Megayear [sec]
+
 
 ##########
 # Define some derived fields
@@ -41,8 +41,9 @@ add_field("logE", take_log=True, function=_logE,
 
 #   Radius from domain center
 def _radius(field, data):
-    return (np.sqrt(data["x"]*data["x"] + data["y"]*data["y"] +
-                    data["z"]*data["z"]))
+    return (np.sqrt((data["x"]-0.5)*(data["x"]-0.5) + 
+                    (data["y"]-0.5)*(data["y"]-0.5) +
+                    (data["z"]-0.5)*(data["z"]-0.5)))
 def _convertradius(data):
     return (data.convert("cm"))
 add_field("radius", take_log=False, function=_radius, 
@@ -192,14 +193,9 @@ for tstep in range(0,te+1):
     yC = 0.5*(pf["DomainLeftEdge"][1] + pf["DomainRightEdge"][1])
     zC = 0.5*(pf["DomainLeftEdge"][2] + pf["DomainRightEdge"][2])
 
-    # determine if simulation was run with source in center or corner
-    spherical = (2.0**(pf.domain_left_edge[0]/pf.domain_right_edge[0]+1.0) 
-               * 2.0**(pf.domain_left_edge[1]/pf.domain_right_edge[1]+1.0) 
-               * 2.0**(pf.domain_left_edge[2]/pf.domain_right_edge[2]+1.0))
-
     # compute I-front radius (assuming spherical)
-    sp = pf.h.sphere([0.0, 0.0, 0.0], 1.0)
-    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()*spherical
+    sp = pf.h.sphere([xC, yC, zC], 0.5)
+    HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()
     rloc = (3.0/4.0*HIIvolume/pi)**(1.0/3.0)
 
     # get analytical solutions for i-front position and velocity

@@ -107,13 +107,13 @@ included in the repository in the directories:
 3. run/RadiationTransportFLD/RHIonization2_AMRstatic
 4. run/RadiationTransportFLD/RHIonization2_AMRdynamic
 5. run/RadiationTransportFLD/CosmoIonization_q05z4_AMRdynamic
+6. run/RadiationTransportFLD/CosmoIonization_q5z4_AMRdynamic
 
-6. run/RadiationTransportFLD/SG_q5z4_amrfld
 7. run/RadiationTransportFLD/SG_q05z10_amrfld
 8. run/RadiationTransportFLD/SG_q5z10_amrfld
 
-Of these, 1 and 3 use a static hierarchy, while 2, 4 and 5 use dynamic
-AMR.
+Of these, 1 and 3 use a static hierarchy, while 2, 4, 5 and 6 use
+dynamic AMR.
 
 
 
@@ -225,6 +225,37 @@ will be used:
 
 * RadHydroMGPostRelax -- number of post-smoothing steps at each level
   of the V- or W- cycle, for multigrid solvers (default 1)
+
+
+
+
+
+New refinement criteria:
+------------------------
+
+In testing the AMRFLD framework in a dynamic AMR setting, I've added
+three new refinement criteria:
+
+* Grid_FlagCellsToBeRefinedByRadiationGradient (Flagging method 19)
+  This approach computes the magnitude of the gradient of the
+  radiation energy density (in normalized units).  This value is
+  compared against a threshold contained in the first entry in the
+  MinimumSlopeForRefinement array.  In initial tests, a value of 1.3
+  here did a reasonable job.
+
+* Grid_FlagCellsToBeRefinedByOpacity (Flagging method 20)
+  This approach computes the magnitude of the gradient of the opacity
+  (again in normalized units). This value is compared against a
+  threshold contained in the second entry in the
+  MinimumSlopeForRefinement array.  In initial tests, a value of 1.0
+  did a reasonable job. 
+
+* Grid_FlagCellsToBeRefinedByIonizedFraction (Flagging method 21)
+  This approach computes the magnitude of the gradient of the ionized
+  fraction (normalized units).  This value is compared against a
+  threshold contained in the third entry in the MinimumSlopeForRefinement
+  array, and initial testing gave 1.25 as a reasonable value for the
+  threshold. 
 
 
 
