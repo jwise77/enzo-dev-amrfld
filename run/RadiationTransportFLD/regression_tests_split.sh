@@ -1,5 +1,4 @@
-#!/bin/sh
-source /usr/local/yt/bin/activate
+#!/bin/bash
 
 echo "    "
 echo "Date:"
@@ -10,12 +9,11 @@ echo "    "
 echo "Running Turner & Stone 1 Split Test"
 cd TurnerStoneEquil1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+./enzo -d *.enzo 1> output.txt 2> error.txt
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
-python ./*makeplots.py &> /dev/null
-python ./*check.py &> PASS_FAIL.txt
+python ./*makeplots.py 1> /dev/null 2> /dev/null
+python ./*check.py 1> PASS_FAIL.txt 2> /dev/null
 echo "error checking result:"
 cat PASS_FAIL.txt
 cd ../
@@ -27,7 +25,6 @@ cd TurnerStoneEquil2_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots.py &> /dev/null
 python ./*check.py &> PASS_FAIL.txt
@@ -42,7 +39,6 @@ cd RadiationStreamX0_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots.py &> /dev/null
 python ./*check.py &> PASS_FAIL.txt
@@ -58,7 +54,6 @@ cd RadiationStream1D_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots.py &> /dev/null
 python ./*check.py &> PASS_FAIL.txt
@@ -73,7 +68,6 @@ cd RadiatingShockLab_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots.py &> /dev/null
 python ./*check.py &> PASS_FAIL.txt
@@ -88,7 +82,6 @@ cd RadiatingShockLab1D_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots.py &> /dev/null
 python ./*check.py &> PASS_FAIL.txt
@@ -97,13 +90,17 @@ cat PASS_FAIL.txt
 cd ../
 echo "    "
 
+
+# now set up yt for remaining tests
+source /usr/local/yt/bin/activate
+
+
 echo "    "
-echo "Running Iliev et al. Split Test 1"
+echo "Running Ionization Split Test 1"
 cd RHIonization1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt
@@ -113,12 +110,11 @@ cd ../
 echo "    "
 
 echo "    "
-echo "Running Iliev et al. Split Test 2"
+echo "Running Ionization Split Test 2"
 cd RHIonization2_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt
@@ -128,12 +124,11 @@ cd ../
 echo "    "
 
 echo "    "
-echo "Running Shapiro & Giroux q0=0.5 z0=4 Split Test"
+echo "Running Cosmological Ionization q0=0.5 z0=4 Split Test"
 cd CosmoIonization_q5z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt
@@ -143,12 +138,11 @@ cd ../
 echo "    "
 
 echo "    "
-echo "Running Shapiro & Giroux q0=0.05 z0=4 Split Test"
+echo "Running Cosmological Ionization q0=0.05 z0=4 Split Test"
 cd CosmoIonization_q05z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt
@@ -158,12 +152,11 @@ cd ../
 echo "    "
 
 echo "    "
-echo "Running Shapiro & Giroux q0=0.5 z0=10 Split Test"
+echo "Running Cosmological Ionization q0=0.5 z0=10 Split Test"
 cd CosmoIonization_q5z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt
@@ -173,12 +166,11 @@ cd ../
 echo "    "
 
 echo "    "
-echo "Running Shapiro & Giroux q0=0.05 z0=10 Split Test"
+echo "Running Cosmological Ionization q0=0.05 z0=10 Split Test"
 cd CosmoIonization_q05z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
 mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
-grep StopCycle output.txt
 grep "Successful run" output.txt
 python ./*makeplots_yt.py &> /dev/null
 python ./*check_yt.py &> PASS_FAIL.txt

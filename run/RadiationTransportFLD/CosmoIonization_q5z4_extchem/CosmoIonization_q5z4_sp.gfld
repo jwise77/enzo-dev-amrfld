@@ -28,7 +28,7 @@ RadiationScaling        = 1.0e-1
 RadHydroMaxDt           = 1.0e-2
 RadHydroMinDt           = 1.0e-6
 RadHydroInitDt          = 1.0e-6
-RadHydroDtRadFac        = 0.0001    // 0.01% desired change/step
+RadHydroDtRadFac        = 0.00005    // 0.005% desired change/step
 RadHydroMGPreRelax      = 3          // MG pre-relaxation sweeps
 RadHydroMGPostRelax     = 3          // MG post-relaxation sweeps
 

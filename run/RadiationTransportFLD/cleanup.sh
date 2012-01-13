@@ -11,8 +11,10 @@ echo "Cleaning up regression test results:"
 \rm -rf */perfdata*
 \rm -rf */RunFinished
 \rm -rf */output.txt
+\rm -rf */error.txt
 \rm -rf */*.png
 \rm -rf */enzo
 \rm -rf */PASS_FAIL.txt
+\rm -rf */Enzo_Build*
 echo "Finished!!"
 echo "    "
