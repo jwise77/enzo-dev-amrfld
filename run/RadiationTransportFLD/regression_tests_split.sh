@@ -1,5 +1,5 @@
 #!/bin/sh
-source /usr/local/yt_dev/bin/activate
+source /usr/local/yt/bin/activate
 
 echo "    "
 echo "Date:"
@@ -51,35 +51,6 @@ cat PASS_FAIL.txt
 cd ../
 echo "    "
 
-# echo "    "
-# echo "Running Radiation Stream Y1 Split Test"
-# cd RadiationStreamY1_sp
-# ln -fs ../../../src/enzo/enzo.exe enzo
-# ./enzo -d *.enzo &> output.txt 
-# grep Wallclock output.txt
-# grep StopCycle output.txt
-# grep "Successful run" output.txt
-# python ./*makeplots.py &> /dev/null
-# python ./*check.py &> PASS_FAIL.txt
-# echo "error checking result:"
-# cat PASS_FAIL.txt
-# cd ../
-# echo "    "
-
-# echo "    "
-# echo "Running Radiation Stream Z0 Split Test"
-# cd RadiationStreamZ0_sp
-# ln -fs ../../../src/enzo/enzo.exe enzo
-# ./enzo -d *.enzo &> output.txt 
-# grep Wallclock output.txt
-# grep StopCycle output.txt
-# grep "Successful run" output.txt
-# python ./*makeplots.py &> /dev/null
-# python ./*check.py &> PASS_FAIL.txt
-# echo "error checking result:"
-# cat PASS_FAIL.txt
-# cd ../
-# echo "    "
 
 echo "    "
 echo "Running Radiation Stream 1D Split Test"
@@ -130,7 +101,7 @@ echo "    "
 echo "Running Iliev et al. Split Test 1"
 cd RHIonization1_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -145,7 +116,7 @@ echo "    "
 echo "Running Iliev et al. Split Test 2"
 cd RHIonization2_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -160,7 +131,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=4 Split Test"
 cd CosmoIonization_q5z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -175,7 +146,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=4 Split Test"
 cd CosmoIonization_q05z4_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -190,7 +161,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=10 Split Test"
 cd CosmoIonization_q5z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -205,7 +176,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=10 Split Test"
 cd CosmoIonization_q05z10_sp
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt

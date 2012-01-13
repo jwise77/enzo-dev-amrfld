@@ -1,5 +1,5 @@
 #!/bin/sh
-source /usr/local/yt_dev/bin/activate
+source /usr/local/yt/bin/activate
 
 echo "    "
 echo "Date:"
@@ -10,7 +10,7 @@ echo "    "
 echo "Running Iliev et al. extchem Test 1"
 cd RHIonization1_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -25,7 +25,7 @@ echo "    "
 echo "Running Iliev et al. extchem Test 2"
 cd RHIonization2_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -40,7 +40,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=4 extchem Test"
 cd CosmoIonization_q5z4_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -55,7 +55,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=4 extchem Test"
 cd CosmoIonization_q05z4_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -70,7 +70,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.5 z0=10 extchem Test"
 cd CosmoIonization_q5z10_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
@@ -85,7 +85,7 @@ echo "    "
 echo "Running Shapiro & Giroux q0=0.05 z0=10 extchem Test"
 cd CosmoIonization_q05z10_extchem
 ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
 grep Wallclock output.txt
 grep StopCycle output.txt
 grep "Successful run" output.txt
