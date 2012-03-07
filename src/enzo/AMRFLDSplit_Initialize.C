@@ -76,11 +76,11 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   if (debug)  printf("Entering AMRFLDSplit::Initialize routine\n");
 
   // find root grid corresponding to this process from the Hierarcy
-  HierarchyEntry *ThisGrid = &TopGrid;
+  HierarchyEntry *RootGrid = &TopGrid;
   int i, dim, face, foundgrid=0;
   for (i=0; i<=MAX_NUMBER_OF_SUBGRIDS; i++) {
-    if (MyProcessorNumber != ThisGrid->GridData->ReturnProcessorNumber()) 
-      ThisGrid = ThisGrid->NextGridThisLevel;
+    if (MyProcessorNumber != RootGrid->GridData->ReturnProcessorNumber()) 
+      RootGrid = RootGrid->NextGridThisLevel;
     else {foundgrid=1; break;}
   }
   if (foundgrid == 0) {
@@ -128,14 +128,15 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   // get processor layout from Grid
   int layout[3];     // number of procs in each dim (1-based)
   for (dim=0; dim<rank; dim++) 
-    layout[dim] = ThisGrid->GridData->GetProcessorLayout(dim);
+    layout[dim] = RootGrid->GridData->GetProcessorLayout(dim);
   
   // get processor location in MPI grid
   int location[3];   // location of this proc in each dim (0-based)
   for (dim=0; dim<rank; dim++) 
-    location[dim] = ThisGrid->GridData->GetProcessorLocation(dim);
+    location[dim] = RootGrid->GridData->GetProcessorLocation(dim);
 
   // set default module parameters
+  int WeakScaling = 0;  // weak scaling test, source in center of each root-grid tile
   Nchem  = 1;           // hydrogen only
   int Model = 1;        // standard non-LTE, non-isothermal model
   ESpectrum = 1;        // T=10^5 blackbody spectrum
@@ -219,6 +220,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "EtaRadius = %"FSYM, &EtaRadius);
 	ret += sscanf(line, "EtaCenter = %"FSYM" %"FSYM" %"FSYM, 
 		      &(EtaCenter[0]), &(EtaCenter[1]), &(EtaCenter[2]));
+
+	ret += sscanf(line, "WeakScaling = %"ISYM, &WeakScaling);
 	
       }  // end loop over file lines
     }  // end successful file open
@@ -235,8 +238,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   //   LocDims holds the dimensions of the local domain, 
   //   active cells only (no ghost or boundary cells)
   for (dim=0; dim<rank; dim++)
-    LocDims[dim] = ThisGrid->GridData->GetGridEndIndex(dim)
-      - ThisGrid->GridData->GetGridStartIndex(dim) + 1;
+    LocDims[dim] = RootGrid->GridData->GetGridEndIndex(dim)
+      - RootGrid->GridData->GetGridStartIndex(dim) + 1;
 
 
   //// Check input parameters ////
@@ -423,15 +426,23 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   dt = initdt*maxsubcycles;
 
   // set initial time step into TopGrid
-  ThisGrid->GridData->SetMaxRadiationDt(dt);
+  RootGrid->GridData->SetMaxRadiationDt(dt);
   
-  // set up vector container for previous time step (empty data)
+  // store number of ghost zones in each direction
   int xghosts = DEFAULT_GHOST_ZONES, yghosts=0, zghosts=0;
   if (rank > 1) {
     yghosts = DEFAULT_GHOST_ZONES;
     if (rank > 2) {
       zghosts = DEFAULT_GHOST_ZONES;
     }
+  }
+
+  // if this is a weak scaling test, overwrite EtaCenter and EtaRadius on each process
+  if (WeakScaling) {
+    for (dim=0; dim<3; dim++)
+      EtaCenter[dim] = 0.5*( RootGrid->GridData->GetGridLeftEdge(dim) 
+			   + RootGrid->GridData->GetGridRightEdge(dim) );
+    EtaRadius = 1.0;
   }
 
   // compute Radiation Energy spectrum integrals
@@ -912,6 +923,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
     else {
       fprintf(outfptr, "RadHydroESpectrum = %"ISYM"\n", ESpectrum);
+      fprintf(outfptr, "RadHydroModel = %"ISYM"\n", Model);
       fprintf(outfptr, "RadHydroChemistry = %"ISYM"\n", Nchem);
       fprintf(outfptr, "RadHydroMaxDt = %g\n", maxdt);
       fprintf(outfptr, "RadHydroMinDt = %g\n", mindt);
@@ -937,10 +949,13 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       fprintf(outfptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
       fprintf(outfptr, "RadHydroMGPreRelax = %i\n", sol_npre);    
       fprintf(outfptr, "RadHydroMGPostRelax = %i\n", sol_npost);    
-      fprintf(outfptr, "FSRadiationNGammaDot = %g\n", NGammaDot);
-      fprintf(outfptr, "FSRadiationEtaRadius = %g\n", EtaRadius);
-      fprintf(outfptr, "FSRadiationEtaCenter = %g  %g  %g\n", 
+      fprintf(outfptr, "NGammaDot = %g\n", NGammaDot);
+      fprintf(outfptr, "EtaRadius = %g\n", EtaRadius);
+      fprintf(outfptr, "EtaCenter = %g  %g  %g\n", 
 	      EtaCenter[0], EtaCenter[1], EtaCenter[2]);
+
+      fprintf(outfptr, "WeakScaling = %i\n", WeakScaling);    
+
       // close parameter file
       fclose(outfptr);
     }
