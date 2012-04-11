@@ -41,7 +41,6 @@ int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
 			  ExternalBoundary *Exterior, LevelHierarchyEntry * Level);
 
 
-
 // This routine evolves the radiation field in an operator-split fashion, 
 // subcycling the physics in the following manner: 
 //     dt_rad <= dt_hydro
@@ -135,7 +134,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   // initialize variables that we'll use throughout the time subcycling
   float stime2, ftime2;   // radiation, chemistry timers
   float thisdt;           // chemistry time-stepping variables
-  Eflt64 Echange;         // temporary used for computing time step
+  Eflt64 Eerror;         // temporary used for computing time step
   int radstep, radstop;   // subcycle iterators
 
 
@@ -186,7 +185,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	       radstep,dt,tnew,dthydro,end_time);
       
       // take a radiation step
-      recompute_step = this->RadStep(LevelArray, level, hierarchy, &Echange);
+      recompute_step = this->RadStep(LevelArray, level, hierarchy, &Eerror);
 
       // if the radiation step was unsuccessful, update dtrad and try again
       if (recompute_step)  dtrad = max(dtrad/10, mindt);
@@ -204,7 +203,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
     
     // update the radiation time step size for next time step
     //   (limit growth at each cycle)
-    float dt_est = this->ComputeTimeStep(Echange);
+    float dt_est = this->ComputeTimeStep(Eerror);
     dtrad = min(dt_est, 1.1*dtrad);
 
 
@@ -308,7 +307,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 // likely much too large), it will return a flag to the calling routine to 
 // have the step recomputed with a smaller time step size.
 int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level, 
-			 AMRsolve_Hierarchy *hierarchy, Eflt64 *Echange)
+			 AMRsolve_Hierarchy *hierarchy, Eflt64 *Eerror)
 {
 
   // update internal Enzo units for current times
@@ -484,11 +483,9 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
 
   // If this was a successful solve, compute relative change in radiation field 
   // solution over time step
-  if (recompute_step == 0) {
-    Eflt64 pnorm = dtnorm;
-    Eflt64 atol = 0.1;
-    *Echange = amrfldsolve.rdiff_norm(pnorm, atol);
-  }
+  if (recompute_step == 0) 
+    *Eerror = amrfldsolve.rdiff_norm(dtnorm, 0.1);
+  
     
   // rescale dt, told, tnew back to normalized values
   dt   /= TimeUnits;

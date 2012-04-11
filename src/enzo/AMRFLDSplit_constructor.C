@@ -63,6 +63,9 @@ AMRFLDSplit::AMRFLDSplit()
   initdt = 1.0e20;
   maxsubcycles = 1.0;
   dtfac = 1.0e20;
+  dt_control = -1;
+  Err_cur = 1.0;
+  Err_new = 1.0;
   dtnorm = 0.0;
   tnew = -1.0;
   told = -1.0;
