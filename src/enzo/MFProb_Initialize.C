@@ -620,9 +620,12 @@ int MFProb::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   HYPRE_SStructGridSetExtents(grid, 0, ilower, iupper);
 
   //       set grid variables
-  hypre_SStructVariable_enum vartypes[3] = {HYPRE_SSTRUCT_VARIABLE_CELL,
-					    HYPRE_SSTRUCT_VARIABLE_CELL,
-					    HYPRE_SSTRUCT_VARIABLE_CELL};
+  // hypre_SStructVariable_enum vartypes[3] = {HYPRE_SSTRUCT_VARIABLE_CELL,
+  // 					    HYPRE_SSTRUCT_VARIABLE_CELL,
+  // 					    HYPRE_SSTRUCT_VARIABLE_CELL};
+  HYPRE_SStructVariable vartypes[3] = {HYPRE_SSTRUCT_VARIABLE_CELL,
+				       HYPRE_SSTRUCT_VARIABLE_CELL,
+				       HYPRE_SSTRUCT_VARIABLE_CELL};
   HYPRE_SStructGridSetVariables(grid, 0, 3, vartypes);
 
   //       set grid periodicity
