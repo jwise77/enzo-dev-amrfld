@@ -89,6 +89,13 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float mindt;         // minimum radiation time step size
   float maxsubcycles;  // max subcycle factor for rad time step within hydro step
   float dtfac;         // desired relative change in radiation per step
+  int dt_control;      // time step controller algorithm:
+                       //      0 -> I controller
+                       //      1 -> PI controller
+                       //      2 -> PID controller
+                       //   else -> original time controller
+  float Err_cur;       // storage for error estimates in adaptive time stepper
+  float Err_new;
   float dtnorm;        // norm choice for computing relative change (default=2.0):
                        //    0 -> max pointwise norm
                        //   >0 -> rms p-norm over entire domain
@@ -189,7 +196,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   int SetupBoundary(int Dimension, int Face, int BdryConst, float *BdryData);
 
   // Return the maximum rad-hydro time step size
-  float ComputeTimeStep(Eflt64 Echange);
+  float ComputeTimeStep(Eflt64 CurError);
 
 };
 

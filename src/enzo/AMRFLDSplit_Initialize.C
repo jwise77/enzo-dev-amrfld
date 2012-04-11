@@ -142,6 +142,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   ESpectrum = 1;        // T=10^5 blackbody spectrum
   theta  = 1.0;         // backwards euler implicit time discret.
   maxsubcycles = 1.0;   // step ratio between radiation and hydro
+  dt_control = 2;       // PID controller
   dtnorm = 2.0;         // use 2-norm for time step estimation
   ErScale = 1.0;        // no radiation equation scaling
   for (dim=0; dim<rank; dim++)     // set default radiation boundaries to 
@@ -195,6 +196,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "RadHydroMaxDt = %"FSYM, &maxdt);
 	ret += sscanf(line, "RadHydroMinDt = %"FSYM, &mindt);
 	ret += sscanf(line, "RadHydroInitDt = %"FSYM, &initdt);
+	ret += sscanf(line, "RadHydroDtControl = %"ISYM, &dt_control);
 	ret += sscanf(line, "RadHydroMaxSubcycles = %"FSYM, &maxsubcycles);
 	ret += sscanf(line, "RadHydroDtNorm = %"FSYM, &dtnorm);
 	ret += sscanf(line, "RadHydroDtRadFac = %"FSYM, &dtfac);
@@ -295,6 +297,21 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     maxdt = huge_number;  // default is no limit
   }
 
+  // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
+  if ((theta < 0.0) || (theta > 1.0)) {
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal theta = %g\n",theta);
+    fprintf(stderr,"   re-setting theta to 1.0 (Backwards Euler)\n");
+    theta = 1.0;  // default is backwards Euler
+  }
+
+  // dt_control gives the time step controller algorithm
+  if ((dt_control < -1) || (dt_control > 2)) {
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal DtControl = %"ISYM"\n",
+	    dt_control);
+    fprintf(stderr,"   re-setting to -1 (original controller)\n");
+    dt_control = -1;
+  }
+  
   // mindt gives the minimum radiation time step size
   if (mindt < 0.0) {
     fprintf(stderr,"AMRFLDSplit Initialize: illegal MinDt = %g\n",mindt);
@@ -341,9 +358,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     fprintf(stderr,"   re-setting to 1.0\n");
     ErScale = 1.0;  // default is no scaling
   }
-  if (debug)
-    printf("AMRFLDSplit::Initialize p%"ISYM": ErScale = %g\n",
-	   MyProcessorNumber,ErScale);
+  if (debug)  printf("AMRFLDSplit::Initialize: ErScale = %g\n",ErScale);
 
   // dtfac gives the desired percent change in values per step
   if (dtfac <= 0.0) {
@@ -357,13 +372,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     fprintf(stderr,"AMRFLDSplit Initialize: illegal DtNorm = %g\n",dtnorm);
     fprintf(stderr,"   re-setting to 2.0 (2-norm)\n");
     dtnorm = 2.0;  // default is 2-norm
-  }
-
-  // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
-  if ((theta < 0.0) || (theta > 1.0)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal theta = %g\n",theta);
-    fprintf(stderr,"   re-setting theta to 1.0 (Backwards Euler)\n");
-    theta = 1.0;  // default is backwards Euler
   }
 
   //   check linear solver parameters
