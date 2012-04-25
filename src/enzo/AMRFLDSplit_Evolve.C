@@ -390,8 +390,9 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   // set up and solve radiation equation via amrsolve
 
   // Initialize the amrsolve FLD solver
-  AMRsolve_Hypre_FLD amrfldsolve(*hierarchy, *amrsolve_params);
-  amrfldsolve.init_hierarchy(*pmpi);
+  int use_HG_prec = 0;     // enable HG preconditioner
+  AMRsolve_Hypre_FLD amrfldsolve(*hierarchy, *amrsolve_params, use_HG_prec);
+  amrfldsolve.init_hierarchy();
   // if (debug)   hierarchy->print();
   amrfldsolve.init_stencil();
   amrfldsolve.init_graph();
@@ -409,6 +410,14 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
 			    LenUnits, LenUnits0, ErUnits, ErUnits0, BdryType);
 
   if (debug)  printf(" ----------------------------------------------------------------------\n");
+
+
+  /////////  AMRsolve_Hypre_FLD testing routine ////////
+  // amrfldsolve.tester();
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // ENZO_FAIL("Stopping run (testing)");
+  //////////////////////////////////////////////////////
+
 
   //    solve amrfldsolve system
   amrfldsolve.solve();
