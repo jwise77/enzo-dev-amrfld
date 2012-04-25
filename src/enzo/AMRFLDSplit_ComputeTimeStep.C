@@ -61,16 +61,18 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
 
       float k1 = -1.0/den;
       dt_est = safety * dt * pow(Err_new,k1);
-      printf(" ComputeTimeStep (I): Err = %g, dt_est = %g (%.1fx change)\n", 
-	     Err_new, dt_est, dt_est/dt);
+      if (debug)
+	printf(" ComputeTimeStep (I): Err = %g, dt_est = %g (%.1fx change)\n", 
+	       Err_new, dt_est, dt_est/dt);
 
     } else if (dt_control == 1) {
 
       float k1 = -0.7/den;
       float k2 =  0.4/den;
       dt_est = safety * dt * pow(Err_new,k1) * pow(Err_cur,k2);
-      printf(" ComputeTimeStep (PI): Errs = %g %g, dt_est = %g (%.1fx change)\n", 
-	     Err_new, Err_cur, dt_est, dt_est/dt);
+      if (debug)
+	printf(" ComputeTimeStep (PI): Errs = %g %g, dt_est = %g (%.1fx change)\n", 
+	       Err_new, Err_cur, dt_est, dt_est/dt);
 
     } else if (dt_control == 2) {
 
@@ -78,14 +80,16 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
       float k2 =  0.34/den;
       float k3 = -0.1/den;
       dt_est = safety * dt * pow(Err_new,k1) * pow(Err_cur,k2) * pow(Err_old,k3);
-      printf(" ComputeTimeStep (PID): Errs = %g %g %g, dt_est = %g (%.1fx change)\n", 
-	     Err_new, Err_cur, Err_old, dt_est, dt_est/dt);
+      if (debug)
+	printf(" ComputeTimeStep (PID): Errs = %g %g %g, dt_est = %g (%.1fx change)\n", 
+	       Err_new, Err_cur, Err_old, dt_est, dt_est/dt);
 
     } else {
 
       dt_est = safety * dt / Err_new;
-      printf(" ComputeTimeStep: Err = %g, dt_est = %g (%.1fx change)\n", 
-	     Err_new, dt_est, dt_est/dt);
+      if (debug)
+	printf(" ComputeTimeStep: Err = %g, dt_est = %g (%.1fx change)\n", 
+	       Err_new, dt_est, dt_est/dt);
 
     }
 
