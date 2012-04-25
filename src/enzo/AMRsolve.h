@@ -23,6 +23,7 @@
 #include "AMRsolve_grid.h"
 #include "AMRsolve_level.h"
 #include "AMRsolve_hierarchy.h"
+#include "AMRsolve_HG_prec.h"
 #include "AMRsolve_hypre_grav.h"
 #include "AMRsolve_hypre_fld.h"
 
