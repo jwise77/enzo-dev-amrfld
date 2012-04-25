@@ -42,6 +42,7 @@ public:
   bool is_root() throw() {return ip_ == 0;};
   int ip() throw() {return ip_;};
   int np() throw() {return np_;};
+  MPI_Comm comm() throw() {return comm_;};
   void barrier() throw() { MPI_Barrier(comm_); };
   void initialize_()
   { MPI_Comm_size(comm_, &np_); MPI_Comm_rank (comm_, &ip_); }
