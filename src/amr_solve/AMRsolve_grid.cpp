@@ -660,6 +660,67 @@ void AMRsolve_Grid::input(int id, int id_parent, int ip, Scalar* xl,
 
 //----------------------------------------------------------------------
 
+bool AMRsolve_Grid::overlap_indices(AMRsolve_Grid* g2, int *g1_ilo, 
+				    int *g1_ihi, int *g2_ilo, 
+				    int *g2_ihi) throw()
+{
+  AMRsolve_Grid& g1 = *this;
+
+  // Determine if any overlap exists
+  bool overlap[3] = {false, false, false};
+  for (int i=0; i<3; i++) {
+    if ((g1.xl_[i] >= g2->xl_[i]-0.5*g2->h(i)) && (g1.xl_[i] <= g2->xu_[i]+0.5*g2->h(i)))
+      overlap[i] = true;
+    if ((g1.xu_[i] >= g2->xl_[i]-0.5*g2->h(i)) && (g1.xu_[i] <= g2->xu_[i]+0.5*g2->h(i)))
+      overlap[i] = true;
+    if ((g2->xl_[i] >= g1.xl_[i]-0.5*g1.h(i)) && (g2->xl_[i] <= g1.xu_[i]+0.5*g1.h(i)))
+      overlap[i] = true;
+    if ((g2->xu_[i] >= g1.xl_[i]-0.5*g1.h(i)) && (g2->xu_[i] <= g1.xu_[i]+0.5*g1.h(i)))
+      overlap[i] = true;
+  }
+  if (!overlap[0] || !overlap[1] || !overlap[2]) {
+    // no overlap, so set outputs to illegal values, and return false
+    for (int i=0; i<3; i++) {
+      g1_ilo[i] = -1;
+      g1_ihi[i] = -1;
+      g1_ilo[i] = -1;
+      g2_ihi[i] = -1;
+      g2_ilo[i] = -1;
+      g2_ihi[i] = -1;
+    }
+    return false;
+  }
+
+  // Determine mesh spacings for both grids
+  Scalar dx1[3];
+  Scalar dx2[3];
+  for (int i=0; i<3; i++) {
+    dx1[i] = (g1.xu_[i] - g1.xl_[i])/g1.n_[i];
+    dx2[i] = (g2->xu_[i] - g2->xl_[i])/g2->n_[i];
+  }
+
+  // Determine floating-point boundaries for overlap region
+  Scalar overlap_lbound[3], overlap_ubound[3];
+  for (int i=0; i<3; i++) {
+    overlap_lbound[i] = MAX(g1.xl_[i],g2->xl_[i]);
+    overlap_ubound[i] = MIN(g1.xu_[i],g2->xu_[i]);
+  }
+
+  // Determine local grid indices for overlap region
+  // (assumes grid boundaries line up perfectly)
+  for (int i=0; i<3; i++) {
+    g1_ilo[i] = (int) ((overlap_lbound[i] - g1.xl_[i])/dx1[i] + 0.5);
+    g1_ihi[i] = (int) ((overlap_ubound[i] - g1.xl_[i])/dx1[i] - 0.5);
+
+    g2_ilo[i] = (int) ((overlap_lbound[i] - g2->xl_[i])/dx2[i] + 0.5);
+    g2_ihi[i] = (int) ((overlap_ubound[i] - g2->xl_[i])/dx2[i] - 0.5);
+  }
+
+  return true;
+}
+
+//----------------------------------------------------------------------
+
 bool AMRsolve_Grid::is_adjacent(AMRsolve_Grid& g2, Scalar period[3]) throw()
 {
   AMRsolve_Grid& g1 = *this;
