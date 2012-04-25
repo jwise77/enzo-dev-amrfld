@@ -735,7 +735,7 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   if (rank > 1) {
     if (BdryType[1][0] == 0) {
       level = 0;
-      Ndir = GlobDims[0];
+      Ndir = GlobDims[1];
       while ( Ndir%2 == 0 ) {
 	level++;
 	Ndir /= 2;
@@ -746,7 +746,7 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   if (rank > 2) {
     if (BdryType[2][0] == 0) {
       level = 0;
-      Ndir = GlobDims[0];
+      Ndir = GlobDims[2];
       while ( Ndir%2 == 0 ) {
 	level++;
 	Ndir /= 2;
