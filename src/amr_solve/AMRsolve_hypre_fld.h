@@ -19,13 +19,22 @@ private:
   HYPRE_SStructMatrix  A_;             // hypre matrix
   HYPRE_SStructVector  B_;             // hypre vector right-hand side
   HYPRE_SStructVector  X_;             // hypre vector solution
+  HYPRE_SStructVector  Y_;             // hypre vector temporary
   HYPRE_SStructSolver  solver_;        // hypre solver
+
+  bool                 use_prec;       // flag whether to setup/use preconditioner (0 -> no)
+  HYPRE_StructGrid     cgrid_;         // hypre coarse grid (structured)
+  HYPRE_StructStencil  cstencil_;      // hypre coarse stencil (structured)
+  HYPRE_StructMatrix   Ac_;            // coarse preconditioning matrix
+  HYPRE_StructVector   Bc_;            // hypre coarse vector right-hand side
+  HYPRE_StructVector   Xc_;            // hypre coarse vector solution
 
   AMRsolve_Parameters *parameters_;    // Pointer to parameters
   AMRsolve_Hierarchy  *hierarchy_;     // Pointer to the hierarchy
 
   double               resid_;         // Solver residual
   int                  iter_;          // Solver iterations
+  int                  citer_;         // Coarse solver iterations
 
   const int            r_factor_;      // Refinement factor
   int                  Nchem_;         // number of chemical species
@@ -49,10 +58,11 @@ private:
 public:
 
   AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy, 
-		     AMRsolve_Parameters& parameters);
+		     AMRsolve_Parameters& parameters,
+		     int precflag);
   ~AMRsolve_Hypre_FLD();
 
-  void init_hierarchy(AMRsolve_Mpi& mpi);
+  void init_hierarchy();
   void init_stencil();
   void init_graph();
   void init_elements(double dt, int Nchem, double theta, double aval, 
@@ -65,6 +75,7 @@ public:
   int  evaluate();
   void update_enzo();
   void abort_dump();
+  void tester();
 
   int    iterations() { return iter_; };
   double residual() { return resid_; };
