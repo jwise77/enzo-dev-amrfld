@@ -425,6 +425,19 @@ class AMRsolve_Grid
   /// Processor owner
   int ip() throw() { return ip_; };
 
+  /// Return the AMRsolve_MPI object for this grid
+  AMRsolve_Mpi* get_mpi() { return &mpi_; };
+
+
+
+  /// Fills the lower and upper global indices of the overlap with grid g2
+  ///   my_ilo, my_ihi -- local indices on my level for overlap region,
+  ///   g2_ilo, g2_ihi -- local indices on g2's level for overlap region,
+  //  Returns true iff there is an overlap with grid g2
+  bool overlap_indices(AMRsolve_Grid* g2, int *my_ilo, int *my_ihi, 
+		       int *g2_ilo, int *g2_ihi) throw();
+
+
   //--------------------------------------------------------------------
   // Query functions
   //--------------------------------------------------------------------
