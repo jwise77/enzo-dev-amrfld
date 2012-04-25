@@ -500,6 +500,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   amrsolve_params->set_parameter("solver_npre",numstr);
   sprintf(numstr, "%i", sol_npost);
   amrsolve_params->set_parameter("solver_npost",numstr);
+
+  // enable preconditioning for BiCGStab and GMRES solvers
+  if (sol_type == 1 || sol_type==3) {
+    amrsolve_params->set_parameter("prec_itmax",  "20");
+    amrsolve_params->set_parameter("prec_restol", "1.0e-6");
+    amrsolve_params->set_parameter("prec_rlxtype","1");
+    amrsolve_params->set_parameter("prec_npre",   "1");
+    amrsolve_params->set_parameter("prec_npost",  "1");
+    amrsolve_params->set_parameter("prec_printl", "0");
+    amrsolve_params->set_parameter("prec_log",    "1");
+  }
  
   if (debug) {
     printf("AMRFLDSplit::Initialize, customized amrsolve parameters:\n");
