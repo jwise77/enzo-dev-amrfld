@@ -61,6 +61,7 @@ OBJS_ALL = \
        AMRsolve_hierarchy.o \
        AMRsolve_hypre_grav.o \
        AMRsolve_hypre_fld.o \
+       AMRsolve_HG_prec.o \
        AMRsolve_level.o \
        AMRsolve_mpi.o \
        AMRsolve_parameters.o \
