@@ -246,7 +246,7 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   if (ierr != 0)  ERROR("could not convert AMRsolve grid u vector into x\n");
 
   // Perform one Jacobi smoothing step on full hierarchy, using temporary vector Y_
-  ierr = Jacobi_smooth_(&A, &x, &b, Y_);
+  ierr = Jacobi_smooth_(A, x, b, *Y_);
   if (ierr != 0)  ERROR("could not perform Jacobi smoother\n");
   
   return ierr;
@@ -269,30 +269,30 @@ HYPRE_Int HG_prec_solve(HYPRE_SStructSolver solver,
 ///                v = v + D^{-1}*(b - A*v).
 /// Arguments: v holds the current guess, b holds the RHS, and y is a 
 ///            temporary.  The vector b is not modified.
-int AMRsolve_HG_prec::Jacobi_smooth_(HYPRE_SStructMatrix *A,
-				     HYPRE_SStructVector *v, 
-				     HYPRE_SStructVector *b,
-				     HYPRE_SStructVector *y)
+int AMRsolve_HG_prec::Jacobi_smooth_(HYPRE_SStructMatrix A,
+				     HYPRE_SStructVector v, 
+				     HYPRE_SStructVector b,
+				     HYPRE_SStructVector y)
 {
   // set output flag to success
   int ierr = 0;
 
   // copy b into y  [y = b]
-  ierr = HYPRE_SStructVectorCopy(*b, *y);
+  ierr = HYPRE_SStructVectorCopy(b, y);
   if (ierr != 0) {
     fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructVectorCopy = %i\n",ierr);
     return ierr;
   }
 
   // perform matrix axpy  [y = b - A*v]
-  ierr = HYPRE_SStructMatrixMatvec(-1.0, *A, *v, 1.0, *y);
+  ierr = HYPRE_SStructMatrixMatvec(-1.0, A, v, 1.0, y);
   if (ierr != 0) {
     fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructMatrixMatvec = %i\n",ierr);
     return ierr;
   }
 
   // gather y
-  ierr = HYPRE_SStructVectorGather(*y);
+  ierr = HYPRE_SStructVectorGather(y);
   if (ierr != 0) {
     fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructVectorGather = %i\n",ierr);
     return ierr;
@@ -310,12 +310,12 @@ int AMRsolve_HG_prec::Jacobi_smooth_(HYPRE_SStructMatrix *A,
     grid->get_limits(lower,upper);
     u = grid->get_u(&n0,&n1,&n2);
     f = grid->get_f(&n0,&n1,&n2);
-    ierr = HYPRE_SStructVectorGetBoxValues(*y, grid->level(), lower, upper, 0, u);
+    ierr = HYPRE_SStructVectorGetBoxValues(y, grid->level(), lower, upper, 0, u);
     if (ierr != 0) {
       fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructVectorGetBoxValues = %i\n",ierr);
       return ierr;
     }
-    ierr = HYPRE_SStructMatrixGetBoxValues(*A, grid->level(), lower, upper, 0, 1, diagonal, f);
+    ierr = HYPRE_SStructMatrixGetBoxValues(A, grid->level(), lower, upper, 0, 1, diagonal, f);
     if (ierr != 0) {
       fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructMatrixGetBoxValues = %i\n",ierr);
       return ierr;
@@ -325,7 +325,7 @@ int AMRsolve_HG_prec::Jacobi_smooth_(HYPRE_SStructMatrix *A,
     for (int i=0; i<n0*n1*n2; i++)  u[i] /= f[i];
     
     // place result back into y
-    ierr = HYPRE_SStructVectorSetBoxValues(*y, grid->level(), lower, upper, 0, u);
+    ierr = HYPRE_SStructVectorSetBoxValues(y, grid->level(), lower, upper, 0, u);
     if (ierr != 0) {
       fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructVectorSetBoxValues = %i\n",ierr);
       return ierr;
@@ -334,14 +334,14 @@ int AMRsolve_HG_prec::Jacobi_smooth_(HYPRE_SStructMatrix *A,
   } // while itgl
 
   // assemble y
-  ierr = HYPRE_SStructVectorAssemble(*y);
+  ierr = HYPRE_SStructVectorAssemble(y);
   if (ierr != 0) {
     fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructVectorAssemble = %i\n",ierr);
     return ierr;
   }
 
   // apply Jacobi update to v  [v = v + D^{-1}*(b - A*v)]
-  ierr = HYPRE_SStructAxpy(1.0, *y, *v);
+  ierr = HYPRE_SStructAxpy(1.0, y, v);
   if (ierr != 0) {
     fprintf(stderr,"Jacobi_smooth_ error in HYPRE_SStructAxpy = %i\n",ierr);
     return ierr;

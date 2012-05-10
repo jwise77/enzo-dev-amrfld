@@ -418,6 +418,10 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
     if (ierr != 0) ERROR("could not set X_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(B_,HYPRE_PARCSR);
     if (ierr != 0) ERROR("could not set B_ type\n");
+    if (use_prec) {
+      ierr = HYPRE_SStructVectorSetObjectType(Y_,HYPRE_PARCSR);
+      if (ierr != 0) ERROR("could not set Y_ type\n");
+    }
   } else {
     ierr = HYPRE_SStructMatrixSetObjectType(A_,HYPRE_SSTRUCT);
     if (ierr != 0) ERROR("could not set A_ type\n");
@@ -425,6 +429,10 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
     if (ierr != 0) ERROR("could not set X_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(B_,HYPRE_SSTRUCT);
     if (ierr != 0) ERROR("could not set B_ type\n");
+    if (use_prec) {
+      ierr = HYPRE_SStructVectorSetObjectType(Y_,HYPRE_SSTRUCT);
+      if (ierr != 0) ERROR("could not set Y_ type\n");
+    }
   }
 
   // Initialize the hypre matrices and vector objects
@@ -464,6 +472,10 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
   ierr = HYPRE_SStructVectorAssemble(X_);
   if (ierr != 0) ERROR("could not assemble X_\n");
   if (use_prec) {
+    ierr = HYPRE_SStructVectorSetConstantValues(Y_, 0.0);
+    if (ierr != 0) ERROR("could not initialize Y_ to 0.0\n");
+    ierr = HYPRE_SStructVectorAssemble(Y_);
+    if (ierr != 0) ERROR("could not assemble Y_\n");
     ierr = HYPRE_StructMatrixAssemble(Ac_);
     if (ierr != 0) ERROR("could not assemble Ac_\n");
     ierr = HYPRE_StructVectorAssemble(Bc_);
@@ -471,6 +483,7 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
     ierr = HYPRE_StructVectorAssemble(Xc_);
     if (ierr != 0) ERROR("could not assemble Ac_\n");
   }
+
 
   // Optionally write the matrices and RHS vector to files for debugging
   if (parameters_->value("dump_a") == "true") {
@@ -2469,7 +2482,7 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
 /// in code as solve() routine. 
 void AMRsolve_Hypre_FLD::tester()
 {
-#define TEST5
+#define TEST7
 
 #ifdef TEST1
   ////////  test 1 -- see if AMRsolve_Grid::overlap_indices works ////////
@@ -2618,7 +2631,7 @@ void AMRsolve_Hypre_FLD::tester()
 
 
 #ifdef TEST4
-  ////////  test 5 -- check spread of restrict->prolong ////////
+  ////////  test 4 -- check spread of restrict->prolong ////////
   // set a value of "1" into a single cell in center of finestgrid, zeroing out all other cells
   int numlevels = hierarchy_->num_levels();
   ItHierarchyGridsLocal itgl(*hierarchy_);
@@ -2671,7 +2684,7 @@ void AMRsolve_Hypre_FLD::tester()
 
 
 #ifdef TEST5
-  ////////  test 4 -- see whether prolong->restrict = identity ////////
+  ////////  test 5 -- see whether prolong->restrict = identity ////////
   int icell, jcell, kcell, cgrid, myid;
 
   // set a value of "1" into a single cell in center of coarsest grid, zeroing out all other cells
@@ -2728,6 +2741,85 @@ void AMRsolve_Hypre_FLD::tester()
   }
   printf("proc %i: prolong->interp error = %g\n",myid,err);
   
+#endif
+
+#ifdef TEST6
+  ////////  test 6 -- AMRsolve_HG_prec initialization and smoother ////////
+
+  // set up the preconditioner
+  AMRsolve_HG_prec *precond;
+  precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
+  int ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
+  if (ierr)
+    fprintf(stderr,"Error in AMRsolve_HG_prec::Initialize = %i\n",ierr);
+
+  // check initial linear residual
+  double resid2;
+  ierr = HYPRE_SStructVectorCopy(B_, Y_);
+  ierr = HYPRE_SStructMatrixMatvec(-1.0, A_, X_, 1.0, Y_);
+  ierr = HYPRE_SStructInnerProd(Y_, Y_, &resid2);
+  printf("tester: initial linear residual norm = %g\n",sqrt(resid2));
+
+  // test Jacobi smoother
+  int nsweeps = 8;
+  for (int i=0; i<nsweeps; i++) {
+    ierr = precond->Jacobi_smooth_(A_, X_, B_, Y_);
+    if (ierr)
+      fprintf(stderr,"Error in AMRsolve_HG_prec::Jacobi_smooth = %i\n",ierr);
+
+    // check resulting linear residual
+    ierr = HYPRE_SStructVectorCopy(B_, Y_);
+    ierr = HYPRE_SStructMatrixMatvec(-1.0, A_, X_, 1.0, Y_);
+    ierr = HYPRE_SStructInnerProd(Y_, Y_, &resid2);
+    printf("tester: sweep %i, linear residual norm = %g\n",i,sqrt(resid2));
+  }
+
+  // Delete the preconditioner
+  delete precond;
+
+#endif
+
+#ifdef TEST7
+  ////////  test 7 -- AMRsolve_HG_prec init, setup, solve, stats ////////
+
+  // set up the preconditioner
+  AMRsolve_HG_prec *precond;
+  precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
+  int ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
+  if (ierr)
+    fprintf(stderr,"Error in AMRsolve_HG_prec::Initialize = %i\n",ierr);
+
+  // set up the preconditioner
+  ierr = precond->Setup_(A_, B_, X_);
+  if (ierr)
+    fprintf(stderr,"Error in AMRsolve_HG_prec::Setup = %i\n",ierr);
+
+  // check initial linear residual
+  double resid2;
+  ierr = HYPRE_SStructVectorCopy(B_, Y_);
+  ierr = HYPRE_SStructMatrixMatvec(-1.0, A_, X_, 1.0, Y_);
+  ierr = HYPRE_SStructInnerProd(Y_, Y_, &resid2);
+  printf("tester: initial linear residual norm = %g\n",sqrt(resid2));
+
+  // solve with the preconditioner
+  ierr = precond->Solve_(A_, B_, X_);
+  if (ierr)
+    fprintf(stderr,"Error in AMRsolve_HG_prec::Solve = %i\n",ierr);
+
+  // extract preconditioner iterations and residual
+  Scalar rnorm = precond->GetResid_();
+  int    coarse_iters = precond->GetIters_();
+  printf("AMRsolve_HG_Prec achieved coarse residual %g in %i iters\n",coarse_iters,rnorm);
+
+  // check final linear residual
+  ierr = HYPRE_SStructVectorCopy(B_, Y_);
+  ierr = HYPRE_SStructMatrixMatvec(-1.0, A_, X_, 1.0, Y_);
+  ierr = HYPRE_SStructInnerProd(Y_, Y_, &resid2);
+  printf("tester: final linear residual norm = %g\n",sqrt(resid2));
+
+  // Delete the preconditioner
+  delete precond;
+
 #endif
 
 }  // AMRsolve_Hypre_FLD::tester

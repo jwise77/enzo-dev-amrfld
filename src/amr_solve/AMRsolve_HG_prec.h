@@ -61,10 +61,10 @@ public:
 		  int *g1_ihi, int *ovsize, int method) throw();
 
   // Jacobi smoother on full hierarchy
-  int Jacobi_smooth_(HYPRE_SStructMatrix *A,
-		     HYPRE_SStructVector *v, 
-		     HYPRE_SStructVector *b,
-		     HYPRE_SStructVector *y);
+  int Jacobi_smooth_(HYPRE_SStructMatrix A,
+		     HYPRE_SStructVector v, 
+		     HYPRE_SStructVector b,
+		     HYPRE_SStructVector y);
 
 };
 
