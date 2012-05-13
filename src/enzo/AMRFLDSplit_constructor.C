@@ -39,6 +39,8 @@ AMRFLDSplit::AMRFLDSplit()
   // initialize solver parameters
   sol_tolerance = -1.0;
   sol_maxit = -1;
+  sol_type = -1;
+  sol_prec = -1;
   sol_rlxtype = -1;
   sol_npre = -1;
   sol_npost = -1;

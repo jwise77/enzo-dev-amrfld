@@ -64,6 +64,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
                                  //    2 -> BiCGStab-BoomerAMG
                                  //    3 -> GMRES
                                  //    4 -> PFMG (unigrid only)
+  Eint32 sol_prec;               // enable HG preconditioner within AMRsolve
   Eint32 sol_printl;             // print output level
   Eint32 sol_log;                // amount of logging
 
