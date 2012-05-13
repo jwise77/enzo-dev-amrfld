@@ -70,6 +70,40 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 
   if (debug)  printf("\n AMRFLDSplit Evolve:\n");
 
+
+
+
+
+
+  // // print current hierarchy to screen
+  // LevelHierarchyEntry *Tmp;
+  // fprintf(stderr,"p%"ISYM", printing hierarchy\n",MyProcessorNumber);
+  // for (int thislevel=0; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++) {
+  //   for (Tmp=LevelArray[thislevel]; Tmp; Tmp=Tmp->NextGridThisLevel) 
+  //     fprintf(stderr,
+  // 	      "p%"ISYM", grid %p (p%"ISYM"), ID %"ISYM": extents (%g:%g,%g:%g,%g:%g), parent %p, NGTL = %p, NGNL = %p\n",
+  // 	      MyProcessorNumber, Tmp->GridHierarchyEntry, 
+  // 	      Tmp->GridHierarchyEntry->GridData->ProcessorNumber,
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridID(),
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(0), 
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(0), 
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(1), 
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(1), 
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(2), 
+  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(2), 
+  // 	      Tmp->GridHierarchyEntry->ParentGrid, 
+  // 	      Tmp->GridHierarchyEntry->NextGridThisLevel, 
+  // 	      Tmp->GridHierarchyEntry->NextGridNextLevel);
+
+  // }
+  // MPI_Barrier(MPI_COMM_WORLD);
+
+
+
+
+
+
+
   // scale radiation field on all relevant grids to solver units; output statistics
   LevelHierarchyEntry *Temp;
   float Etyp=0.0, Emax=0.0, dV = 1.0;
@@ -390,8 +424,7 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   // set up and solve radiation equation via amrsolve
 
   // Initialize the amrsolve FLD solver
-  int use_HG_prec = 0;     // enable HG preconditioner
-  AMRsolve_Hypre_FLD amrfldsolve(*hierarchy, *amrsolve_params, use_HG_prec);
+  AMRsolve_Hypre_FLD amrfldsolve(*hierarchy, *amrsolve_params, sol_prec);
   amrfldsolve.init_hierarchy();
   // if (debug)   hierarchy->print();
   amrfldsolve.init_stencil();
@@ -412,11 +445,11 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   if (debug)  printf(" ----------------------------------------------------------------------\n");
 
 
-  /////////  AMRsolve_Hypre_FLD testing routine ////////
+  // /////////  AMRsolve_Hypre_FLD testing routine ////////
   // amrfldsolve.tester();
   // MPI_Barrier(MPI_COMM_WORLD);
   // ENZO_FAIL("Stopping run (testing)");
-  //////////////////////////////////////////////////////
+  // //////////////////////////////////////////////////////
 
 
   //    solve amrfldsolve system
@@ -425,7 +458,8 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   Eint32 Sits = amrfldsolve.iterations();
   if (debug) printf("   lin resid = %.1e (tol = %.1e), its = %i\n",
 		    finalresid, sol_tolerance, Sits);
-  
+
+
   // check solution, and if the solver fails:
   //  * if we have room to decrease the time step size, do so and allow remainder 
   //    of function to complete (to reset units, etc.), but have calling routine 

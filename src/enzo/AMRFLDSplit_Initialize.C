@@ -153,6 +153,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   sol_tolerance = 1e-8;  // HYPRE solver tolerance
   sol_maxit     = 200;   // HYPRE max linear iters
   sol_type      = 1;     // HYPRE solver
+  sol_prec      = 1;     // Enable HG preconditioner by default
   sol_printl    = 1;     // HYPRE print level
   sol_log       = 1;     // HYPRE logging level
   sol_rlxtype   = 1;     // HYPRE relaxation type
@@ -213,6 +214,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	  }
 	}
 	ret += sscanf(line, "RadHydroSolType = %i", &sol_type);
+	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
 	ret += sscanf(line, "RadHydroSolTolerance = %"FSYM, &sol_tolerance);
 	ret += sscanf(line, "RadHydroMaxMGIters = %i", &sol_maxit);
 	ret += sscanf(line, "RadHydroMGRelaxType = %i", &sol_rlxtype);
@@ -380,12 +382,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	    sol_maxit);
     sol_maxit = 200;
   }
-  if ((sol_type < 0) || (sol_type) > 4) {
+  if ((sol_type < 0) || (sol_type > 4)) {
     fprintf(stderr,"Illegal RadHydroSolType = %i.  Setting to 1 (BiCGStab)\n", 
 	    sol_type);
     sol_type = 1;
   }
-  if ((sol_rlxtype<0) || (sol_rlxtype>3)) {
+  if ((sol_prec < 0) || (sol_prec > 1)) {
+    fprintf(stderr,"Illegal RadHydroSolPrec = %i.  Setting to 1 (enabled)\n", 
+	    sol_prec);
+    sol_prec = 1;
+  }
+  if ((sol_rlxtype < 0) || (sol_rlxtype > 3)) {
     fprintf(stderr,"Illegal RadHydroMGRelaxType = %i. Setting to 1\n",
 	    sol_rlxtype);
     sol_rlxtype = 1;
@@ -501,7 +508,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   sprintf(numstr, "%i", sol_npost);
   amrsolve_params->set_parameter("solver_npost",numstr);
 
-  // enable preconditioning for BiCGStab and GMRES solvers
+  // set preconditioning options for BiCGStab and GMRES solvers
   if (sol_type == 1 || sol_type==3) {
     amrsolve_params->set_parameter("prec_itmax",  "20");
     amrsolve_params->set_parameter("prec_restol", "1.0e-6");
@@ -963,6 +970,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	}
       }
       fprintf(outfptr, "RadHydroSolType = %i\n", sol_type);
+      fprintf(outfptr, "RadHydroSolPrec = %i\n", sol_prec);
       fprintf(outfptr, "RadHydroSolTolerance = %g\n", sol_tolerance);    
       fprintf(outfptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
       fprintf(outfptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
