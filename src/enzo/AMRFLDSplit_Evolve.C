@@ -71,39 +71,6 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   if (debug)  printf("\n AMRFLDSplit Evolve:\n");
 
 
-
-
-
-
-  // // print current hierarchy to screen
-  // LevelHierarchyEntry *Tmp;
-  // fprintf(stderr,"p%"ISYM", printing hierarchy\n",MyProcessorNumber);
-  // for (int thislevel=0; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++) {
-  //   for (Tmp=LevelArray[thislevel]; Tmp; Tmp=Tmp->NextGridThisLevel) 
-  //     fprintf(stderr,
-  // 	      "p%"ISYM", grid %p (p%"ISYM"), ID %"ISYM": extents (%g:%g,%g:%g,%g:%g), parent %p, NGTL = %p, NGNL = %p\n",
-  // 	      MyProcessorNumber, Tmp->GridHierarchyEntry, 
-  // 	      Tmp->GridHierarchyEntry->GridData->ProcessorNumber,
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridID(),
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(0), 
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(0), 
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(1), 
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(1), 
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridLeftEdge(2), 
-  // 	      Tmp->GridHierarchyEntry->GridData->GetGridRightEdge(2), 
-  // 	      Tmp->GridHierarchyEntry->ParentGrid, 
-  // 	      Tmp->GridHierarchyEntry->NextGridThisLevel, 
-  // 	      Tmp->GridHierarchyEntry->NextGridNextLevel);
-
-  // }
-  // MPI_Barrier(MPI_COMM_WORLD);
-
-
-
-
-
-
-
   // scale radiation field on all relevant grids to solver units; output statistics
   LevelHierarchyEntry *Temp;
   float Etyp=0.0, Emax=0.0, dV = 1.0;
