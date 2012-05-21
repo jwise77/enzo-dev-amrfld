@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include "mpi.h"
 #include "ErrorExceptions.h"
 #include "macros_and_parameters.h"
 #include "typedefs.h"
@@ -186,11 +187,6 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   if (AMRNumberOfInitialPatches > MAX_INITIAL_PATCHES) 
     ENZO_FAIL("Too many InitialPatches! increase MAX_INITIAL_PATCHES\n");
 
-  // // if both an initially refined mesh and ParallelRootGridIO are enabled, issue 
-  // // an error message since that functionality is not currently supported
-  // if (ParallelRootGridIO && AMRNumberOfInitialPatches) 
-  //   ENZO_FAIL("ParallelRootGridIO and initial refined mesh (AMRNumberOfInitialPatches) incompatible!\n");
-
   // set grid dimensions of each patch
   float dx;
   for (patch=0; patch<AMRNumberOfInitialPatches; patch++) 
@@ -202,7 +198,7 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
     }  
 
   // output requested initial AMR hierarchy structure
-  if (debug && local && AMRNumberOfInitialPatches) {
+  if (debug && local && AMRNumberOfInitialPatches && !WeakScaling) {
     printf("\n  Initializing with prescribed AMR hierarchy:\n");
     printf("    AMRNumberOfInitialPatches = %"ISYM"\n\n",
 	   AMRNumberOfInitialPatches);
@@ -218,6 +214,11 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
       printf("    AMRPatchDims[%"ISYM"] = %"ISYM" %"ISYM" %"ISYM"\n\n", patch, 
 	     AMRPatchDims[patch][0], AMRPatchDims[patch][1], AMRPatchDims[patch][2]);
     }
+  }
+  if (debug && local && AMRNumberOfInitialPatches && WeakScaling) {
+    printf("\n  Initializing with weak scaling AMR hierarchy:\n");
+    printf("    AMRNumberOfInitialPatches = %"ISYM"\n\n",
+	   AMRNumberOfInitialPatches);
   }
 
   // set up CoolData object if not already set up
@@ -282,69 +283,184 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   
 
   /////////////////
-  // If requested, add patches -- currently requires strict nesting of subgrids, 
-  // with one patch per level
-  if (AMRNumberOfInitialPatches>0  &&  local==1  &&  WeakScaling==0) {
+  // If requested, add patches
+  if (AMRNumberOfInitialPatches>0  &&  local==1) {
 
-    // determine how many levels we'll fill in
-    int numlevels = 0;
-    for (patch=0; patch<AMRNumberOfInitialPatches; patch++)
-      numlevels = max(numlevels,AMRPatchLevel[patch]);
-    if (numlevels > MAX_DEPTH_OF_HIERARCHY) 
-      ENZO_FAIL("Too many initial patch levels! increase MAX_DEPTH_OF_HIERARCHY!\n");
-    if (numlevels != AMRNumberOfInitialPatches)
-      ENZO_FAIL("Error: patches must be strictly nested, one per level (for now)!\n");
+    // not a weak scaling run: strictly nested subgrids, with one patch per level
+    if (WeakScaling == 0) {
 
-    if (numlevels > 0) {
+      // determine how many levels we'll fill in
+      int numlevels = 0;
+      for (patch=0; patch<AMRNumberOfInitialPatches; patch++)
+	numlevels = max(numlevels,AMRPatchLevel[patch]);
+      if (numlevels > MAX_DEPTH_OF_HIERARCHY) 
+	ENZO_FAIL("Too many initial patch levels! increase MAX_DEPTH_OF_HIERARCHY!\n");
+      if (numlevels != AMRNumberOfInitialPatches)
+	ENZO_FAIL("Error: patches must be strictly nested, one per level (for now)!\n");
       
-      // data for setting up initially-refined regions
-      HierarchyEntry **Subgrid = new HierarchyEntry*[numlevels];
-      for (patch=0; patch<numlevels; patch++) 
-	Subgrid[patch] = new HierarchyEntry;
-
-      for (patch=0; patch<numlevels; patch++) {
+      if (numlevels > 0) {
 	
-	int level = AMRPatchLevel[patch];
-	if (AMRPatchDims[patch][0] > 0) {
-
-	  for (dim = 0; dim < MetaData.TopGridRank; dim++)
-	    AMRPatchDims[patch][dim] += 2*DEFAULT_GHOST_ZONES;
+	// data for setting up initially-refined regions
+	HierarchyEntry **Subgrid = new HierarchyEntry*[numlevels];
+	for (patch=0; patch<numlevels; patch++) 
+	  Subgrid[patch] = new HierarchyEntry;
+	
+	for (patch=0; patch<numlevels; patch++) {
 	  
-	  // Insert into AMR hierarchy
-	  if (level == 1) {
-	    Subgrid[patch]->NextGridThisLevel = TopGrid.NextGridNextLevel;
-	    TopGrid.NextGridNextLevel = Subgrid[patch];
-	    Subgrid[patch]->ParentGrid = &TopGrid;
-	  } else {
-	    Subgrid[patch]->NextGridThisLevel = NULL;
-	    Subgrid[patch]->ParentGrid = Subgrid[patch-1];
+	  int level = AMRPatchLevel[patch];
+	  if (AMRPatchDims[patch][0] > 0) {
+	    
+	    for (dim = 0; dim < MetaData.TopGridRank; dim++)
+	      AMRPatchDims[patch][dim] += 2*DEFAULT_GHOST_ZONES;
+	    
+	    // Insert into AMR hierarchy
+	    if (level == 1) {
+	      Subgrid[patch]->NextGridThisLevel = TopGrid.NextGridNextLevel;
+	      TopGrid.NextGridNextLevel = Subgrid[patch];
+	      Subgrid[patch]->ParentGrid = &TopGrid;
+	    } else {
+	      Subgrid[patch]->NextGridThisLevel = NULL;
+	      Subgrid[patch]->ParentGrid = Subgrid[patch-1];
+	    }
+	    if (level == numlevels) 
+	      Subgrid[patch]->NextGridNextLevel = NULL;
+	    else 
+	      Subgrid[patch]->NextGridNextLevel = Subgrid[patch+1];
+	    
+	    // Create grid
+	    Subgrid[patch]->GridData = new grid;
+	    Subgrid[patch]->GridData->InheritProperties(Subgrid[patch]->ParentGrid->GridData);
+	    Subgrid[patch]->GridData->PrepareGrid(MetaData.TopGridRank, 
+						  AMRPatchDims[patch],
+						  AMRPatchLeftEdge[patch],
+						  AMRPatchRightEdge[patch], 0);
+	    
+	    if (Subgrid[patch]->GridData->RHIonizationTestInitializeGrid(
+			 RadHydroChemistry, RadHydroDensity, RadHydroX0Velocity, 
+			 RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
+			 RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
+			 RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
+			 RadHydroInitialFractionHeIII, local) == FAIL)
+	      ENZO_FAIL("Error in RHIonizationTestInitializeGrid.\n");
+	  } // endif (AMRPatchDims[patch][0] > 0)
+	} // endfor (patch)
+      } // endif (numlevels > 0)
+
+
+
+    // weak scaling run, set up an identical hierarchy on top of every root grid tile
+    } else {
+
+
+      // determine how many levels we'll fill in
+      int numlevels = AMRNumberOfInitialPatches;
+      
+      // determine total number of root-grid tiles
+      int numtiles = 0;
+      HierarchyEntry *RootTile = &TopGrid;
+      while (RootTile != NULL) {
+	numtiles += 1;
+	RootTile = RootTile->NextGridThisLevel;
+      }
+      
+      // start building the hierarchy
+      if (numlevels > 0) {
+	
+	// create 2D array of HierarchyEntry pointers
+	HierarchyEntry ***Subgrid = new HierarchyEntry**[numlevels];
+	for (patch=0; patch<numlevels; patch++) {
+	  Subgrid[patch] = new HierarchyEntry*[numtiles];
+	  for (tile=0; tile<numtiles; tile++)
+	    Subgrid[patch][tile] = new HierarchyEntry;
+	}
+	
+	// iterate over tiles/levels, setting up AMR hierarchy
+	RootTile = &TopGrid;
+	for (tile=0; tile<numtiles; tile++) {
+
+	  // determine the center and width of this root grid tile
+	  FLOAT TileCenter[MAX_DIMENSION], TileWidth[MAX_DIMENSION];
+	  for (i=0; i<MAX_DIMENSION; i++) {
+	    TileCenter[i] = 0.5*( RootTile->GridData->GetGridLeftEdge(i) 
+				+ RootTile->GridData->GetGridRightEdge(i) );
+	    TileWidth[i] = RootTile->GridData->GetGridRightEdge(i) 
+	                 - RootTile->GridData->GetGridLeftEdge(i);
 	  }
-	  if (level == numlevels) 
-	    Subgrid[patch]->NextGridNextLevel = NULL;
-	  else 
-	    Subgrid[patch]->NextGridNextLevel = Subgrid[patch+1];
-	  
-	  // Create grid
-	  Subgrid[patch]->GridData = new grid;
-	  Subgrid[patch]->GridData->InheritProperties(Subgrid[patch]->ParentGrid->GridData);
-	  Subgrid[patch]->GridData->PrepareGrid(MetaData.TopGridRank, 
-						AMRPatchDims[patch],
-						AMRPatchLeftEdge[patch],
-						AMRPatchRightEdge[patch], 0);
 
-	  if (Subgrid[patch]->GridData->RHIonizationTestInitializeGrid(
-		        RadHydroChemistry, RadHydroDensity, RadHydroX0Velocity, 
-			RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
-			RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
-			RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
-			RadHydroInitialFractionHeIII, local) == FAIL)
-		ENZO_FAIL("Error in RHIonizationTestInitializeGrid.\n");
-	} // endif (AMRPatchDims[patch][0] > 0)
-      } // endfor (patch)
-      delete[] Subgrid;
-    } // endif (numlevels > 0)
+	  // iterate over levels below this root grid tile
+	  for (level=0; level<numlevels; level++) {
+	    
+	    // determine extents and dimensions of patch
+	    int   PatchDims[MAX_DIMENSION];
+	    FLOAT PatchLeftEdge[MAX_DIMENSION], PatchRightEdge[MAX_DIMENSION], PatchLen;
+	    for (i=0; i<MAX_DIMENSION; i++) {
+	      PatchLen = TileWidth[i] * POW(0.5, level+1);
+	      PatchLeftEdge[i]  = TileCenter[i] - 0.5*PatchLen;
+	      PatchRightEdge[i] = TileCenter[i] + 0.5*PatchLen;
+	      dx = 1.0 / float(MetaData.TopGridDims[i]) / POW(RefineBy, level+1);
+	      PatchDims[i] = nint((PatchRightEdge[i]-PatchLeftEdge[i]) 
+				  / (DomainRightEdge[i]-DomainLeftEdge[i]) / dx);
+	      PatchDims[i] += 2*DEFAULT_GHOST_ZONES;
+	      
+	    }
+	    
+	    // initialize subgrid information
+	    Subgrid[level][tile]->ParentGrid = NULL;
+	    Subgrid[level][tile]->NextGridThisLevel = NULL;
+	    Subgrid[level][tile]->NextGridNextLevel = NULL;
+	    
+	    // point to parent grid
+	    if (level==0) {
+	      Subgrid[level][tile]->ParentGrid = RootTile;
+	    } else {
+	      Subgrid[level][tile]->ParentGrid = Subgrid[level-1][tile];
+	    }
+	    
+	    // tell parent about the new child
+	    Subgrid[level][tile]->ParentGrid->NextGridNextLevel = Subgrid[level][tile];
+	    
+	    // create grid data
+	    Subgrid[level][tile]->GridData = new grid;
 
-
+	    // fill in grid data
+	    Subgrid[level][tile]->GridData->InheritProperties(Subgrid[level][tile]->ParentGrid->GridData);
+	    Subgrid[level][tile]->GridData->PrepareGrid(MetaData.TopGridRank,
+							PatchDims,
+							PatchLeftEdge,
+							PatchRightEdge, 0);
+	    int gID = (level%2 == 1) ? numtiles-tile-1 : tile;
+	    Subgrid[level][tile]->GridData->SetGridID(gID);
+	    Subgrid[level][tile]->GridData->SetProcessorNumber(
+		       Subgrid[level][tile]->ParentGrid->GridData->ReturnProcessorNumber());
+	    // fprintf(stderr,
+	    // 	  "p%"ISYM", NEW grid %p (p%"ISYM"), ID %"ISYM", parent %p, NGTL = %p, NGNL = %p, subdomain (%g:%g,%g:%g,%g:%g)\n",
+	    // 	  MyProcessorNumber, Subgrid[level][tile],
+	    // 	  Subgrid[level][tile]->GridData->ProcessorNumber,
+	    // 	  Subgrid[level][tile]->GridData->GetGridID(),
+	    // 	  Subgrid[level][tile]->ParentGrid, 
+	    // 	  Subgrid[level][tile]->NextGridThisLevel, 
+	    // 	  Subgrid[level][tile]->NextGridNextLevel,
+	    // 	  PatchLeftEdge[0],PatchRightEdge[0],
+	    // 	  PatchLeftEdge[1],PatchRightEdge[1],
+	    // 	  PatchLeftEdge[2],PatchRightEdge[2]);
+	    
+	    // initialize grid data
+	    if (Subgrid[level][tile]->GridData->RHIonizationTestInitializeGrid(
+		       RadHydroChemistry, RadHydroDensity, RadHydroX0Velocity, 
+		       RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
+		       RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
+		       RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
+		       RadHydroInitialFractionHeIII, local) == FAIL)
+	      ENZO_FAIL("Error in RHIonizationTestInitializeGrid.\n");
+	    
+	  }
+	  RootTile = RootTile->NextGridThisLevel;
+	}
+	
+      } // endif (numlevels > 0)
+      
+    } // end if (WeakScaling)
+    
     // All patches and data have been set up fully at this time.  However, we'll now 
     // build a temporary LevelArray so that we can ensure "consistency" between levels
     
@@ -353,164 +469,23 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
     for (level=0; level<MAX_DEPTH_OF_HIERARCHY; level++)
       LevelArray[level] = NULL;
     AddLevel(LevelArray, &TopGrid, 0);
-
+    
     // Loop back from the bottom, restoring the consistency among levels
     for (level=MaximumRefinementLevel; level>0; level--) {
       LevelHierarchyEntry *Temp = LevelArray[level];
       while (Temp != NULL) {
 	if (Temp->GridData->ProjectSolutionToParentGrid(
-			      *LevelArray[level-1]->GridData) == FAIL) {
+			*LevelArray[level-1]->GridData) == FAIL) {
 	  ENZO_FAIL("Error in grid->ProjectSolutionToParentGrid.");
 	}
-	//	Temp->GridData->ClearBoundaryFluxes();
+	Temp->GridData->ClearBoundaryFluxes();
 	Temp = Temp->NextGridThisLevel;
       }
     }
-
-  } // end if (AMRNumberOfInitialPatches > 0  &&  local==1  &&  WeakScaling==0) {
-
-
-  /////////////////
-  // For weak scaling tests, refine the grid to the desired level (second go around)
-  if (AMRNumberOfInitialPatches>0  &&  local==1  &&  WeakScaling==1) {
-
-    // determine how many levels we'll fill in
-    int numlevels = AMRNumberOfInitialPatches;
-
-    // determine total number of root-grid tiles
-    int numtiles = 0;
-    HierarchyEntry *RootTile = &TopGrid;
-    while (RootTile != NULL) {
-      numtiles += 1;
-      RootTile = RootTile->NextGridThisLevel;
-    }
-
-    // start building the hierarchy
-    if (numlevels > 0) {
       
-      // create 2D array of HierarchyEntry pointers
-      HierarchyEntry ***Subgrid = new HierarchyEntry**[numlevels];
-      for (patch=0; patch<numlevels; patch++) {
-	Subgrid[patch] = new HierarchyEntry*[numtiles];
-	for (tile=0; tile<numtiles; tile++)
-	  Subgrid[patch][tile] = new HierarchyEntry;
-      }
-
-
-      // iterate over tiles/levels, setting up AMR hierarchy
-      RootTile = &TopGrid;
-      for (tile=0; tile<numtiles; tile++) {
-	for (level=0; level<numlevels; level++) {
-
-	  // initialize subgrid information
-	  Subgrid[level][tile]->ParentGrid = NULL;
-	  Subgrid[level][tile]->NextGridThisLevel = NULL;
-	  Subgrid[level][tile]->NextGridNextLevel = NULL;
-
-	  // point to parent grid
-	  if (level==0) {
-	    Subgrid[level][tile]->ParentGrid = RootTile;
-	  } else {
-	    Subgrid[level][tile]->ParentGrid = Subgrid[level-1][tile];
-	  }
-
-	  // tell parent about the new child
-	  Subgrid[level][tile]->ParentGrid->NextGridNextLevel = Subgrid[level][0];
-
-	  // point to next grid on this level (if one exists)
-	  if (tile < numtiles-1)
-	    Subgrid[level][tile]->NextGridThisLevel = Subgrid[level][tile+1];
-
-	}
-	RootTile = RootTile->NextGridThisLevel;
-      }
-
-      // iterate over tiles, setting up grids below
-      RootTile = &TopGrid;
-      for (tile=0; tile<numtiles; tile++) {
-
-	// determine the center and width of this root grid tile
-	FLOAT TileCenter[MAX_DIMENSION], TileWidth[MAX_DIMENSION];
-	for (i=0; i<MAX_DIMENSION; i++) {
-	  TileCenter[i] = 0.5*( RootTile->GridData->GetGridLeftEdge(i) 
-			      + RootTile->GridData->GetGridRightEdge(i) );
-	  TileWidth[i] = RootTile->GridData->GetGridRightEdge(i) 
-	               - RootTile->GridData->GetGridLeftEdge(i);
-	}
-
-	// iterate over levels below this root grid tile
-	for (level=0; level<numlevels; level++) {
-
-	  // determine extents and dimensions of patch
-	  int   PatchDims[MAX_DIMENSION];
-	  FLOAT PatchLeftEdge[MAX_DIMENSION], PatchRightEdge[MAX_DIMENSION], PatchLen;
-	  for (i=0; i<MAX_DIMENSION; i++) {
-	    PatchLen = TileWidth[i] * POW(0.75, level+1);
-	    PatchLeftEdge[i]  = TileCenter[i] - 0.5*PatchLen;
-	    PatchRightEdge[i] = TileCenter[i] + 0.5*PatchLen;
-	    dx = 1.0 / float(MetaData.TopGridDims[i]) / POW(RefineBy, level+1);
-	    PatchDims[i] = nint((PatchRightEdge[i]-PatchLeftEdge[i]) 
-				/ (DomainRightEdge[i]-DomainLeftEdge[i]) / dx);
-	    PatchDims[i] += 2*DEFAULT_GHOST_ZONES;
-	  
-	  }
-
-	  // create grid
-	  Subgrid[level][tile]->GridData = new grid;
-	  Subgrid[level][tile]->GridData->InheritProperties(Subgrid[level][tile]->ParentGrid->GridData);
-	  Subgrid[level][tile]->GridData->PrepareGrid(MetaData.TopGridRank,
-						      PatchDims,
-						      PatchLeftEdge,
-						      PatchRightEdge, 0);
-	  
-	  // initialize grid data
-	  if (Subgrid[level][tile]->GridData->RHIonizationTestInitializeGrid(
-		        RadHydroChemistry, RadHydroDensity, RadHydroX0Velocity, 
-			RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
-			RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
-			RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
-			RadHydroInitialFractionHeIII, local) == FAIL)
-		ENZO_FAIL("Error in RHIonizationTestInitializeGrid.\n");
-
-	} // endfor (level<numlevels)
-
-	RootTile = RootTile->NextGridThisLevel;
-
-      } // endfor (tile<numtiles)
-
-      // for (patch=0; patch<numlevels; patch++) 
-      // 	delete[] Subgrid[patch];
-      // delete[] Subgrid;
-
-    } // endif (numlevels > 0)
-
-
-    // All patches and data have been set up fully at this time.  However, we'll now 
-    // build a temporary LevelArray so that we can ensure "consistency" between levels
-
-
-    // Declare, initialize and fill out the LevelArray
-    LevelHierarchyEntry *LevelArray[MAX_DEPTH_OF_HIERARCHY];
-    for (level=0; level<MAX_DEPTH_OF_HIERARCHY; level++)
-      LevelArray[level] = NULL;
-    AddLevel(LevelArray, &TopGrid, 0);
-
-    // Loop back from the bottom, restoring the consistency among levels
-    for (level=MaximumRefinementLevel; level>0; level--) {
-      LevelHierarchyEntry *Temp = LevelArray[level];
-      while (Temp != NULL) {
-	if (Temp->GridData->ProjectSolutionToParentGrid(
-			      *LevelArray[level-1]->GridData) == FAIL) {
-	  ENZO_FAIL("Error in grid->ProjectSolutionToParentGrid.");
-	}
-	//	Temp->GridData->ClearBoundaryFluxes();
-	Temp = Temp->NextGridThisLevel;
-      }
-    }
-
-  } // end if (AMRNumberOfInitialPatches > 0  &&  local==1  &&  WeakScaling==1) {
-
-
+  } // end if (AMRNumberOfInitialPatches>0  &&  local==1)
+  
+  
   // set up field names and units
   int BaryonField = 0;
   DataLabel[BaryonField++] = DensName;
