@@ -62,7 +62,7 @@
 
 #define MAX_FLAGGING_METHODS                9
 
-#define MAX_STATIC_REGIONS               1000
+#define MAX_STATIC_REGIONS             100000
 
 #define MAX_REFINE_REGIONS               150
 
