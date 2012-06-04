@@ -64,7 +64,7 @@ int FindSubgrids(HierarchyEntry *Grid, int level, int &TotalFlaggedCells,
  
   /* Set the flagging field. */
 
-  if (CurrentGrid->SetFlaggingField(NumberOfFlaggedCells, level) == FAIL) {
+  if (CurrentGrid->SetFlaggingField(NumberOfFlaggedCells, level, Grid) == FAIL) {
     ENZO_FAIL("Error in grid->SetFlaggingField.");
   }
  

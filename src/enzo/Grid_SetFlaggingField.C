@@ -26,7 +26,8 @@
 extern float DepositParticleMaximumParticleMass;
  
  
-int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level)
+int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level, 
+			   HierarchyEntry *MyHierarchyEntry)
 {
  
   /* Return if this doesn't concern us. */
@@ -267,6 +268,21 @@ int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level)
       NumberOfFlaggedCells = this->FlagCellsToBeRefinedByIonizedFraction();
       if (NumberOfFlaggedCells < 0) {
 	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedByIonizedFraction.");
+      }
+    }
+#endif /* TRANSFER */
+    break;
+
+ 
+    /* ==== METHOD 22: BY LOCATION FOR WEAK SCALING TESTS ==== */
+  case 22:
+
+#ifdef TRANSFER
+    if (RadiativeTransferFLD) {
+      NumberOfFlaggedCells = this->FlagCellsToBeRefinedForWeakScaling(level, 
+                                                           MyHierarchyEntry);
+      if (NumberOfFlaggedCells < 0) {
+	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedForWeakScaling.");
       }
     }
 #endif /* TRANSFER */

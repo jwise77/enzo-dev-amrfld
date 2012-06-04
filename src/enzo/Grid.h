@@ -809,7 +809,8 @@ public:
 
 /* Set boolean flagging field */
 
-   int SetFlaggingField(int &NumberOfFlaggedCells, int level);
+   int SetFlaggingField(int &NumberOfFlaggedCells, int level, 
+			HierarchyEntry *MyHierarchyEntry);
 
 /* Set flagging field from static regions */
 
@@ -912,6 +913,10 @@ public:
 
    int FlagCellsToBeRefinedByMetallicity(int level);
 
+
+/* Flag all points that require refining based on location -- used for weak scaling tests. */
+
+   int FlagCellsToBeRefinedForWeakScaling(int level, HierarchyEntry *MyHierarchyEntry);
 
 /* Flagging all cell adjacent to a previous flagged cell.  Also, remove all
    Flagged cells in the boundary zones and within one zone of the boundary. */
