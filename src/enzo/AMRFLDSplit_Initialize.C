@@ -136,10 +136,10 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     location[dim] = RootGrid->GridData->GetProcessorLocation(dim);
 
   // set default module parameters
-  int WeakScaling = 0;  // weak scaling test, source in center of each root-grid tile
-  Nchem  = 1;           // hydrogen only
-  int Model = 1;        // standard non-LTE, non-isothermal model
+  WeakScaling = 0;      // standard run, source based on other inputs or physics
   ESpectrum = 1;        // T=10^5 blackbody spectrum
+  Nchem  = 1;           // hydrogen only
+  Model  = 1;           // standard non-LTE, non-isothermal model
   theta  = 1.0;         // backwards euler implicit time discret.
   maxsubcycles = 1.0;   // step ratio between radiation and hydro
   dt_control = 2;       // PID controller
