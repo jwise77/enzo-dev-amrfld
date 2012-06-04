@@ -93,6 +93,8 @@ AMRFLDSplit::AMRFLDSplit()
   TimeUnits = 1.0;
   VelUnits = 1.0;
   Nchem = 0;
+  Model = -1;
+  WeakScaling = 0;
   ESpectrum = -1;
   intSigE = 0.0;
   intSigESigHI = 0.0;

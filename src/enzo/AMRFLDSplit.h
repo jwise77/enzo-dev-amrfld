@@ -83,6 +83,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   int rank;                // Rank of problem
   int LocDims[3];          // top grid local dims (no ghost or bdry cells)
   float *BdryVals[3][2];   // boundary values for radiation BCs
+  int WeakScaling;         // flag denoting we're doing a weak-scaling problem
 
   // time-stepping related data
   float initdt;        // initial radiation time step size
@@ -108,6 +109,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   
   // problem defining data
   int Nchem;           // number of chemical species (non-negative integer)
+  int Model;           // choices are 1 (standard) or 4 (isothermal)
   float NGammaDot;     // ionization strength (photons/sec)
   float EtaRadius;     // ionization source radius
   float EtaCenter[3];  // ionization source location

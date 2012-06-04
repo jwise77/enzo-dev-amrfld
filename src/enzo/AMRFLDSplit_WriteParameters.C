@@ -28,35 +28,39 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   
   fprintf(fptr, "RadHydroESpectrum = %"ISYM"\n", ESpectrum);
   fprintf(fptr, "RadHydroChemistry = %"ISYM"\n", Nchem);
+  fprintf(fptr, "RadHydroModel = %"ISYM"\n", Model);
+
+  fprintf(fptr, "RadHydroMaxDt = %22.16e\n", maxdt);
+  fprintf(fptr, "RadHydroMinDt = %22.16e\n", mindt);
 
   // set restart initial time step to current time step
   if (dt == 0.0) {
     fprintf(fptr, "RadHydroInitDt = %22.16e\n", initdt);
-  }
-  else {
+  } else {
     fprintf(fptr, "RadHydroInitDt = %22.16e\n", dt);
   }
-  fprintf(fptr, "RadHydroMaxDt = %22.16e\n", maxdt);
-  fprintf(fptr, "RadHydroMinDt = %22.16e\n", mindt);
+  fprintf(fptr, "RadHydroDtControl = %"ISYM"\n", dt_control);
+  fprintf(fptr, "RadHydroMaxSubcycles = %22.16e\n", maxsubcycles);
   fprintf(fptr, "RadHydroDtNorm = %22.16e\n", dtnorm);
   fprintf(fptr, "RadHydroDtRadFac = %22.16e\n", dtfac);
   fprintf(fptr, "RadiationScaling = %22.16e\n", ErScale);
   fprintf(fptr, "RadHydroTheta = %22.16e\n", theta);
-
-  fprintf(fptr, "RadiationBoundaryX0Faces = %"ISYM" %"ISYM"\n", 
+  fprintf(fptr, "RadiationBoundaryX0Faces = %i %i\n", 
 	  BdryType[0][0], BdryType[0][1]);
   if (rank > 1) 
-    fprintf(fptr, "RadiationBoundaryX1Faces = %"ISYM" %"ISYM"\n", 
+    fprintf(fptr, "RadiationBoundaryX1Faces = %i %i\n", 
 	    BdryType[1][0], BdryType[1][1]);
   if (rank > 2) 
-    fprintf(fptr, "RadiationBoundaryX2Faces = %"ISYM" %"ISYM"\n", 
+    fprintf(fptr, "RadiationBoundaryX2Faces = %i %i\n", 
 	    BdryType[2][0], BdryType[2][1]);
-  
-  fprintf(fptr, "RadHydroNewtTolerance = %22.16e\n", sol_tolerance);
+  fprintf(fptr, "RadHydroSolType = %i\n", sol_type);
+  fprintf(fptr, "RadHydroSolPrec = %i\n", sol_prec);
+  fprintf(fptr, "RadHydroSolTolerance = %22.16e\n", sol_tolerance);
   fprintf(fptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
   fprintf(fptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
   fprintf(fptr, "RadHydroMGPreRelax = %i\n", sol_npre);    
   fprintf(fptr, "RadHydroMGPostRelax = %i\n", sol_npost);    
+  fprintf(fptr, "WeakScaling = %i\n", &WeakScaling);    
 
   // if doing an ionization problem (ProblemTypes 410-415),
   // output additional parameters 
