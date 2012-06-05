@@ -19,13 +19,22 @@ private:
   HYPRE_SStructMatrix  A_;             // hypre matrix
   HYPRE_SStructVector  B_;             // hypre vector right-hand side
   HYPRE_SStructVector  X_;             // hypre vector solution
+  HYPRE_SStructVector  Y_;             // hypre vector temporary
   HYPRE_SStructSolver  solver_;        // hypre solver
+
+  bool                 use_prec;       // flag whether to setup/use preconditioner (0 -> no)
+  HYPRE_StructGrid     cgrid_;         // hypre coarse grid (structured)
+  HYPRE_StructStencil  cstencil_;      // hypre coarse stencil (structured)
+  HYPRE_StructMatrix   Ac_;            // coarse preconditioning matrix
+  HYPRE_StructVector   Bc_;            // hypre coarse vector right-hand side
+  HYPRE_StructVector   Xc_;            // hypre coarse vector solution
 
   AMRsolve_Parameters *parameters_;    // Pointer to parameters
   AMRsolve_Hierarchy  *hierarchy_;     // Pointer to the hierarchy
 
   double               resid_;         // Solver residual
   int                  iter_;          // Solver iterations
+  int                  citer_;         // Coarse solver iterations
 
   const int            r_factor_;      // Refinement factor
   Scalar               matrix_scale_;  // 1.0:  1 1 1 -6 1 1 1
@@ -33,7 +42,8 @@ private:
 public:
 
   AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, 
-		      AMRsolve_Parameters& parameters);
+		      AMRsolve_Parameters& parameters,
+		      int precflag);
 
   ~AMRsolve_Hypre_Grav();
 
@@ -65,6 +75,7 @@ private:
       Scalar f_scale=1.0); */
   void init_elements_rhs_(Scalar f_scale=1.0);
 
+  // init_matrix() functions
   void init_matrix_stencil_(AMRsolve_Grid& grid);
   void init_matrix_clear_(int part);
   void init_matrix_nonstencil_(AMRsolve_Grid& grid)

@@ -53,9 +53,6 @@ typedef int int3[3];
 #include "AMRsolve_hypre_fld.h"
 #include "AMRsolve_error.h"
 
-//======================================================================
-
-// Coefficient for Poisson problem
 
 //======================================================================
 // PUBLIC MEMBER FUNCTIONS
@@ -66,7 +63,8 @@ AMRsolve_Hypre_FLD::AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy,
 				       AMRsolve_Parameters& parameters,
 				       int precflag)
   : grid_(0), graph_(0), stencil_(0), A_(0), B_(0), X_(0), Y_(0), solver_(0), 
-    Ac_(0), parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), 
+    Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), 
+    parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), 
     iter_(-1), citer_(-1), r_factor_(const_r_factor), Nchem_(-1), theta_(-1.0), 
     dt_(-1.0), aval_(-1.0), aval0_(-1.0), adot_(-1.0), adot0_(-1.0), 
     HIconst_(-1.0), HeIconst_(-1.0), HeIIconst_(-1.0), nUn_(-1.0), 
