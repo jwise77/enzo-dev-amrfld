@@ -67,7 +67,8 @@ void AMRGravitySolve
 
   // Initialize the AMRsolve linear system
   LCAPERF_START("amrsolve_matrix");
-  AMRsolve_Hypre_Grav amrsolve(*hierarchy, *amrsolve_parameters);
+  Eint32 sol_prec = 0;
+  AMRsolve_Hypre_Grav amrsolve(*hierarchy, *amrsolve_parameters, sol_prec);
   amrsolve.init_hierarchy(*pmpi);
   amrsolve.init_stencil();
   amrsolve.init_graph();
