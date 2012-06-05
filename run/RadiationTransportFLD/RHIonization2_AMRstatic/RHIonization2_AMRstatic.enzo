@@ -30,6 +30,13 @@ DomainLeftEdge             = -1.0 -1.0 -1.0   // (scaled units)
 DomainRightEdge            =  1.0  1.0  1.0
 RefineBy                   =  2
 #
+# AMR parameters
+#
+StaticHierarchy            = 0
+RefineBy                   = 2
+CellFlaggingMethod         = 22
+MaximumRefinementLevel     = 2
+#
 # runtime and I/O
 #
 StopTime                   = 1.57788e0     // 500 Myr
