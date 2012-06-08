@@ -71,14 +71,15 @@ inline Scalar acoef(Scalar x, Scalar y, Scalar z)
 /// AMRsolve_Hypre_Grav constructor
 AMRsolve_Hypre_Grav::AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, 
 					 AMRsolve_Parameters& parameters,
-					 int precflag)
+					 int precflag, int zeroguess)
   : grid_(0), graph_(0), stencil_(0), A_(0), B_(0), X_(0), Y_(0),
     solver_(0), Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), citer_(-1), 
     parameters_(&parameters), hierarchy_(&hierarchy),
     resid_(-1.0), iter_(-1), r_factor_(const_r_factor), matrix_scale_(1.0)
 {
-  // set preconditioner flag
-  use_prec = (precflag != 0);
+  // set preconditioner and initial guess flags
+  use_prec_   = (precflag != 0);
+  zero_guess_ = (zeroguess != 0);
 }
 
 //----------------------------------------------------------------------
@@ -89,38 +90,28 @@ AMRsolve_Hypre_Grav::~AMRsolve_Hypre_Grav()
   // destroy HYPRE objects that we created along the way
   if (HYPRE_SStructVectorDestroy(B_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy B_\n");
-
   if (HYPRE_SStructVectorDestroy(X_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy X_\n");
-
   if (HYPRE_SStructMatrixDestroy(A_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy A_\n");
-
   if (HYPRE_SStructGraphDestroy(graph_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy graph_\n");
-
   if (HYPRE_SStructStencilDestroy(stencil_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy stencil_\n");
-
   if (HYPRE_SStructGridDestroy(grid_) != 0) 
     ERROR("AMRsolve_Hypre_FLD::could not destroy grid_\n");
 
-  if (use_prec) {
+  if (use_prec_) {
     if (HYPRE_SStructVectorDestroy(Y_) != 0)  
       ERROR("could not destroy Y_\n");
-
     if (HYPRE_StructVectorDestroy(Bc_) != 0)
       ERROR("could not destroy Bc_\n");
-
     if (HYPRE_StructVectorDestroy(Xc_) != 0)
       ERROR("could not destroy Xc_\n");
-
     if (HYPRE_StructMatrixDestroy(Ac_) != 0)
       ERROR("could not destroy Ac_\n");
-
     if (HYPRE_StructStencilDestroy(cstencil_) != 0)
       ERROR("could not destroy cstencil_\n");
-
     if (HYPRE_StructGridDestroy(cgrid_) != 0)
       ERROR("could not destroy cgrid_\n");
   }
@@ -132,7 +123,7 @@ AMRsolve_Hypre_Grav::~AMRsolve_Hypre_Grav()
 /** Creates a hypre grid, with one part per level and one box per Grid
     patch object, for an AMR problem.  Sets grid box extents, grid
     part variables, and periodicity. */
-void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
+void AMRsolve_Hypre_Grav::init_hierarchy()
 {
 
   int ierr;
@@ -142,10 +133,10 @@ void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
   // Create the hypre grid
   _TRACE_;
   ierr = HYPRE_SStructGridCreate(MPI_COMM_WORLD, dim, num_parts, &grid_);
-  if (ierr != 0) ERROR("could not create grid_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not create grid_\n");
+  if (use_prec_) {
     ierr = HYPRE_StructGridCreate(MPI_COMM_WORLD, dim, &cgrid_);
-    if (ierr != 0) ERROR("could not create cgrid_\n");
+    if (ierr != 0)  ERROR("could not create cgrid_\n");
   }
 
   _TRACE_;
@@ -165,12 +156,12 @@ void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
 		      grid->index_upper(1),
 		      grid->index_upper(2)};
       ierr = HYPRE_SStructGridSetExtents(grid_, part, lower, upper);
-      if (ierr != 0) ERROR("could not set grid_ extents\n");
+      if (ierr != 0)  ERROR("could not set grid_ extents\n");
       
       // set up cgrid for coarse level
-      if (use_prec && part==0) {
+      if (use_prec_ && part==0) {
 	ierr = HYPRE_StructGridSetExtents(cgrid_, lower, upper);
-	if (ierr != 0) ERROR("could not set cgrid_ extents\n");
+	if (ierr != 0)  ERROR("could not set cgrid_ extents\n");
       }
     } // while grid = itgl++
 
@@ -179,7 +170,7 @@ void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
     HYPRE_SStructVariable variable_types[] = { HYPRE_SSTRUCT_VARIABLE_CELL };
     const int numvars = 1;
     ierr = HYPRE_SStructGridSetVariables(grid_, part, numvars, variable_types);
-    if (ierr != 0) ERROR("could not set grid_ variables\n");
+    if (ierr != 0)  ERROR("could not set grid_ variables\n");
 
     // Set periodicity of the grid part
     int period[3] = { hierarchy_->period_index(0,part),
@@ -188,11 +179,11 @@ void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
 
     _TRACE_;
     ierr = HYPRE_SStructGridSetPeriodic(grid_, part, period);
-    if (ierr != 0) ERROR("could not set grid_ periodicity\n");
+    if (ierr != 0)  ERROR("could not set grid_ periodicity\n");
 
-    if (use_prec && part==0) {
+    if (use_prec_ && part==0) {
       ierr = HYPRE_StructGridSetPeriodic(cgrid_, period);
-      if (ierr != 0) ERROR("could not set cgrid_ periodicity\n");
+      if (ierr != 0)  ERROR("could not set cgrid_ periodicity\n");
     }
 
   } // while level = itl++
@@ -201,13 +192,12 @@ void AMRsolve_Hypre_Grav::init_hierarchy(AMRsolve_Mpi& mpi)
   _TRACE_;
 
   ierr = HYPRE_SStructGridAssemble(grid_);
-  if (ierr != 0) ERROR("could not assemble grid_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not assemble grid_\n");
+  if (use_prec_) {
     ierr = HYPRE_StructGridAssemble(cgrid_);
-    if (ierr != 0) ERROR("could not assemble cgrid_\n");
+    if (ierr != 0)  ERROR("could not assemble cgrid_\n");
   }
   _TRACE_;
-  
 } // AMRsolve_Hypre_Grav::init_hierarchy()
 
 //----------------------------------------------------------------------
@@ -223,10 +213,10 @@ void AMRsolve_Hypre_Grav::init_stencil()
 
   _TRACE_;
   ierr = HYPRE_SStructStencilCreate(dim,dim*2+1,&stencil_);
-  if (ierr != 0) ERROR("could not initialize stencil_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not initialize stencil_\n");
+  if (use_prec_) {
     ierr = HYPRE_StructStencilCreate(dim, dim*2+1, &cstencil_);
-    if (ierr != 0) ERROR("could not initialize stencil_\n");
+    if (ierr != 0)  ERROR("could not initialize stencil_\n");
   }
 
   int entries[][3] = { {  0, 0, 0 },     // center
@@ -240,62 +230,61 @@ void AMRsolve_Hypre_Grav::init_stencil()
   _TRACE_;
   if (dim >= 1) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 0, entries[0], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 0, entries[0]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 1) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 1, entries[1], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 1, entries[1]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 1) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 2, entries[2], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 2, entries[2]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 2) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 3, entries[3], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 3, entries[3]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 2) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 4, entries[4], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 4, entries[4]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 3) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 5, entries[5], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 5, entries[5]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   if (dim >= 3) {
     ierr = HYPRE_SStructStencilSetEntry(stencil_, 6, entries[6], 0);
-    if (ierr != 0) ERROR("could not set stencil_ entry\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set stencil_ entry\n");
+    if (use_prec_) {
       ierr = HYPRE_StructStencilSetElement(cstencil_, 6, entries[6]);
-      if (ierr != 0) ERROR("could not set cstencil_ entry\n");
+      if (ierr != 0)  ERROR("could not set cstencil_ entry\n");
     }
   }
   _TRACE_;
-
 } // AMRsolve_Hypre_Grav::init_stencil()
 
 //----------------------------------------------------------------------
@@ -312,11 +301,11 @@ void AMRsolve_Hypre_Grav::init_graph()
   // Create the hypre graph object
   _TRACE_;
   ierr = HYPRE_SStructGraphCreate(MPI_COMM_WORLD, grid_, &graph_);
-  if (ierr != 0) ERROR("could not create graph_\n");
+  if (ierr != 0)  ERROR("could not create graph_\n");
   
   _TRACE_;
   ierr = HYPRE_SStructGraphSetObjectType(graph_, HYPRE_SSTRUCT);
-  if (ierr != 0) ERROR("could not set graph_ type\n");
+  if (ierr != 0)  ERROR("could not set graph_ type\n");
 
   _TRACE_;
   ItHierarchyLevels itl (*hierarchy_);
@@ -327,7 +316,7 @@ void AMRsolve_Hypre_Grav::init_graph()
     // Define stencil connections within each level
     _TRACE_;
     ierr = HYPRE_SStructGraphSetStencil(graph_, part, 0, stencil_);
-    if (ierr != 0) ERROR("could not set stencil_ into graph_\n");
+    if (ierr != 0)  ERROR("could not set stencil_ into graph_\n");
 
     // Define graph connections between levels
     _TRACE_;
@@ -349,9 +338,8 @@ void AMRsolve_Hypre_Grav::init_graph()
   // Assemble the hypre graph
   _TRACE_;
   ierr = HYPRE_SStructGraphAssemble(graph_);
-  if (ierr != 0) ERROR("could not assemble graph_\n");
+  if (ierr != 0)  ERROR("could not assemble graph_\n");
   _TRACE_;
-
 } // AMRsolve_Hypre_Grav::init_graph()
 
 //----------------------------------------------------------------------
@@ -366,63 +354,65 @@ void AMRsolve_Hypre_Grav::init_elements(Scalar f_scale)
   // Create the hypre matrix A_, solution X_, and right-hand side B_ objects
   int ierr;
   ierr = HYPRE_SStructMatrixCreate(MPI_COMM_WORLD, graph_, &A_);
-  if (ierr != 0) ERROR("could not create A_\n");
+  if (ierr != 0)  ERROR("could not create A_\n");
   ierr = HYPRE_SStructVectorCreate(MPI_COMM_WORLD, grid_,  &X_);
-  if (ierr != 0) ERROR("could not create X_\n");
+  if (ierr != 0)  ERROR("could not create X_\n");
   ierr = HYPRE_SStructVectorCreate(MPI_COMM_WORLD, grid_,  &B_);
-  if (ierr != 0) ERROR("could not create B_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not create B_\n");
+
+  if (use_prec_) {
     ierr = HYPRE_SStructVectorCreate(MPI_COMM_WORLD, grid_,  &Y_);
-    if (ierr != 0) ERROR("could not create Y_\n");
+    if (ierr != 0)  ERROR("could not create Y_\n");
     ierr = HYPRE_StructMatrixCreate(MPI_COMM_WORLD, cgrid_, cstencil_,  &Ac_);
-    if (ierr != 0) ERROR("could not create Ac_\n");
+    if (ierr != 0)  ERROR("could not create Ac_\n");
     ierr = HYPRE_StructVectorCreate(MPI_COMM_WORLD, cgrid_, &Xc_);
-    if (ierr != 0) ERROR("could not create Xc_\n");
+    if (ierr != 0)  ERROR("could not create Xc_\n");
     ierr = HYPRE_StructVectorCreate(MPI_COMM_WORLD, cgrid_, &Bc_);
-    if (ierr != 0) ERROR("could not create Bc_\n");
+    if (ierr != 0)  ERROR("could not create Bc_\n");
   }
 
   // Set the object types
   if (parameters_->value("solver") == "bicgstab-boomer") {
     ierr = HYPRE_SStructMatrixSetObjectType(A_,HYPRE_PARCSR);
-    if (ierr != 0) ERROR("could not set A_ type\n");
+    if (ierr != 0)  ERROR("could not set A_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(X_,HYPRE_PARCSR);
-    if (ierr != 0) ERROR("could not set X_ type\n");
+    if (ierr != 0)  ERROR("could not set X_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(B_,HYPRE_PARCSR);
-    if (ierr != 0) ERROR("could not set B_ type\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set B_ type\n");
+    if (use_prec_) {
       ierr = HYPRE_SStructVectorSetObjectType(Y_,HYPRE_PARCSR);
-      if (ierr != 0) ERROR("could not set Y_ type\n");
+      if (ierr != 0)  ERROR("could not set Y_ type\n");
     }
   } else {
     ierr = HYPRE_SStructMatrixSetObjectType(A_,HYPRE_SSTRUCT);
-    if (ierr != 0) ERROR("could not set A_ type\n");
+    if (ierr != 0)  ERROR("could not set A_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(X_,HYPRE_SSTRUCT);
-    if (ierr != 0) ERROR("could not set X_ type\n");
+    if (ierr != 0)  ERROR("could not set X_ type\n");
     ierr = HYPRE_SStructVectorSetObjectType(B_,HYPRE_SSTRUCT);
-    if (ierr != 0) ERROR("could not set B_ type\n");
-    if (use_prec) {
+    if (ierr != 0)  ERROR("could not set B_ type\n");
+    if (use_prec_) {
       ierr = HYPRE_SStructVectorSetObjectType(Y_,HYPRE_SSTRUCT);
-      if (ierr != 0) ERROR("could not set Y_ type\n");
+      if (ierr != 0)  ERROR("could not set Y_ type\n");
     }
   }
 
   // Initialize the hypre matrix and vector objects
   ierr = HYPRE_SStructMatrixInitialize(A_);
-  if (ierr != 0) ERROR("could not initialize A_\n");
+  if (ierr != 0)  ERROR("could not initialize A_\n");
   ierr = HYPRE_SStructVectorInitialize(X_);
-  if (ierr != 0) ERROR("could not initialize X_\n");
+  if (ierr != 0)  ERROR("could not initialize X_\n");
   ierr = HYPRE_SStructVectorInitialize(B_);
-  if (ierr != 0) ERROR("could not initialize B_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not initialize B_\n");
+
+  if (use_prec_) {
     ierr = HYPRE_SStructVectorInitialize(Y_);
-    if (ierr != 0) ERROR("could not initialize Y_\n");
+    if (ierr != 0)  ERROR("could not initialize Y_\n");
     ierr = HYPRE_StructMatrixInitialize(Ac_);
-    if (ierr != 0) ERROR("could not initialize Ac_\n");
+    if (ierr != 0)  ERROR("could not initialize Ac_\n");
     ierr = HYPRE_StructVectorInitialize(Xc_);
-    if (ierr != 0) ERROR("could not initialize Xc_\n");
+    if (ierr != 0)  ERROR("could not initialize Xc_\n");
     ierr = HYPRE_StructVectorInitialize(Bc_);
-    if (ierr != 0) ERROR("could not initialize Bc_\n");
+    if (ierr != 0)  ERROR("could not initialize Bc_\n");
   }
 
   //--------------------------------------------------
@@ -437,36 +427,37 @@ void AMRsolve_Hypre_Grav::init_elements(Scalar f_scale)
 
   // Assemble the matrix and vectors
   ierr = HYPRE_SStructMatrixAssemble(A_);
-  if (ierr != 0) ERROR("could not assemble A_\n");
+  if (ierr != 0)  ERROR("could not assemble A_\n");
   ierr = HYPRE_SStructVectorAssemble(B_);
-  if (ierr != 0) ERROR("could not assemble B_\n");
+  if (ierr != 0)  ERROR("could not assemble B_\n");
   ierr = HYPRE_SStructVectorAssemble(X_);
-  if (ierr != 0) ERROR("could not assemble X_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not assemble X_\n");
+
+  if (use_prec_) {
     ierr = HYPRE_SStructVectorSetConstantValues(Y_, 0.0);
-    if (ierr != 0) ERROR("could not initialize Y_ to 0.0\n");
+    if (ierr != 0)  ERROR("could not initialize Y_ to 0.0\n");
     ierr = HYPRE_SStructVectorAssemble(Y_);
-    if (ierr != 0) ERROR("could not assemble Y_\n");
+    if (ierr != 0)  ERROR("could not assemble Y_\n");
     ierr = HYPRE_StructMatrixAssemble(Ac_);
-    if (ierr != 0) ERROR("could not assemble Ac_\n");
+    if (ierr != 0)  ERROR("could not assemble Ac_\n");
     ierr = HYPRE_StructVectorAssemble(Bc_);
-    if (ierr != 0) ERROR("could not assemble Ac_\n");
+    if (ierr != 0)  ERROR("could not assemble Ac_\n");
     ierr = HYPRE_StructVectorAssemble(Xc_);
-    if (ierr != 0) ERROR("could not assemble Ac_\n");
+    if (ierr != 0)  ERROR("could not assemble Ac_\n");
   }
 
   // Optionally write the matrix and vectors to a file for debugging
   if (parameters_->value("dump_a") == "true") {
     ierr = HYPRE_SStructMatrixPrint("A-hypre",A_,0);
-    if (ierr != 0) ERROR("could not print A_\n");
+    if (ierr != 0)  ERROR("could not print A_\n");
   }
   if (parameters_->value("dump_b") == "true") {
     ierr = HYPRE_SStructVectorPrint("B-hypre",B_,0);
-    if (ierr != 0) ERROR("could not print A_\n");
+    if (ierr != 0)  ERROR("could not print A_\n");
   }
-  if (parameters_->value("dump_ac") == "true" && use_prec) {
+  if (parameters_->value("dump_ac") == "true" && use_prec_) {
     ierr = HYPRE_StructMatrixPrint("Ac-hypre",Ac_,0);
-    if (ierr != 0) ERROR("could not print Ac_\n");
+    if (ierr != 0)  ERROR("could not print Ac_\n");
   }
 
 } // AMRsolve_Hypre_Grav::init_elements()
@@ -526,7 +517,7 @@ void AMRsolve_Hypre_Grav::solve()
   
   if (parameters_->value("dump_x") == "true") {
     ierr = HYPRE_SStructVectorPrint("X-hypre",X_,1);
-    if (ierr != 0) ERROR("could not print X_\n");
+    if (ierr != 0)  ERROR("could not print X_\n");
   }
 
 } // AMRsolve_Hypre_Grav::solve()
@@ -556,10 +547,10 @@ int AMRsolve_Hypre_Grav::evaluate()
 	// extract Enzo solution
 	int nx[3];
 	ierr = HYPRE_SStructVectorGather(X_);
-	if (ierr != 0) ERROR("could not gather X_\n");
+	if (ierr != 0)  ERROR("could not gather X_\n");
 	ierr = HYPRE_SStructVectorGetBoxValues(X_, level, lower, upper, 0,
 					       grid->get_u(&nx[0],&nx[1],&nx[2]));  
-	if (ierr != 0) ERROR("could not GetBoxValues from X_\n");
+	if (ierr != 0)  ERROR("could not GetBoxValues from X_\n");
 	sprintf(filename,"X.%d",grid->id());
 	grid->write("header",filename);
 	grid->write("u",filename);
@@ -569,10 +560,10 @@ int AMRsolve_Hypre_Grav::evaluate()
 	// extract Enzo rhs
 	int nb[3];
 	ierr = HYPRE_SStructVectorGather(B_);
-	if (ierr != 0) ERROR("could not gather B_\n");
+	if (ierr != 0)  ERROR("could not gather B_\n");
 	ierr = HYPRE_SStructVectorGetBoxValues(B_, level, lower, upper, 0,
 					       grid->get_f(&nb[0],&nb[1],&nb[2]));  
-	if (ierr != 0) ERROR("could not GetBoxValues from B_\n");
+	if (ierr != 0)  ERROR("could not GetBoxValues from B_\n");
 	sprintf(filename,"B.%d",grid->id());
 	grid->write("f",filename);
       }
@@ -624,9 +615,9 @@ void AMRsolve_Hypre_Grav::update_enzo()
     int n3[3];
     Scalar* u = grid->get_u(&n3[0],&n3[1],&n3[2]);
     ierr = HYPRE_SStructVectorGather(X_);
-    if (ierr != 0) ERROR("could not gather X_\n");
+    if (ierr != 0)  ERROR("could not gather X_\n");
     ierr = HYPRE_SStructVectorGetBoxValues(X_, level, lower, upper, 0, u);  
-    if (ierr != 0) ERROR("could not GetBoxValues from X_\n");
+    if (ierr != 0)  ERROR("could not GetBoxValues from X_\n");
 
     // access Enzo PotentialField
     Scalar* phi = grid->get_phi();
@@ -654,7 +645,7 @@ void AMRsolve_Hypre_Grav::update_enzo()
 	  k = k0 + en0*(k1 + en1*k2);
 
 	  // update Enzo solution with amrsolve solution (corrector)
-	  phi[k] += u[i];
+	  phi[k] = u[i];
 	}
       }
     }
@@ -673,14 +664,14 @@ void AMRsolve_Hypre_Grav::abort_dump()
 
   // have HYPRE dump out everything it knows to disk
   ierr = HYPRE_SStructMatrixPrint("A.mat",A_,0);
-  if (ierr != 0) ERROR("could not print A_\n");
+  if (ierr != 0)  ERROR("could not print A_\n");
   ierr = HYPRE_SStructVectorPrint("x.vec",X_,0);
-  if (ierr != 0) ERROR("could not print X_\n");
+  if (ierr != 0)  ERROR("could not print X_\n");
   ierr = HYPRE_SStructVectorPrint("b.vec",B_,0);
-  if (ierr != 0) ERROR("could not print B_\n");
-  if (use_prec) {
+  if (ierr != 0)  ERROR("could not print B_\n");
+  if (use_prec_) {
     ierr = HYPRE_StructMatrixPrint("Ac.mat",Ac_,0);
-    if (ierr != 0) ERROR("could not print Ac_\n");
+    if (ierr != 0)  ERROR("could not print Ac_\n");
   }
 
 } // AMRsolve_Hypre_Grav::abort_dump()
@@ -699,7 +690,7 @@ void AMRsolve_Hypre_Grav::init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase
   // Input parameter check
   if ( !(phase == phase_graph || phase == phase_matrix) ) {
     char error_message[80];
-    sprintf(error_message,"init_matrix_nonstencil_ called with phase = %d", int(phase));
+    sprintf(error_message,"init_nonstencil_ called with phase = %d", int(phase));
     ERROR(error_message);
   } // if phase unexpected
 
@@ -870,7 +861,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
   ItHierarchyGridsLocal itg (*hierarchy_);
   while (AMRsolve_Grid* grid = itg++) {
 
-    // for each local grid, use our "f" array to store RHS entries 
+    // for each local grid, use our "f" array to store vector entries 
     // for the linear system.
     int n0,n1,n2;
     Scalar* values = grid->get_f(&n0,&n1,&n2);
@@ -882,35 +873,28 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
     // get buffering information on relating amrsolve grid to Enzo data
     int ghosts[3][2]; 
     grid->get_GravGhosts(ghosts);
-    int en0 = n0 + ghosts[0][0] + ghosts[0][1];  // enzo data dimensions
-    int en1 = n1 + ghosts[1][0] + ghosts[1][1];  // enzo data dimensions
-    int en2 = n2 + ghosts[2][0] + ghosts[2][1];  // enzo data dimensions
+    int en0 = n0 + ghosts[0][0] + ghosts[0][1];  // enzo gravity data dimensions
+    int en1 = n1 + ghosts[1][0] + ghosts[1][1];  // enzo gravity data dimensions
+    int en2 = n2 + ghosts[2][0] + ghosts[2][1];  // enzo gravity data dimensions
 
     // iterate over the domain, copying Enzo's GravitatingMassField into f
-    int k0, k1, k2, k, i0, i1, i2, i;
+    int k0, k1, k2, i0, i1, i2;
     for (i2=0; i2<n2; i2++) {
       k2 = ghosts[2][0] + i2;
-
       for (i1=0; i1<n1; i1++) {
 	k1 = ghosts[1][0] + i1;
-
 	for (i0=0; i0<n0; i0++) {
 	  k0 = ghosts[0][0] + i0;
-
-	  // compute indices of amrsolve, enzo cells
-	  k = k0 + en0*(k1 + en1*k2);
-	  i = i0 + n0*(i1 + n1*i2);
-
-	  // fill in f with Enzo RHS data
-	  values[i] = GravMassField[k];
+	  values[i0 + n0*(i1 + n1*i2)] = GravMassField[k0 + en0*(k1 + en1*k2)];
 	}
       }
     }
    
-    // scale RHS by input scaling multiplied by 1/(hx*hy*hz)
+    // scale RHS by input scaling multiplied by cell volume
+    // [input contains GravitationalConstant/a]
     Scalar hx,hy,hz;
     grid->h(hx,hy,hz);
-    Scalar scale = hx*hy*hz * f_scale;
+    Scalar scale = f_scale * hx * hy * hz;
     for (int i=0; i<n0*n1*n2; i++)  values[i] *= scale;
 
     // Set Hypre B_ vector to grid f_ values
@@ -922,7 +906,25 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
 		     grid->index_upper(1), 
 		     grid->index_upper(2) };
     ierr = HYPRE_SStructVectorAddToBoxValues(B_,part,lower,upper,0,values);
-    if (ierr != 0) ERROR("could not AddToBoxValues in B_\n");
+    if (ierr != 0)  ERROR("could not AddToBoxValues in B_\n");
+
+    // insert current values for PotentialField into HYPRE vector X_
+    if (!zero_guess_) {
+      Scalar* phi = grid->get_phi();
+      for (i=0; i<n0*n1*n2; i++)  values[i] = 0.0;
+      for (i2=0; i2<n2; i2++) {
+	k2 = ghosts[2][0] + i2;
+	for (i1=0; i1<n1; i1++) {
+	  k1 = ghosts[1][0] + i1;
+	  for (i0=0; i0<n0; i0++) {
+	    k0 = ghosts[0][0] + i0;
+	    values[i0 + n0*(i1 + n1*i2)] = phi[k0 + en0*(k1 + en1*k2)];
+	  }
+	}
+      }
+      ierr = HYPRE_SStructVectorSetBoxValues(X_,part,lower,upper,0,values);
+      if (ierr != 0)  ERROR("could not SetBoxValues in X_\n");
+    }
 
   } //  while grid = itg++
   
@@ -938,7 +940,11 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
       rfactors[part][2] = r_factor_;
     }
     ierr = HYPRE_SStructFACZeroAMRVectorData(B_, plevels, rfactors);
-    if (ierr != 0) ERROR("could not ZeroAMRVectorData in B_\n");
+    if (ierr != 0)  ERROR("could not ZeroAMRVectorData in B_\n");
+    if (!zero_guess_) {
+      ierr = HYPRE_SStructFACZeroAMRVectorData(X_, plevels, rfactors);
+      if (ierr != 0)  ERROR("could not ZeroAMRVectorData in X_\n");
+    }
   }
  
 
@@ -977,7 +983,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
 
  	  // Copy vector values to the array
  	  ierr = HYPRE_SStructVectorGetBoxValues(B_, part, lower, upper, 0, tmpvals);
-	  if (ierr != 0) ERROR("could not GetBoxValues in B_\n");
+	  if (ierr != 0)  ERROR("could not GetBoxValues in B_\n");
 
 	  // Accumulate the sum
 	  for (int i=0; i<n; i++)  local_shift_b_sum += tmpvals[i];
@@ -992,7 +998,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
     Scalar shift_b_sum = 0.0;
     ierr = MPI_Allreduce(&local_shift_b_sum, &shift_b_sum, 1, 
 			 MPI_SCALAR, MPI_SUM, MPI_COMM_WORLD);
-    if (ierr != 0) ERROR("error in MPI_Allreduce\n");
+    if (ierr != 0)  ERROR("error in MPI_Allreduce\n");
 
     // Compute the shift given the global sum and global count
     Scalar shift_b_amount = -shift_b_sum/shift_b_count;
@@ -1013,7 +1019,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
 	for (int i=0; i<grid->num_unknowns(); i++) tmpvals[i] = shift_b_amount;
 
 	ierr = HYPRE_SStructVectorAddToBoxValues(B_,part,lower,upper,0,tmpvals);
-	if (ierr != 0) ERROR("could not AddToBoxValues in B_\n");
+	if (ierr != 0)  ERROR("could not AddToBoxValues in B_\n");
 
 	delete [] tmpvals;
 
@@ -1032,7 +1038,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
 	rfactors[part][2] = r_factor_;
       }
       ierr = HYPRE_SStructFACZeroAMRVectorData(B_, plevels, rfactors);
-      if (ierr != 0) ERROR("could not ZeroAMRVectorData in B_\n");
+      if (ierr != 0)  ERROR("could not ZeroAMRVectorData in B_\n");
     }
 
   } // if periodic
@@ -1119,41 +1125,48 @@ void AMRsolve_Hypre_Grav::init_matrix_stencil_(AMRsolve_Grid& grid)
   // Update matrix stencil values
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper,
 					 0, 1, &entries[0], v0);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[1], v1[0][1]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[2], v1[0][0]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[3], v1[1][1]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[4], v1[1][0]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[5], v1[2][1]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
   ierr = HYPRE_SStructMatrixSetBoxValues(A_, level, index_lower, index_upper, 
 					 0, 1, &entries[6], v1[2][0]);
-  if (ierr != 0) ERROR("could not SetBoxValues in A_\n");
+  if (ierr != 0)  ERROR("could not SetBoxValues in A_\n");
 
-  if (coarsegrid && use_prec) {
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[0], v0);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[1], v1[0][1]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[2], v1[0][0]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[3], v1[1][1]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[4], v1[1][0]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[5], v1[2][1]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
-    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 1, &entries[6], v1[2][0]);
-    if (ierr != 0) ERROR("could not SetBoxValues in Ac_\n");
+  if (coarsegrid && use_prec_) {
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[0], v0);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[1], v1[0][1]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[2], v1[0][0]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[3], v1[1][1]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[4], v1[1][0]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[5], v1[2][1]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
+    ierr = HYPRE_StructMatrixSetBoxValues(Ac_, index_lower, index_upper, 
+					  1, &entries[6], v1[2][0]);
+    if (ierr != 0)  ERROR("could not SetBoxValues in Ac_\n");
   }
 
   // Deallocate arrays
@@ -1174,7 +1187,7 @@ void AMRsolve_Hypre_Grav::init_matrix_clear_(int part)
   if (part > 0) {
     int r_factors[3] = {r_factor_,r_factor_,r_factor_}; 
     int ierr = HYPRE_SStructFACZeroAMRMatrixData(A_, part-1, r_factors);
-    if (ierr != 0) ERROR("could not ZeroAMRMatrixData in A_\n");
+    if (ierr != 0)  ERROR("could not ZeroAMRMatrixData in A_\n");
   }
 
 } // AMRsolve_Hypre_Grav::init_matrix_clear_()
@@ -1401,7 +1414,7 @@ void AMRsolve_Hypre_Grav::solve_pfmg_(int itmax, double restol)
   _TRACE_;
   // Create and initialize the solver
   ierr = HYPRE_SStructSysPFMGCreate(MPI_COMM_WORLD, &solver_);
-  if (ierr != 0) ERROR("could not create SysPFMG solver_\n");
+  if (ierr != 0)  ERROR("could not create SysPFMG solver_\n");
 
   // extract some additional solver parameters
   std::string srlxtype = parameters_->value("solver_rlxtype");
@@ -1427,26 +1440,26 @@ void AMRsolve_Hypre_Grav::solve_pfmg_(int itmax, double restol)
   // set solver options
   if (itmax != 0 ) {
     ierr = HYPRE_SStructSysPFMGSetMaxIter(solver_,itmax);
-    if (ierr != 0) ERROR("could not set itmax\n");
+    if (ierr != 0)  ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
     ierr = HYPRE_SStructSysPFMGSetTol(solver_,restol);
-    if (ierr != 0) ERROR("could not set restol\n");
+    if (ierr != 0)  ERROR("could not set restol\n");
   }
   ierr = HYPRE_SStructSysPFMGSetRelaxType(solver_,rlxtype);
-  if (ierr != 0) ERROR("could not set rlxtype\n");
+  if (ierr != 0)  ERROR("could not set rlxtype\n");
   ierr = HYPRE_SStructSysPFMGSetNumPreRelax(solver_,npre);
-  if (ierr != 0) ERROR("could not set npre\n");
+  if (ierr != 0)  ERROR("could not set npre\n");
   ierr = HYPRE_SStructSysPFMGSetNumPostRelax(solver_,npost);
-  if (ierr != 0) ERROR("could not set npost\n");
+  if (ierr != 0)  ERROR("could not set npost\n");
   ierr = HYPRE_SStructSysPFMGSetPrintLevel(solver_,printl);
-  if (ierr != 0) ERROR("could not set printl\n");
+  if (ierr != 0)  ERROR("could not set printl\n");
   ierr = HYPRE_SStructSysPFMGSetLogging(solver_,log);
-  if (ierr != 0) ERROR("could not set log\n");
+  if (ierr != 0)  ERROR("could not set log\n");
 
   // setup solver 
   ierr = HYPRE_SStructSysPFMGSetup(solver_,A_,B_,X_);
-  if (ierr != 0) ERROR("could not setup solver_\n");
+  if (ierr != 0)  ERROR("could not setup solver_\n");
 
   // Solve the linear system
   ierr = HYPRE_SStructSysPFMGSolve(solver_,A_,B_,X_);
@@ -1458,9 +1471,9 @@ void AMRsolve_Hypre_Grav::solve_pfmg_(int itmax, double restol)
 
   // Write out some diagnostic info about the solve
   ierr = HYPRE_SStructSysPFMGGetNumIterations(solver_,&iter_);
-  if (ierr != 0) ERROR("could not get iter_\n");
+  if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructSysPFMGGetFinalRelativeResidualNorm(solver_,&resid_);
-  if (ierr != 0) ERROR("could not get resid_\n");
+  if (ierr != 0)  ERROR("could not get resid_\n");
   if (debug && pmpi->is_root()) {
     printf("hypre PFMG num iterations: %d\n",iter_);
     printf("hypre PFMG final relative residual norm: %g\n",resid_);
@@ -1468,7 +1481,7 @@ void AMRsolve_Hypre_Grav::solve_pfmg_(int itmax, double restol)
 
   // Delete the solver
   ierr = HYPRE_SStructSysPFMGDestroy(solver_);
-  if (ierr != 0) ERROR("could not destroy solver_\n");
+  if (ierr != 0)  ERROR("could not destroy solver_\n");
   _TRACE_;
 } // AMRsolve_Hypre_Grav::solve_pfmg_()
 
@@ -1482,17 +1495,17 @@ void AMRsolve_Hypre_Grav::solve_fac_(int itmax, double restol)
 
   // Create the solver
   ierr = HYPRE_SStructFACCreate(MPI_COMM_WORLD, &solver_);
-  if (ierr != 0) ERROR("could not create FAC solver_\n");
+  if (ierr != 0)  ERROR("could not create FAC solver_\n");
 
   // Initialize parts
   int num_parts = hierarchy_->num_levels();
   ierr = HYPRE_SStructFACSetMaxLevels(solver_, num_parts);
-  if (ierr != 0) ERROR("could not set max FAC levels\n");
+  if (ierr != 0)  ERROR("could not set max FAC levels\n");
 
   int *parts = new int[num_parts];
   for (i=0; i<num_parts; i++) parts[i] = i;
   ierr = HYPRE_SStructFACSetPLevels(solver_, num_parts, parts);
-  if (ierr != 0) ERROR("could not set FAC PLevels\n");
+  if (ierr != 0)  ERROR("could not set FAC PLevels\n");
 
   // Initialize refinement factors
   int3 *refinements = new int3[num_parts];
@@ -1502,7 +1515,7 @@ void AMRsolve_Hypre_Grav::solve_fac_(int itmax, double restol)
     refinements[i][2] = r_factor_;
   }
   ierr = HYPRE_SStructFACSetPRefinements(solver_, num_parts, refinements);
-  if (ierr != 0) ERROR("could not set FAC refinements\n");
+  if (ierr != 0)  ERROR("could not set FAC refinements\n");
 
   // extract some additional solver parameters
   std::string srlxtype = parameters_->value("solver_rlxtype");
@@ -1530,31 +1543,31 @@ void AMRsolve_Hypre_Grav::solve_fac_(int itmax, double restol)
 
   // solver parameters
   ierr = HYPRE_SStructFACSetNumPreRelax(solver_,npre);
-  if (ierr != 0) ERROR("could not set npre\n");
+  if (ierr != 0)  ERROR("could not set npre\n");
   ierr = HYPRE_SStructFACSetNumPostRelax(solver_,npost);
-  if (ierr != 0) ERROR("could not set npost\n");
+  if (ierr != 0)  ERROR("could not set npost\n");
   ierr = HYPRE_SStructFACSetCoarseSolverType(solver_,csolve);
-  if (ierr != 0) ERROR("could not set csolve\n");
+  if (ierr != 0)  ERROR("could not set csolve\n");
   ierr = HYPRE_SStructFACSetRelaxType(solver_,relax);
-  if (ierr != 0) ERROR("could not set relax\n");
+  if (ierr != 0)  ERROR("could not set relax\n");
 
   // stopping criteria
   if (itmax != 0 ) {
     ierr = HYPRE_SStructFACSetMaxIter(solver_,itmax);
-    if (ierr != 0) ERROR("could not set itmax\n");
+    if (ierr != 0)  ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
     ierr = HYPRE_SStructFACSetTol(solver_,restol);
-    if (ierr != 0) ERROR("could not set restol\n");
+    if (ierr != 0)  ERROR("could not set restol\n");
   }
 
   // output amount
   ierr = HYPRE_SStructFACSetLogging(solver_, 1);
-  if (ierr != 0) ERROR("could not set logging\n");
+  if (ierr != 0)  ERROR("could not set logging\n");
 
   // prepare for solve
   ierr = HYPRE_SStructFACSetup2(solver_, A_, B_, X_);
-  if (ierr != 0) ERROR("could not setup FAC solver_\n");
+  if (ierr != 0)  ERROR("could not setup FAC solver_\n");
 
   // Solve the linear system
   ierr = HYPRE_SStructFACSolve3(solver_, A_, B_, X_);
@@ -1566,9 +1579,9 @@ void AMRsolve_Hypre_Grav::solve_fac_(int itmax, double restol)
 
   // Write out some diagnostic info about the solve
   ierr = HYPRE_SStructFACGetNumIterations(solver_, &iter_);
-  if (ierr != 0) ERROR("could not get iter_\n");
+  if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructFACGetFinalRelativeResidualNorm(solver_, &resid_);
-  if (ierr != 0) ERROR("could not get resid_\n");
+  if (ierr != 0)  ERROR("could not get resid_\n");
   if (debug && pmpi->is_root()) {
     printf("hypre FAC num iterations: %d\n",iter_);
     printf("hypre FAC final relative residual norm: %g\n",resid_);
@@ -1576,7 +1589,7 @@ void AMRsolve_Hypre_Grav::solve_fac_(int itmax, double restol)
 
   // Delete the solver
   ierr = HYPRE_SStructFACDestroy2(solver_);
-  if (ierr != 0) ERROR("could not destroy solver_\n");
+  if (ierr != 0)  ERROR("could not destroy solver_\n");
 
   // Delete local dynamic storage
   delete [] parts;
@@ -1595,7 +1608,7 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
 
   // Create the solver
   ierr = HYPRE_SStructBiCGSTABCreate(MPI_COMM_WORLD, &solver_);
-  if (ierr != 0) ERROR("could not create solver_\n");
+  if (ierr != 0)  ERROR("could not create solver_\n");
 
   // extract some additional solver parameters
   std::string slog = parameters_->value("solver_log");
@@ -1605,37 +1618,37 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
   // stopping criteria
   if (itmax != 0 ) {
     ierr = HYPRE_SStructBiCGSTABSetMaxIter(solver_,itmax);
-    if (ierr != 0) ERROR("could not set itmax\n");
+    if (ierr != 0)  ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
     ierr = HYPRE_SStructBiCGSTABSetTol(solver_,restol);
-    if (ierr != 0) ERROR("could not set restol\n");
+    if (ierr != 0)  ERROR("could not set restol\n");
   }
 
   // output amount
   ierr = HYPRE_SStructBiCGSTABSetLogging(solver_, 1);
-  if (ierr != 0) ERROR("could not set logging\n");
+  if (ierr != 0)  ERROR("could not set logging\n");
 
   // set up the preconditioner (if requested)
   AMRsolve_HG_prec *precond;
-  if (use_prec) {
+  if (use_prec_) {
     int BdryType_[3][2];
     for (int i=0; i<3; i++)
       for (int j=0; j<2; j++)
 	BdryType_[i][j] = 0;
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
-    if (ierr != 0) ERROR("could not initialize HG preconditioner\n");
+    if (ierr != 0)  ERROR("could not initialize HG preconditioner\n");
     ierr = HYPRE_SStructBiCGSTABSetPrecond(solver_,
 					   (HYPRE_PtrToSStructSolverFcn) HG_prec_solve,
 					   (HYPRE_PtrToSStructSolverFcn) HG_prec_setup,
 					   (HYPRE_SStructSolver) precond);
-    if (ierr != 0) ERROR("could not set preconditioner\n");
+    if (ierr != 0)  ERROR("could not set preconditioner\n");
   }
 
   // Initialize the solver
   ierr = HYPRE_SStructBiCGSTABSetup(solver_, A_, B_, X_);
-  if (ierr != 0) ERROR("could not setup solver_\n");
+  if (ierr != 0)  ERROR("could not setup solver_\n");
 
   // Solve the linear system
   ierr = HYPRE_SStructBiCGSTABSolve(solver_, A_, B_, X_);
@@ -1656,9 +1669,9 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
 
   // Write out some diagnostic info about the solve
   ierr = HYPRE_SStructBiCGSTABGetNumIterations(solver_, &iter_);
-  if (ierr != 0) ERROR("could not get iter_\n");
+  if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructBiCGSTABGetFinalRelativeResidualNorm(solver_, &resid_);
-  if (ierr != 0) ERROR("could not get resid_\n");
+  if (ierr != 0)  ERROR("could not get resid_\n");
   if (debug && pmpi->is_root()) {
     printf("hypre BiCGSTAB num iterations: %d\n",iter_);
     printf("hypre BiCGSTAB final relative residual norm: %g\n",resid_);
@@ -1666,8 +1679,8 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
 
   // Delete the solver
   ierr = HYPRE_SStructBiCGSTABDestroy(solver_);
-  if (ierr != 0) ERROR("could not destroy solver_\n");
-  if (use_prec)  delete precond;
+  if (ierr != 0)  ERROR("could not destroy solver_\n");
+  if (use_prec_)  delete precond;
 
   _TRACE_;
 } // AMRsolve_Hypre_Grav::solve_bicgstab_()
@@ -1683,16 +1696,16 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_boomer_(int itmax, double restol)
 
   // Create the solver
   ierr = HYPRE_ParCSRBiCGSTABCreate(MPI_COMM_WORLD, &solver);
-  if (ierr != 0) ERROR("could not create solver\n");
+  if (ierr != 0)  ERROR("could not create solver\n");
 
   // stopping criteria
   if (itmax != 0 ) {
     ierr = HYPRE_BiCGSTABSetMaxIter(solver,itmax);
-    if (ierr != 0) ERROR("could not set itmax\n");
+    if (ierr != 0)  ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
     ierr = HYPRE_BiCGSTABSetTol(solver,restol);
-    if (ierr != 0) ERROR("could not set restol\n");
+    if (ierr != 0)  ERROR("could not set restol\n");
   }
 
   // extract some additional solver parameters
@@ -1705,34 +1718,34 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_boomer_(int itmax, double restol)
 
   // output amount
   ierr = HYPRE_BiCGSTABSetLogging(solver, log);
-  if (ierr != 0) ERROR("could not set logging\n");
+  if (ierr != 0)  ERROR("could not set logging\n");
 
   // Set BoomerAMG preconditioner
   HYPRE_Solver par_precond;
   ierr = HYPRE_BoomerAMGCreate(&par_precond);
-  if (ierr != 0) ERROR("could not create AMG precond\n");
+  if (ierr != 0)  ERROR("could not create AMG precond\n");
   ierr = HYPRE_BoomerAMGSetCoarsenType(par_precond, 6);
-  if (ierr != 0) ERROR("could not set coarsening type\n");
+  if (ierr != 0)  ERROR("could not set coarsening type\n");
   ierr = HYPRE_BoomerAMGSetStrongThreshold(par_precond, 0.25);
-  if (ierr != 0) ERROR("could not set threshold\n");
+  if (ierr != 0)  ERROR("could not set threshold\n");
   ierr = HYPRE_BoomerAMGSetTol(par_precond, 0.0);
-  if (ierr != 0) ERROR("could not set tolerance\n");
+  if (ierr != 0)  ERROR("could not set tolerance\n");
   ierr = HYPRE_BoomerAMGSetPrintLevel(par_precond, 1);
-  if (ierr != 0) ERROR("could not set print level\n");
+  if (ierr != 0)  ERROR("could not set print level\n");
   ierr = HYPRE_BoomerAMGSetPrintFileName(par_precond, "sstruct.out.log");
-  if (ierr != 0) ERROR("could not SetPrintFileName\n");
+  if (ierr != 0)  ERROR("could not SetPrintFileName\n");
   ierr = HYPRE_BoomerAMGSetMaxIter(par_precond, 1);
-  if (ierr != 0) ERROR("could not set maxiter\n");
+  if (ierr != 0)  ERROR("could not set maxiter\n");
   ierr = HYPRE_BiCGSTABSetPrecond(solver,
 				  (HYPRE_PtrToSolverFcn) HYPRE_BoomerAMGSolve,
 				  (HYPRE_PtrToSolverFcn) HYPRE_BoomerAMGSetup,
 				  par_precond);
-  if (ierr != 0) ERROR("could not set preconditioner\n");
+  if (ierr != 0)  ERROR("could not set preconditioner\n");
 
   // Initialize the solver
   ierr = HYPRE_BiCGSTABSetup(solver, (HYPRE_Matrix) A_, 
 			     (HYPRE_Vector) B_, (HYPRE_Vector) X_);
-  if (ierr != 0) ERROR("could not setup solver\n");
+  if (ierr != 0)  ERROR("could not setup solver\n");
 
   // Solve the linear system
   ierr = HYPRE_BiCGSTABSolve(solver, (HYPRE_Matrix) A_, 
@@ -1745,9 +1758,9 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_boomer_(int itmax, double restol)
 
   // Write out some diagnostic info about the solve
   ierr = HYPRE_BiCGSTABGetNumIterations(solver, &iter_);
-  if (ierr != 0) ERROR("could not get iter_\n");
+  if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_BiCGSTABGetFinalRelativeResidualNorm(solver, &resid_);
-  if (ierr != 0) ERROR("could not get resid_\n");
+  if (ierr != 0)  ERROR("could not get resid_\n");
   if (debug &&pmpi->is_root()) {
     printf("hypre BiCGSTAB num iterations: %d\n",iter_);
     printf("hypre BiCGSTAB final relative residual norm: %g\n",resid_);
@@ -1756,9 +1769,9 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_boomer_(int itmax, double restol)
 
   // Delete the solver and preconditiner
   ierr = HYPRE_BoomerAMGDestroy(par_precond);
-  if (ierr != 0) ERROR("could not destroy precond\n");
+  if (ierr != 0)  ERROR("could not destroy precond\n");
   ierr = HYPRE_BiCGSTABDestroy(solver);
-  if (ierr != 0) ERROR("could not destroy solver\n");
+  if (ierr != 0)  ERROR("could not destroy solver\n");
   _TRACE_;
 } // AMRsolve_Hypre_Grav::solve_bicgstab_boomer_()
 
@@ -1772,7 +1785,7 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
 
   // Create the solver
   ierr = HYPRE_SStructGMRESCreate(MPI_COMM_WORLD, &solver_);
-  if (ierr != 0) ERROR("could not create solver_\n");
+  if (ierr != 0)  ERROR("could not create solver_\n");
 
   // extract some additional solver parameters
   std::string slog = parameters_->value("solver_log");
@@ -1782,41 +1795,50 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
   // stopping criteria
   if (itmax != 0 ) {
     ierr = HYPRE_SStructGMRESSetMaxIter(solver_, itmax);
-    if (ierr != 0) ERROR("could not set itmax\n");
+    if (ierr != 0)  ERROR("could not set itmax\n");
   }
   if (restol != 0.0) {
     ierr = HYPRE_SStructGMRESSetTol(solver_, restol);
-    if (ierr != 0) ERROR("could not set restol\n");
+    if (ierr != 0)  ERROR("could not set restol\n");
   }
 
   // output amount
   ierr = HYPRE_SStructGMRESSetLogging(solver_, log);
-  if (ierr != 0) ERROR("could not set logging\n");
+  if (ierr != 0)  ERROR("could not set logging\n");
 
   // set up the preconditioner (if requested)
   AMRsolve_HG_prec *precond;
-  if (use_prec) {
+  if (use_prec_) {
     int BdryType_[3][2];
     for (int i=0; i<3; i++)
       for (int j=0; j<2; j++)
 	BdryType_[i][j] = 0;
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
-    if (ierr != 0) ERROR("could not initialize HG preconditioner\n");
+    if (ierr != 0)  ERROR("could not initialize HG preconditioner\n");
     ierr = HYPRE_SStructGMRESSetPrecond(solver_,
 					(HYPRE_PtrToSStructSolverFcn) HG_prec_solve,
 					(HYPRE_PtrToSStructSolverFcn) HG_prec_setup,
 					(HYPRE_SStructSolver) precond);
-    if (ierr != 0) ERROR("could not set preconditioner\n");
+    if (ierr != 0)  ERROR("could not set preconditioner\n");
   }
 
   // Initialize the solver
   ierr = HYPRE_SStructGMRESSetup(solver_, A_, B_, X_);
-  if (ierr != 0) ERROR("could not setup solver_\n");
+  if (ierr != 0)  ERROR("could not setup solver_\n");
 
   // Solve the linear system
   ierr = HYPRE_SStructGMRESSolve(solver_, A_, B_, X_);
   if (ierr != 0) {
+    HYPRE_SStructGMRESGetNumIterations(solver_, &iter_);
+    HYPRE_SStructGMRESGetFinalRelativeResidualNorm(solver_, &resid_);
+    fprintf(stderr, "Error %i detected, GMRES solver stats:\n  iterations = %d\n  final relative residual = %g\n",ierr,iter_,resid_);
+    fprintf(stderr, "Error %i detected, writing B_ to 'B-hypre.*':\n",ierr);
+    HYPRE_SStructVectorPrint("B-hypre",B_,1);
+    fprintf(stderr, "Error %i detected, writing X_ to 'X-hypre.*':\n",ierr);
+    HYPRE_SStructVectorPrint("X-hypre",X_,1);
+    fprintf(stderr, "Error %i detected, writing A_ to 'A-hypre.*':\n",ierr);
+    HYPRE_SStructMatrixPrint("A-hypre",A_,1);
     fprintf(stderr, "Error %i detected, printing current hierarchy:\n",ierr);
     hierarchy_->print();
     ERROR("could not solve with GMRES\n");
@@ -1824,9 +1846,9 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
 
   // Write out some diagnostic info about the solve
   ierr = HYPRE_SStructGMRESGetNumIterations(solver_, &iter_);
-  if (ierr != 0) ERROR("could not get iter_\n");
+  if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructGMRESGetFinalRelativeResidualNorm(solver_, &resid_);
-  if (ierr != 0) ERROR("could not get resid_\n");
+  if (ierr != 0)  ERROR("could not get resid_\n");
   if (debug && pmpi->is_root()) {
     printf("hypre GMRES num iterations: %d\n",iter_);
     printf("hypre GMRES final relative residual norm: %g\n",resid_);
@@ -1834,8 +1856,8 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
 
   // Delete the solver
   ierr = HYPRE_SStructGMRESDestroy(solver_);
-  if (ierr != 0) ERROR("could not destroy GMRES solver\n");
-  if (use_prec)  delete precond;
+  if (ierr != 0)  ERROR("could not destroy GMRES solver\n");
+  if (use_prec_)  delete precond;
 
   _TRACE_;
 } // AMRsolve_Hypre_Grav::solve_gmres_()
@@ -1843,7 +1865,7 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
 //------------------------------------------------------------------------
 
 /// Update the matrix at a coarse/fine interface; this routine changes the
-/// fine-grid matrix to account for teh coarse grid neighbor.  Called in
+/// fine-grid matrix to account for the coarse grid neighbor.  Called in
 /// two phases, with phase == phase_graph (via init_graph_nonstencil_()) 
 /// for the nonzero structure, and with phase == phase_matrix 
 /// (via init_matrix_nonstencil_()) for the matrix nonzeros.
@@ -1886,7 +1908,7 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
       for (k=1; k<5; k++) {
 	ierr = HYPRE_SStructGraphAddEntries(graph_, level_fine, index_fine, 
 					    0, level_coarse, index_coarse, 0);
-	if (ierr != 0) ERROR("could not add graph entries\n");
+	if (ierr != 0)  ERROR("could not add graph entries\n");
 	index_fine[axis0] += index_increment[k][0];
 	index_fine[axis1] += index_increment[k][1];
 	index_fine[axis2] += index_increment[k][2];
@@ -1895,9 +1917,9 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
     } else if (phase == phase_matrix) {
 
       // fine->coarse off-diagonal
-      double val_s = 2.0 / 3.0;
+      double val_s = 2.0 / 3.0;  /* DRR: where did this come from?? */
       int entry;
-      double val,value;
+      double val, value;
 
       int k=0;
       index_fine[axis0] += index_increment[k][0];
@@ -1914,16 +1936,16 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
 	value = val;
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
-	if (ierr != 0) ERROR("could not AddToValues in A_\n");
+	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
 
 	// Update diagonal
 	entry = 0;
 	value = -val;
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
-	if (ierr != 0) ERROR("could not AddToValues in A_\n");
+	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
 
-	// Clear coarse-fine stencil values
+	// Clear coarse-fine stencil values from structured grid part
 	val = matrix_scale_ * val_h_fine;
 
 	//   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
@@ -1931,14 +1953,14 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
 	value = -val;
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
-	if (ierr != 0) ERROR("could not AddToValues in A_\n");
+	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
 
 	//   Update diagonal
 	entry = 0;
 	value = val;
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
-	if (ierr != 0) ERROR("could not AddToValues in A_\n");
+	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
 
 	// Update indices
 	index_fine[axis0] += index_increment[k][0];
@@ -1967,14 +1989,8 @@ void AMRsolve_Hypre_Grav::update_coarse_fine_const_(int face,
 						    int index_coarse[3])
 {
   int ierr;
-  int axis1 = (axis0+1)%3;
-  int axis2 = (axis0+2)%3;
-
-  Scalar val_h_coarse = grid_coarse.h(axis1) * grid_coarse.h(axis2) / grid_coarse.h(axis0);
-
   // set graph entry
   if (phase == phase_graph) {
-
     int index_increment[][3] = {{1,0,0},
 				{0,1,0},
 				{-1,0,0},
@@ -1983,11 +1999,10 @@ void AMRsolve_Hypre_Grav::update_coarse_fine_const_(int face,
 				{0,-1,0},
 				{-1,0,0},
 				{0,0,-1}};
-
     for (int k=0; k<8; k++) {
       ierr = HYPRE_SStructGraphAddEntries(graph_, level_coarse, index_coarse, 
 					  0, level_fine, index_fine, 0);
-      if (ierr != 0) ERROR("could not add entries to graph_\n");
+      if (ierr != 0)  ERROR("could not add entries to graph_\n");
       index_fine[0] += index_increment[k][0];
       index_fine[1] += index_increment[k][1];
       index_fine[2] += index_increment[k][2];
@@ -1995,47 +2010,25 @@ void AMRsolve_Hypre_Grav::update_coarse_fine_const_(int face,
 
   // set matrix entry
   } else if (phase == phase_matrix) {
-
-    // Set matrix entry using diffusion coefficient 
-    // (x,y,z) == (x3[0],x3[1],x3[2])
-    double val_s = 1.0 / 8.0;
-    double val   = matrix_scale_ * val_h_coarse * val_s;
-    int    entry;
-    double value;
-
-    // Adjust coarse-fine nonstencil values
+    
+    // Get existing matrix entry to neighboring cell (and remove from matrix)
+    double val, val2 = 0.0;
+    int entry = 2*axis0 + 1 + face;
+    ierr = HYPRE_SStructMatrixGetValues(A_, level_coarse, index_coarse, 
+					0, 1, &entry, &val);
+    if (ierr != 0)  ERROR("could not GetValues from A_\n");
+    ierr = HYPRE_SStructMatrixSetValues(A_, level_coarse, index_coarse, 
+					0, 1, &entry, &val2);
+    if (ierr != 0)  ERROR("could not SetValues in A_\n");
+    
+    // Set new values across interface, scaling to depend equally on each fine neighbor
+    val2 = val / 8.0;
     for (int i=0; i<8; i++) {
-      // Set new nonstencil coarse-fine entry
       entry = grid_coarse.counter(index_coarse)++;
-      value = val;
-      ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse,index_coarse, 
-					    0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
-      // Adjust stencil diagonal
-      entry = 0;
-      value = -val;
-      ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					    0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
-    } // for i=0,7
-
-    // Clear original matrix values from stencil
-    val = matrix_scale_ * val_h_coarse;
-
-    //   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
-    //   (note: "face" is for fine grid, but we want coarse)
-    entry = 2*axis0 + 1 + face;
-    value = -val;
-    ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					  0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
-
-    //   Update diagonal
-    entry = 0;
-    value = val;
-    ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					  0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
+      ierr = HYPRE_SStructMatrixSetValues(A_, level_coarse, index_coarse, 
+					  0, 1, &entry, &val2);
+      if (ierr != 0)  ERROR("could not SetValues in A_\n");
+    }  // for i=0,7
 
   } // if phase == phase_matrix
 }

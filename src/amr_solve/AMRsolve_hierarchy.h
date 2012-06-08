@@ -61,9 +61,9 @@ protected:
 #ifdef AMR_SOLVE
 
   /// ENZO INTERFACE: attach to the Enzo hierarchy for gravity solves
-  void enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
-			int level_coarse = LEVEL_UNKNOWN,
-			int level_fine   = LEVEL_UNKNOWN) throw();
+  int enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
+		       int level_coarse = LEVEL_UNKNOWN,
+		       int level_fine   = LEVEL_UNKNOWN) throw();
 
   /// ENZO INTERFACE: attach to the Enzo hierarchy for radiation solves
   void enzo_attach_fld(LevelHierarchyEntry *LevelArray[],

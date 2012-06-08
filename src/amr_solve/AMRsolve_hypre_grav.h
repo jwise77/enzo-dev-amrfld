@@ -22,7 +22,7 @@ private:
   HYPRE_SStructVector  Y_;             // hypre vector temporary
   HYPRE_SStructSolver  solver_;        // hypre solver
 
-  bool                 use_prec;       // flag whether to setup/use preconditioner (0 -> no)
+  bool                 use_prec_;      // flag whether to setup/use preconditioner (0 -> no)
   HYPRE_StructGrid     cgrid_;         // hypre coarse grid (structured)
   HYPRE_StructStencil  cstencil_;      // hypre coarse stencil (structured)
   HYPRE_StructMatrix   Ac_;            // coarse preconditioning matrix
@@ -38,16 +38,17 @@ private:
 
   const int            r_factor_;      // Refinement factor
   Scalar               matrix_scale_;  // 1.0:  1 1 1 -6 1 1 1
+  bool                 zero_guess_;    // use a zero-valued guess vs the previous solution
 
 public:
 
   AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, 
 		      AMRsolve_Parameters& parameters,
-		      int precflag);
+		      int precflag, int zeroguess);
 
   ~AMRsolve_Hypre_Grav();
 
-  void init_hierarchy(AMRsolve_Mpi& mpi);
+  void init_hierarchy();
   void init_stencil();
   void init_graph();
   /*   void init_elements(std::vector<AMRsolve_Point *> points,
