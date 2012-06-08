@@ -406,6 +406,7 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
 		  ExternalGravityOrientation+2);
 
     ret += sscanf(line, "SelfGravity           = %"ISYM, &SelfGravity);
+    ret += sscanf(line, "SelfGravityConsistent = %"ISYM, &SelfGravityConsistent);
     ret += sscanf(line, "SelfGravityGasOff     = %"ISYM, &SelfGravityGasOff);
     ret += sscanf(line, "AccretionKernal       = %"ISYM, &AccretionKernal);
     ret += sscanf(line, "GravitationalConstant = %"FSYM, &GravitationalConstant);
@@ -1530,10 +1531,20 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     OutputParticleTypeGrouping = FALSE;
   }
  
-  //  if (WritePotential && ComovingCoordinates && SelfGravity) {
+  //  if (WritePotential && SelfGravity) {
   if (WritePotential && SelfGravity) {
     CopyGravPotential = TRUE;
   }
+
+  // if (SelfGravityConsistent) ensure that AMR_SOLVE and HYPRE are defined
+#ifndef AMR_SOLVE
+  if (SelfGravityConsistent) 
+    ENZO_FAIL("SelfGravityConsistent requires AMR_SOLVE to be enabled!\n");
+#endif  
+#ifndef USE_HYPRE
+  if (SelfGravityConsistent) 
+    ENZO_FAIL("SelfGravityConsistent requires HYPRE to be enabled!\n");
+#endif  
 
   // Keep track of number of outputs left until exit.
   MetaData.OutputsLeftBeforeExit = MetaData.NumberOfOutputsBeforeExit;

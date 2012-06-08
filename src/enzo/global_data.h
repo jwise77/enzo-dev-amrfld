@@ -252,6 +252,7 @@ EXTERN float PointSourceGravityCoreRadius;
 /* SelfGravity (TRUE or FALSE) */
 
 EXTERN int SelfGravity;
+EXTERN int SelfGravityConsistent;
 EXTERN int SelfGravityGasOff;
 EXTERN int AccretionKernal;
 
