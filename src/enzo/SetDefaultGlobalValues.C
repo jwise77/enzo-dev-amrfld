@@ -302,6 +302,7 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   PointSourceGravityCoreRadius = 0.0;
 
   SelfGravity                 = FALSE;             // off
+  SelfGravityConsistent       = FALSE;             // off
   SelfGravityGasOff           = FALSE;             // off
   AccretionKernal             = FALSE;             // off
   CopyGravPotential           = FALSE;             // off

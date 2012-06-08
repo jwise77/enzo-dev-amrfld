@@ -94,6 +94,7 @@ OBJS_CONFIG_LIB = \
         CommunicationShareGrids.o \
         CommunicationShareParticles.o \
         CommunicationShareStars.o \
+	CommunicationSolvePotential.o \
         CommunicationSyncNumberOfParticles.o \
         CommunicationTransferParticlesOpt.o \
         CommunicationTransferStarsOpt.o \
@@ -338,6 +339,7 @@ OBJS_CONFIG_LIB = \
 	Grid_ClearMassFlaggingField.o \
 	Grid_ClearParticleAccelerations.o \
 	Grid_ClearParticleMassFlaggingField.o \
+	Grid_ClearPotentialField.o \
 	Grid_CollapseTestInitializeGrid.o \
         Grid_CollectGridInformation.o \
         Grid_CollectParticles.o \
