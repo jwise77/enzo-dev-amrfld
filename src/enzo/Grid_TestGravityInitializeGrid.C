@@ -34,11 +34,9 @@ int grid::TestGravityInitializeGrid(float CentralDensity,
   int dim, i, size, field, vel;
   float phi, r, theta, pi = 3.14159;
  
+  NumberOfBaryonFields = 0;
   if (UseBaryons) {
- 
     /* create fields */
- 
-    NumberOfBaryonFields = 0;
     FieldType[NumberOfBaryonFields++] = Density;
     FieldType[NumberOfBaryonFields++] = TotalEnergy;
     if (DualEnergyFormalism)
@@ -50,6 +48,10 @@ int grid::TestGravityInitializeGrid(float CentralDensity,
     if (GridRank > 2)
       FieldType[NumberOfBaryonFields++] = Velocity3;
   }
+
+   if (WritePotential)
+    FieldType[NumberOfBaryonFields++] = GravPotential;
+
  
   /* Return if this doesn't concern us. */
  
