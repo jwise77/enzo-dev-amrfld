@@ -1079,6 +1079,11 @@ public:
 
    int ClearGravitatingMassField();
 
+/* Gravity: allocate & clear the PotentialField 
+   (must be called after InitializeGravitatingMassField). */
+
+   int ClearPotentialField();
+
 /* Gravity & baryons: Copy the parent density field to the extra boundary
       region of GravitatingMassField (if any). */
 
