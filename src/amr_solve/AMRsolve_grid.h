@@ -462,20 +462,27 @@ class AMRsolve_Grid
     int i0=i3[0]-il_[0];
     int i1=i3[1]-il_[1];
     int i2=i3[2]-il_[2];
-    assert(counters_);
+    //    assert(counters_);
+    if (counters_ == NULL) {
+      counters_ = new int[n_[0]*n_[1]*n_[2]];
+      assert(counters_);
+      for (int i=0; i<n_[0]*n_[1]*n_[2]; i++)  counters_[i] = counters_init_;
+      counters_init_ = 0;
+    }
     return counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])]; 
   }
 
   /// Initialize the counters_ array to given value
   void init_counter(int value)
   {
-    for (int i2=0; i2<n_[2]; i2++) {
-      for (int i1=0; i1<n_[1]; i1++) {
-	for (int i0=0; i0<n_[0]; i0++) {
-	  counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = value;
-	}
-      }
-    }
+    counters_init_ = value;
+    /* for (int i2=0; i2<n_[2]; i2++) { */
+    /*   for (int i1=0; i1<n_[1]; i1++) { */
+    /* 	for (int i0=0; i0<n_[0]; i0++) { */
+    /* 	  counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = value; */
+    /* 	} */
+    /*   } */
+    /* } */
   }
 
   //--------------------------------------------------------------------
