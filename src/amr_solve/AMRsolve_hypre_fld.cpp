@@ -2190,10 +2190,7 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
   grid_fine.indices(index_global);
   
   // set this grid's mesh spacing in this direction
-  Scalar dxi;
-  if (axis0 == 0)  dxi = aval_ / grid_fine.h(0) / lUn_;
-  if (axis0 == 1)  dxi = aval_ / grid_fine.h(1) / lUn_;
-  if (axis0 == 2)  dxi = aval_ / grid_fine.h(2) / lUn_;
+  Scalar dxi = aval_ / grid_fine.h(axis0) / lUn_;
 
   // get location of fine grid
   double xl0, xl1, xl2, xu0, xu1, xu2;
@@ -2202,7 +2199,9 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
   
   //--------------------------------------------------
   // (*) CONSTANT
-  //     Scale        = 2/3
+  //     Scale        = 2/3 (distance between coarse/fine cell 
+  //                         centers, as a fraction of h_coarse; 
+  //                         since we have 1/h^2, we use 4/9)
   //     Coefficients = determined on the fly
   //--------------------------------------------------
 
@@ -2239,7 +2238,8 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
       Scalar* HeII = grid_fine.get_HeII();
 
       // fine->coarse off-diagonal scaling
-      double val_s = 2.0 / 3.0;
+      //      double val_s = 2.0 / 3.0;
+      double val_s = 4.0 / 9.0;
       int entry;
       double val, value;
 
@@ -2250,6 +2250,23 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 
       for (k=1; k<5; k++) {
 
+	// // Query and zero out existing matrix entry
+	// double val, val2 = 0.0;
+	// int entry = 2*axis0 + 1 + face;
+	// ierr = HYPRE_SStructMatrixGetValues(A_, level_fine, index_fine, 
+	// 				    0, 1, &entry, &val);
+	// if (ierr != 0) ERROR("could not GetValues from A_\n");
+	// ierr = HYPRE_SStructMatrixSetValues(A_, level_fine, index_fine, 
+	// 				    0, 1, &entry, &val2);
+	// if (ierr != 0) ERROR("could not SetValues in A_\n");
+    
+	// // Set new values across interface, scaling to depend equally on each fine neighbor
+	// val2 = val;
+	// entry = grid_fine.counter(index_fine)++;
+	// ierr = HYPRE_SStructMatrixSetValues(A_, level_fine, index_fine,
+	// 				    0, 1, &entry, &val2);
+	// if (ierr != 0) ERROR("could not SetValues in A_\n");
+	
 	// set indices for Enzo fine cells on both sides of interface
 	k0 = index_fine[0] - index_global[0][0] + ghosts[0][0];
 	k1 = index_fine[1] - index_global[1][0] + ghosts[1][0];
@@ -2341,12 +2358,8 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
 						   int index_coarse[3])
 {
   int ierr;
-  int axis1 = (axis0+1)%3;
-  int axis2 = (axis0+2)%3;
-
   // set graph entry
   if (phase == phase_graph) {
-
     int index_increment[][3] = {{1,0,0},
 				{0,1,0},
 				{-1,0,0},
@@ -2355,7 +2368,6 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
 				{0,-1,0},
 				{-1,0,0},
 				{0,0,-1}};
-
     for (int k=0; k<8; k++) {
       ierr = HYPRE_SStructGraphAddEntries(graph_, level_coarse, index_coarse, 
 					  0, level_fine, index_fine, 0);
@@ -2368,108 +2380,124 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
   // set matrix entry
   } else if (phase == phase_matrix) {
 
-    // declare shortcut variables
-    double Eavg, Ed, R, kap, D;
-    double afac = adot_ / aval_;
-    double dtfac = dt_ * theta_;
-    double Rmin = 1.0e-20;
-    double c = 2.99792458e10;
+    // Get existing matrix entry to neighboring cell (and remove from matrix)
+    double val, val2 = 0.0;
+    int entry = 2*axis0 + 1 + face;
+    ierr = HYPRE_SStructMatrixGetValues(A_, level_coarse, index_coarse, 
+					0, 1, &entry, &val);
+    if (ierr != 0) ERROR("could not GetValues from A_\n");
+    ierr = HYPRE_SStructMatrixSetValues(A_, level_coarse, index_coarse, 
+					0, 1, &entry, &val2);
+    if (ierr != 0) ERROR("could not SetValues in A_\n");
     
-    // access relevant arrays from this grid to compute RHS
-    Scalar* E    = grid_coarse.get_E();
-    Scalar* HI   = grid_coarse.get_HI();
-    Scalar* HeI  = grid_coarse.get_HeI();
-    Scalar* HeII = grid_coarse.get_HeII();
-    
-    // get active enzo grid size
-    int n3[3];
-    grid_coarse.get_size(n3);
-
-    // get buffering information on relating amrsolve grid to Enzo data
-    int ghosts[3][2]; 
-    grid_coarse.get_Ghosts(ghosts);
-    int en0 = n3[0] + ghosts[0][0] + ghosts[0][1];  // enzo data dimensions
-    int en1 = n3[1] + ghosts[1][0] + ghosts[1][1];  // enzo data dimensions
-    int en2 = n3[2] + ghosts[2][0] + ghosts[2][1];  // enzo data dimensions
-    
-    // global grid index limits for coarse grid
-    int index_global[3][2];
-    grid_coarse.indices(index_global);
-  
-    // set this grid's mesh spacing in this direction
-    Scalar dxi;
-    if (axis0 == 0)  dxi = aval_ / grid_coarse.h(0) / lUn_;
-    if (axis0 == 1)  dxi = aval_ / grid_coarse.h(1) / lUn_;
-    if (axis0 == 2)  dxi = aval_ / grid_coarse.h(2) / lUn_;
-    
-    // set indices for Enzo coarse grid cells on both sides of interface
-    int adj0=0, adj1=0, adj2=0;
-    if (axis0 == 0)  adj0 = (face == 0) ? -1 : 1;  
-    if (axis0 == 1)  adj1 = (face == 0) ? -1 : 1;  
-    if (axis0 == 2)  adj2 = (face == 0) ? -1 : 1;  
-    
-    int k0 = index_coarse[0] - index_global[0][0] + ghosts[0][0];
-    int k1 = index_coarse[1] - index_global[1][0] + ghosts[1][0];
-    int k2 = index_coarse[2] - index_global[2][0] + ghosts[2][0];
-    int k_row = k0 + en0*(k1 + en1*k2);
-    int k_col = k0 + adj0 + en0*(k1 + adj1 + en1*(k2 + adj2));
-    
-    // Compute limiter at this face
-    Ed = E[k_row] - E[k_col];
-    Eavg = (E[k_row] + E[k_col])*0.5;
-    R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
-    if (Nchem_ == 1) {
-      kap = (HI[k_row] + HI[k_col])*HIconst_*0.5;
-    } else {
-      kap = ((HI[k_row]   + HI[k_col])*HIconst_ +
-	     (HeI[k_row]  + HeI[k_col])*HeIconst_ +
-	     (HeII[k_row] + HeII[k_col])*HeIIconst_)*0.5;
-    }
-    D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-
-    // set matrix entry across coarse/fine face
-    double val_s = 1./8.;
-    double val = -val_s * dtfac * dxi * dxi * D;
-    if (isnan(val) || isinf(val)) {
-      fprintf(stderr,"update_coarse_fine_const ERROR: encountered NaN/Inf value (%g)\n   val_s = %g, dtfac = %g, dxi = %g, D = %g, k_row = %i, k_col = %i\n\n", val, val_s, dtfac, dxi, D, k_row, k_col);
-      ERROR("NaN or Inf value in setting matrix entries\n");
-    }
-    int    entry;
-    double value;
-
-    // Adjust coarse-fine nonstencil values
+    // Set new values across interface, scaling to depend equally on each fine neighbor
+    val2 = val / 8.0;
     for (int i=0; i<8; i++) {
-      // Set new nonstencil coarse-fine entry
       entry = grid_coarse.counter(index_coarse)++;
-      value = val;
-      ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					    0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
-      // Adjust stencil diagonal
-      entry = 0;
-      value = -val;
-      ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					    0, 1, &entry, &value);
-      if (ierr != 0) ERROR("could not AddToValues in A_\n");
-    } // for i=0,7
+      ierr = HYPRE_SStructMatrixSetValues(A_, level_coarse, index_coarse, 
+					  0, 1, &entry, &val2);
+      if (ierr != 0) ERROR("could not SetValues in A_\n");
+    }  // for i=0,7
 
-    // Clear original matrix values from stencil
-    val = -dtfac * dxi * dxi * D;
+    // // declare shortcut variables
+    // double Eavg, Ed, R, kap, D;
+    // double afac = adot_ / aval_;
+    // double dtfac = dt_ * theta_;
+    // double Rmin = 1.0e-20;
+    // double c = 2.99792458e10;
+    
+    // // access relevant arrays from this grid to compute RHS
+    // Scalar* E    = grid_coarse.get_E();
+    // Scalar* HI   = grid_coarse.get_HI();
+    // Scalar* HeI  = grid_coarse.get_HeI();
+    // Scalar* HeII = grid_coarse.get_HeII();
+    
+    // // get active enzo grid size
+    // int n3[3];
+    // grid_coarse.get_size(n3);
 
-    //   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
-    //   (note: "face" is for fine grid, but we want coarse)
-    entry = 2*axis0 + 1 + face;
-    value = -val;
-    ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					  0, 1, &entry, &value);
-    if (ierr != 0) ERROR("could not AddToValues in A_\n");
+    // // get buffering information on relating amrsolve grid to Enzo data
+    // int ghosts[3][2]; 
+    // grid_coarse.get_Ghosts(ghosts);
+    // int en0 = n3[0] + ghosts[0][0] + ghosts[0][1];  // enzo data dimensions
+    // int en1 = n3[1] + ghosts[1][0] + ghosts[1][1];  // enzo data dimensions
+    // int en2 = n3[2] + ghosts[2][0] + ghosts[2][1];  // enzo data dimensions
+    
+    // // global grid index limits for coarse grid
+    // int index_global[3][2];
+    // grid_coarse.indices(index_global);
+  
+    // // set this grid's mesh spacing in this direction
+    // Scalar dxi = aval_ / grid_coarse.h(axis0) / lUn_;
+    
+    // // set indices for Enzo coarse grid cells on both sides of interface
+    // int adj0=0, adj1=0, adj2=0;
+    // if (axis0 == 0)  adj0 = (face == 0) ? -1 : 1;  
+    // if (axis0 == 1)  adj1 = (face == 0) ? -1 : 1;  
+    // if (axis0 == 2)  adj2 = (face == 0) ? -1 : 1;  
+    
+    // int k0 = index_coarse[0] - index_global[0][0] + ghosts[0][0];
+    // int k1 = index_coarse[1] - index_global[1][0] + ghosts[1][0];
+    // int k2 = index_coarse[2] - index_global[2][0] + ghosts[2][0];
+    // int k_row = k0 + en0*(k1 + en1*k2);
+    // int k_col = k0 + adj0 + en0*(k1 + adj1 + en1*(k2 + adj2));
+    
+    // // Compute limiter at this face
+    // Ed = E[k_row] - E[k_col];
+    // Eavg = (E[k_row] + E[k_col])*0.5;
+    // R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
+    // if (Nchem_ == 1) {
+    //   kap = (HI[k_row] + HI[k_col])*HIconst_*0.5;
+    // } else {
+    //   kap = ((HI[k_row]   + HI[k_col])*HIconst_ +
+    // 	     (HeI[k_row]  + HeI[k_col])*HeIconst_ +
+    // 	     (HeII[k_row] + HeII[k_col])*HeIIconst_)*0.5;
+    // }
+    // D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 
-    //   Update diagonal
-    entry = 0;
-    value = val;
-    ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-					  0, 1, &entry, &value);
-    if (ierr != 0) ERROR("could not AddToValues in A_\n");
+    // // set matrix entry across coarse/fine face
+    // double val_s = 1.0 / 8.0;
+    // double val = -val_s * dtfac * dxi * dxi * D;
+    // if (isnan(val) || isinf(val)) {
+    //   fprintf(stderr,"update_coarse_fine_const ERROR: encountered NaN/Inf value (%g)\n   val_s = %g, dtfac = %g, dxi = %g, D = %g, k_row = %i, k_col = %i\n\n", val, val_s, dtfac, dxi, D, k_row, k_col);
+    //   ERROR("NaN or Inf value in setting matrix entries\n");
+    // }
+    // int    entry;
+    // double value;
+
+    // // Adjust coarse-fine nonstencil values
+    // for (int i=0; i<8; i++) {
+    //   // Set new nonstencil coarse-fine entry
+    //   entry = grid_coarse.counter(index_coarse)++;
+    //   value = val;
+    //   ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
+    // 					    0, 1, &entry, &value);
+    //   if (ierr != 0) ERROR("could not AddToValues in A_\n");
+    //   // Adjust stencil diagonal
+    //   entry = 0;
+    //   value = -val;
+    //   ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
+    // 					    0, 1, &entry, &value);
+    //   if (ierr != 0) ERROR("could not AddToValues in A_\n");
+    // } // for i=0,7
+
+    // // Clear original matrix values from stencil
+    // val = -dtfac * dxi * dxi * D;
+
+    // //   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
+    // //   (note: "face" is for fine grid, but we want coarse)
+    // entry = 2*axis0 + 1 + face;
+    // value = -val;
+    // ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
+    // 					  0, 1, &entry, &value);
+    // if (ierr != 0) ERROR("could not AddToValues in A_\n");
+
+    // //   Update diagonal
+    // entry = 0;
+    // value = val;
+    // ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
+    // 					  0, 1, &entry, &value);
+    // if (ierr != 0) ERROR("could not AddToValues in A_\n");
 
   } // if phase == phase_matrix
 } // AMRsolve_Hypre_FLD::update_coarse_fine_const_
