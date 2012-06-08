@@ -80,9 +80,9 @@ AMRsolve_Hierarchy::~AMRsolve_Hierarchy() throw()
 
 #ifdef AMR_SOLVE
 
-void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
-					  int level_coarsest,
-					  int level_finest) throw()
+int AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
+					 int level_coarsest,
+					 int level_finest) throw()
 {
   _TRACE_;
   set_dim(3);
@@ -125,6 +125,10 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	 itEnzoLevelGrid = itEnzoLevelGrid->NextGridThisLevel) {
 
       grid* enzo_grid = itEnzoLevelGrid->GridData;
+      if (enzo_grid == NULL) {
+	fprintf(stderr,"GridData is NULL\n");
+	return(1);
+      }
 
       // Save grid id's to determine parents
       enzo_id[enzo_grid] = id;
@@ -138,6 +142,10 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	id_parent = -1;
       } else {
 	grid* enzo_parent = itEnzoLevelGrid->GridHierarchyEntry->ParentGrid->GridData;
+	if (enzo_parent == NULL) {
+	  fprintf(stderr,"ParentGrid->GridData is NULL\n");
+	  return(1);
+	}
 	id_parent = enzo_id[enzo_parent];
       }
 
@@ -158,7 +166,7 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 	il[dim] = nint((xl[dim] - DomainLeftEdge[dim]) 
 		       / (DomainRightEdge[dim]-DomainLeftEdge[dim]) * nd[dim]);
       }
-	      
+
       // Create a new amr_solve grid
       AMRsolve_Grid* grid = new AMRsolve_Grid(id,id_parent,ip,xl,xu,il,n);
       insert_grid(grid);
@@ -171,13 +179,24 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 
 	// Set pointers to the relevant Enzo data arrays for setting up the 
 	// linear system later on.
-	grid->set_phi(enzo_grid->AccessPotentialField());
-	grid->set_gmass(enzo_grid->AccessGravitatingMassField());
+	Scalar* phi   = enzo_grid->AccessPotentialField();
+	Scalar* gmass = enzo_grid->AccessGravitatingMassField();
+	if (phi == NULL) {
+	  fprintf(stderr,"PotentialField is NULL\n");
+	  return(1);
+	}
+	if (gmass == NULL) {
+	  fprintf(stderr,"GravitatingMassField is NULL\n");
+	  return(1);
+	}
+	grid->set_phi(phi);
+	grid->set_gmass(gmass);
 
 	// Set Enzo gravity ghost zone information for this grid
-	int enzo_ghosts[][2] = { {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE}, 
-				 {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE}, 
-				 {GRAVITY_BUFFER_SIZE, GRAVITY_BUFFER_SIZE} };
+	int grav_ghosts = (enzo_grid->GravitatingMassFieldDimension[0] - n[0])/2;
+	int enzo_ghosts[][2] = { {grav_ghosts, grav_ghosts}, 
+				 {grav_ghosts, grav_ghosts}, 
+				 {grav_ghosts, grav_ghosts} };
 	grid->set_GravGhosts(enzo_ghosts);
       }
       id++;
@@ -185,6 +204,7 @@ void AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 
   } // level
 
+  return(0);
   _TRACE_;
 }
 #endif
