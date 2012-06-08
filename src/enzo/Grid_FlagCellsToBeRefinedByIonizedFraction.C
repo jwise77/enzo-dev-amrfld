@@ -90,8 +90,8 @@ int grid::FlagCellsToBeRefinedByIonizedFraction()
   if (MinRefinementSlope == 0.0)  return NumberOfFlaggedCells;
 
   // iterate over the grid, marking cells as needed
-  float maxgrad=0.0,  mingrad=0.0,  avggrad=0.0;
-  float maxifrac=0.0, minifrac=0.0, avgifrac=0.0;
+  // float maxgrad=0.0,  mingrad=0.0,  avggrad=0.0;
+  // float maxifrac=0.0, minifrac=0.0, avgifrac=0.0;
   float gradx, grady, gradz, gradnorm;
   float atol = 1.0;
   for (k=GridStartIndex[2]; k<=GridEndIndex[2]; k++)
@@ -105,27 +105,27 @@ int grid::FlagCellsToBeRefinedByIonizedFraction()
 	gradz = (ifrac[index+zOffset] - ifrac[index-zOffset]) /
 	  max(fabs(ifrac[index]), atol);
 	gradnorm = sqrt(gradx*gradx + grady*grady + gradz*gradz);
-	maxgrad = (gradnorm > maxgrad) ? gradnorm : maxgrad;
-	mingrad = (gradnorm < mingrad) ? gradnorm : mingrad;
-	avggrad += gradnorm;
-	maxifrac = (ifrac[index] > maxifrac) ? ifrac[index] : maxifrac;
-	minifrac = (ifrac[index] < minifrac) ? ifrac[index] : minifrac;
-	avgifrac += ifrac[index];
+	// maxgrad = (gradnorm > maxgrad) ? gradnorm : maxgrad;
+	// mingrad = (gradnorm < mingrad) ? gradnorm : mingrad;
+	// avggrad += gradnorm;
+	// maxifrac = (ifrac[index] > maxifrac) ? ifrac[index] : maxifrac;
+	// minifrac = (ifrac[index] < minifrac) ? ifrac[index] : minifrac;
+	// avgifrac += ifrac[index];
 	if (gradnorm > MinRefinementSlope) {
 	  FlaggingField[index] += 1;
 	  NumberOfFlaggedCells++;
 	}
       }  // end loop over cells
-  avggrad /= ((GridEndIndex[2]-GridStartIndex[2]+1) *
-	      (GridEndIndex[1]-GridStartIndex[1]+1) * 
-	      (GridEndIndex[0]-GridStartIndex[0]+1) );
-  avgifrac /= ((GridEndIndex[2]-GridStartIndex[2]+1) *
-	       (GridEndIndex[1]-GridStartIndex[1]+1) * 
-	       (GridEndIndex[0]-GridStartIndex[0]+1) );
-  printf("FlagCellsIFrac: grad max = %g, min = %g, avg = %g, NFlagCells = %i\n",
-  	 maxgrad,mingrad,avggrad,NumberOfFlaggedCells);
-  printf("FlagCellsIFrac: ifrac max = %g, min = %g, avg = %g, atol = %g\n",
-  	 maxifrac,minifrac,avgifrac,atol);
+  // avggrad /= ((GridEndIndex[2]-GridStartIndex[2]+1) *
+  // 	      (GridEndIndex[1]-GridStartIndex[1]+1) * 
+  // 	      (GridEndIndex[0]-GridStartIndex[0]+1) );
+  // avgifrac /= ((GridEndIndex[2]-GridStartIndex[2]+1) *
+  // 	       (GridEndIndex[1]-GridStartIndex[1]+1) * 
+  // 	       (GridEndIndex[0]-GridStartIndex[0]+1) );
+  // printf("FlagCellsIFrac: grad max = %g, min = %g, avg = %g, NFlagCells = %i\n",
+  // 	 maxgrad,mingrad,avggrad,NumberOfFlaggedCells);
+  // printf("FlagCellsIFrac: ifrac max = %g, min = %g, avg = %g, atol = %g\n",
+  // 	 maxifrac,minifrac,avgifrac,atol);
 
   
   delete [] ifrac;
