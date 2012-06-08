@@ -54,7 +54,7 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
   faces_ = new AMRsolve_Faces(n_);
 
   // Allocate counters_ here.
-  counters_ = new int[n_[0]*n_[1]*n_[2]];
+  //  counters_ = new int[n_[0]*n_[1]*n_[2]];
 
   // initialize Enzo Ghost zone information
   for (int i=0; i<3; i++)
@@ -84,7 +84,7 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
   faces_ = new AMRsolve_Faces(n_);
 
   // Allocate counters_ here.
-  counters_ = new int[n_[0]*n_[1]*n_[2]];
+  //  counters_ = new int[n_[0]*n_[1]*n_[2]];
 
   // initialize Enzo Ghost zone information
   for (int i=0; i<3; i++)
