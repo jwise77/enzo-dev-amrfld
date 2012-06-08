@@ -89,9 +89,9 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   //  amrsolve_params->set_parameter("solver","gmres");
   //  amrsolve_params->set_parameter("solver","pfmg"); // [BROKEN]
 
-  amrsolve_params->set_parameter("dump_a","true");
-  amrsolve_params->set_parameter("dump_b","true");
-  amrsolve_params->set_parameter("dump_x","true");
+  // amrsolve_params->set_parameter("dump_a","true");
+  // amrsolve_params->set_parameter("dump_b","true");
+  // amrsolve_params->set_parameter("dump_x","true");
 
   amrsolve_params->set_parameter("solver_itmax","600");
   amrsolve_params->set_parameter("solver_printl", "1");
@@ -177,17 +177,11 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   hierarchy = NULL;
 
 
-
   // copy potential values to BaryonField if requested
   int grid1, grid2, StartGrid, EndGrid;
   if (CopyGravPotential)
     for (grid1=0; grid1<NumberOfGrids; grid1++) 
       Grids[grid1]->GridData->CopyPotentialToBaryonField();
-
-
-  return SUCCESS;
-
-
  
   // share boundary values
 #ifdef FORCE_MSG_PROGRESS 
