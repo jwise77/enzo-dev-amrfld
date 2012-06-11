@@ -911,7 +911,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
     // insert current values for PotentialField into HYPRE vector X_
     if (!zero_guess_) {
       Scalar* phi = grid->get_phi();
-      for (i=0; i<n0*n1*n2; i++)  values[i] = 0.0;
+      for (i0=0; i0<n0*n1*n2; i0++)  values[i0] = 0.0;
       for (i2=0; i2<n2; i2++) {
 	k2 = ghosts[2][0] + i2;
 	for (i1=0; i1<n1; i1++) {
@@ -950,7 +950,9 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
 
   // for periodic BCs, need to shift RHS to have zero average
   // value to deflate the null space
-  if ( parameters_->value("boundary") == "periodic" ) {
+  if ( hierarchy_->is_periodic(0) && 
+       hierarchy_->is_periodic(1) && 
+       hierarchy_->is_periodic(2) ) {
 
     // Accumulate local sums
     local_shift_b_sum = 0.0;
@@ -1103,11 +1105,21 @@ void AMRsolve_Hypre_Grav::init_matrix_stencil_(AMRsolve_Grid& grid)
   } // for i2
 
   //-----------------------------------------------------------
-  // Adjust stencil at grid boundaries (not implemented)
+  // Adjust stencil at grid boundaries:
+  //  -> for periodic problems we must deflate the null space 
+  //     by setting a single Dirichlet condition in a corner 
+  //     of the root grid.
   //  -> if we want to allow Neumann/Dirichlet conditions, 
-  //     insert code here
+  //     that code should be inserted here as well
   //-----------------------------------------------------------
-
+  if (hierarchy_->is_periodic(0) && 
+      hierarchy_->is_periodic(1) && 
+      hierarchy_->is_periodic(2) && coarsegrid &&
+      (grid.index_lower(0)*grid.index_lower(1)*grid.index_lower(2) == 0)) {
+    for (i0=0; i0<3; i0++)
+      for (i1=0; i1<2; i1++)
+	v1[i0][i1][0] = 0.0;
+  }
 
   //-----------------------------------------------------------
   // insert matrix entries into Hypre matrices A_ and Ac_
@@ -1657,11 +1669,19 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
     HYPRE_SStructBiCGSTABGetFinalRelativeResidualNorm(solver_, &resid_);
     fprintf(stderr, "Error %i detected, BiCGSTAB solver stats:\n  iterations = %d\n  final relative residual = %g\n",ierr,iter_,resid_);
     fprintf(stderr, "Error %i detected, writing B_ to 'B-hypre.*':\n",ierr);
-    HYPRE_SStructVectorPrint("B-hypre",B_,1);
+    HYPRE_SStructVectorPrint("B-hypre",B_,0);
     fprintf(stderr, "Error %i detected, writing X_ to 'X-hypre.*':\n",ierr);
-    HYPRE_SStructVectorPrint("X-hypre",X_,1);
+    HYPRE_SStructVectorPrint("X-hypre",X_,0);
     fprintf(stderr, "Error %i detected, writing A_ to 'A-hypre.*':\n",ierr);
-    HYPRE_SStructMatrixPrint("A-hypre",A_,1);
+    HYPRE_SStructMatrixPrint("A-hypre",A_,0);
+    if (use_prec_) {
+      fprintf(stderr, "Error %i detected, writing Bc_ to 'Bc-hypre.*':\n",ierr);
+      HYPRE_StructVectorPrint("Bc-hypre",Bc_,0);
+      fprintf(stderr, "Error %i detected, writing Xc_ to 'Xc-hypre.*':\n",ierr);
+      HYPRE_StructVectorPrint("Xc-hypre",Xc_,0);
+      fprintf(stderr, "Error %i detected, writing Ac_ to 'Ac-hypre.*':\n",ierr);
+      HYPRE_StructMatrixPrint("Ac-hypre",Ac_,0);
+    }
     fprintf(stderr, "Error %i detected, printing current hierarchy:\n",ierr);
     hierarchy_->print();
     ERROR("could not solve with BiCGStab\n");
@@ -1672,9 +1692,18 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
   if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructBiCGSTABGetFinalRelativeResidualNorm(solver_, &resid_);
   if (ierr != 0)  ERROR("could not get resid_\n");
-  if (debug && pmpi->is_root()) {
-    printf("hypre BiCGSTAB num iterations: %d\n",iter_);
-    printf("hypre BiCGSTAB final relative residual norm: %g\n",resid_);
+  if (use_prec_) {
+    Scalar presid = precond->GetResid_();
+    int piters = precond->GetIters_();
+    if (debug && pmpi->is_root()) {
+      printf("hypre BiCGSTAB num iterations: %d,  prec: %d\n",iter_,piters);
+      printf("hypre BiCGSTAB final relative residual norm: %g,  prec: %g\n",resid_,presid);
+    }
+  } else {
+    if (debug && pmpi->is_root()) {
+      printf("hypre BiCGSTAB num iterations: %d\n",iter_);
+      printf("hypre BiCGSTAB final relative residual norm: %g\n",resid_);
+    }
   }
 
   // Delete the solver
@@ -1834,11 +1863,19 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
     HYPRE_SStructGMRESGetFinalRelativeResidualNorm(solver_, &resid_);
     fprintf(stderr, "Error %i detected, GMRES solver stats:\n  iterations = %d\n  final relative residual = %g\n",ierr,iter_,resid_);
     fprintf(stderr, "Error %i detected, writing B_ to 'B-hypre.*':\n",ierr);
-    HYPRE_SStructVectorPrint("B-hypre",B_,1);
+    HYPRE_SStructVectorPrint("B-hypre",B_,0);
     fprintf(stderr, "Error %i detected, writing X_ to 'X-hypre.*':\n",ierr);
-    HYPRE_SStructVectorPrint("X-hypre",X_,1);
+    HYPRE_SStructVectorPrint("X-hypre",X_,0);
     fprintf(stderr, "Error %i detected, writing A_ to 'A-hypre.*':\n",ierr);
-    HYPRE_SStructMatrixPrint("A-hypre",A_,1);
+    HYPRE_SStructMatrixPrint("A-hypre",A_,0);
+    if (use_prec_) {
+      fprintf(stderr, "Error %i detected, writing Bc_ to 'Bc-hypre.*':\n",ierr);
+      HYPRE_StructVectorPrint("Bc-hypre",Bc_,0);
+      fprintf(stderr, "Error %i detected, writing Xc_ to 'Xc-hypre.*':\n",ierr);
+      HYPRE_StructVectorPrint("Xc-hypre",Xc_,0);
+      fprintf(stderr, "Error %i detected, writing Ac_ to 'Ac-hypre.*':\n",ierr);
+      HYPRE_StructMatrixPrint("Ac-hypre",Ac_,0);
+    }
     fprintf(stderr, "Error %i detected, printing current hierarchy:\n",ierr);
     hierarchy_->print();
     ERROR("could not solve with GMRES\n");
@@ -1849,9 +1886,18 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
   if (ierr != 0)  ERROR("could not get iter_\n");
   ierr = HYPRE_SStructGMRESGetFinalRelativeResidualNorm(solver_, &resid_);
   if (ierr != 0)  ERROR("could not get resid_\n");
-  if (debug && pmpi->is_root()) {
-    printf("hypre GMRES num iterations: %d\n",iter_);
-    printf("hypre GMRES final relative residual norm: %g\n",resid_);
+  if (use_prec_) {
+    Scalar presid = precond->GetResid_();
+    int piters = precond->GetIters_();
+    if (debug && pmpi->is_root()) {
+      printf("hypre GMRES num iterations: %d,  prec: %d\n",iter_,piters);
+      printf("hypre GMRES final relative residual norm: %g,  prec: %g\n",resid_,presid);
+    }
+  } else {
+    if (debug && pmpi->is_root()) {
+      printf("hypre GMRES num iterations: %d\n",iter_);
+      printf("hypre GMRES final relative residual norm: %g\n",resid_);
+    }
   }
 
   // Delete the solver
