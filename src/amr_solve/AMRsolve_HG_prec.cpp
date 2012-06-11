@@ -71,10 +71,10 @@ AMRsolve_HG_prec::~AMRsolve_HG_prec()
 /// Initialize routine for 2-level hierarchical-grid preconditioner.
 /// Need to create and set parameters into coarse grid PFMG solver.
 int AMRsolve_HG_prec::Initialize_(AMRsolve_Parameters *parameters,
-				   HYPRE_StructMatrix *A,
-				   HYPRE_StructVector *X,
-				   HYPRE_StructVector *B,
-				   HYPRE_SStructVector *Y)
+				  HYPRE_StructMatrix  *A,
+				  HYPRE_StructVector  *X,
+				  HYPRE_StructVector  *B,
+				  HYPRE_SStructVector *Y)
 {
   // set output flag to success
   int ierr = 0;
@@ -127,7 +127,7 @@ int AMRsolve_HG_prec::Initialize_(AMRsolve_Parameters *parameters,
 
   // determine the maximum number of MG levels (due to periodicity)
   int max_levels, Ndir, level=-1;
-  max_levels = 10000000;
+  max_levels = 100000;
   for (int idim=0; idim<3; idim++) {
     if (BdryType_[idim][0] == 0) {
       level = 0;
@@ -224,6 +224,10 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   // copy coarse grid u into Bc_ vector
   ierr = AMRsolve_to_HYPRE_coarse_(Bc_, 1);
 
+  // clear out solution vector of old data
+  ierr = HYPRE_StructVectorSetConstantValues(*Xc_, 0.0);
+  if (ierr != 0)  ERROR("could not initialize Xc_ to 0.0\n");
+
   // Solve the coarse-grid linear system, update statistics
   int iters;
   ierr = HYPRE_StructPFMGSolve(csolver_,*Ac_,*Bc_,*Xc_);
@@ -248,7 +252,7 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   // Perform one Jacobi smoothing step on full hierarchy, using temporary vector Y_
   ierr = Jacobi_smooth_(A, x, b, *Y_);
   if (ierr != 0)  ERROR("could not perform Jacobi smoother\n");
-  
+
   return ierr;
 }  // AMRsolve_HG_prec::Solve_
 
