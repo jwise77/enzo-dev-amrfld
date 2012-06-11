@@ -89,10 +89,6 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   //  amrsolve_params->set_parameter("solver","gmres");
   //  amrsolve_params->set_parameter("solver","pfmg"); // [BROKEN]
 
-  // amrsolve_params->set_parameter("dump_a","true");
-  // amrsolve_params->set_parameter("dump_b","true");
-  // amrsolve_params->set_parameter("dump_x","true");
-
   amrsolve_params->set_parameter("solver_itmax","600");
   amrsolve_params->set_parameter("solver_printl", "1");
 
@@ -123,8 +119,7 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
 
   // Initialize the AMRsolve hierarchy
   AMRsolve_Domain domain(3, DomainLeftEdge, DomainRightEdge);
-  //  bool is_periodic[] = {true, true, true};
-  bool is_periodic[] = {false, false, false};
+  bool is_periodic[] = {true, true, true};
 
   LCAPERF_START("amrsolve_hierarchy");
   hierarchy->initialize(domain,*pmpi,is_periodic);
@@ -138,7 +133,7 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   float f_scale = GravitationalConstant / a;
 
   // Initialize the AMRsolve linear system
-  Eint32 sol_prec   = 0;   // [BROKEN]
+  Eint32 sol_prec   = 1;
   Eint32 zero_guess = 1;
   LCAPERF_START("amrsolve_matrix");
   AMRsolve_Hypre_Grav amrgravsolve(*hierarchy, *amrsolve_params, 
