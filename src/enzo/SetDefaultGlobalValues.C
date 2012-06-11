@@ -314,6 +314,16 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   WritePotential              = FALSE;
   BaryonSelfGravityApproximation = TRUE;           // less accurate but faster
 
+  AMRGravitySolve_solver      = 0;                 // BiCGStab
+  AMRGravitySolve_useprec     = TRUE;              // on
+  AMRGravitySolve_zeroguess   = FALSE;             // off
+  AMRGravitySolve_maxit       = 500;               // 500
+  AMRGravitySolve_precmaxit   = 1;                 // 1
+  AMRGravitySolve_rlxtype     = 1;                 // weighted Jacobi
+  AMRGravitySolve_npre        = 1;                 // 1 smoothing iteration/level
+  AMRGravitySolve_Jaciters    = 1;                 // 1 Jacobi sweep
+  AMRGravitySolve_restol      = 0.0;               // iteration-based stop criteria
+
   GreensFunctionMaxNumber     = 1;                 // only one at a time
   GreensFunctionMaxSize       = 1;                 // not used yet
  

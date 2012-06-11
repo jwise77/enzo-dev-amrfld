@@ -417,6 +417,16 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     ret += sscanf(line, "WritePotential        = %"ISYM, &WritePotential);
     ret += sscanf(line, "BaryonSelfGravityApproximation = %"ISYM,
 		  &BaryonSelfGravityApproximation);
+
+    ret += sscanf(line, "AMRGravitySolve_solver    = %"ISYM, &AMRGravitySolve_solver);
+    ret += sscanf(line, "AMRGravitySolve_useprec   = %"ISYM, &AMRGravitySolve_useprec);
+    ret += sscanf(line, "AMRGravitySolve_zeroguess = %"ISYM, &AMRGravitySolve_zeroguess);
+    ret += sscanf(line, "AMRGravitySolve_maxit     = %"ISYM, &AMRGravitySolve_maxit);
+    ret += sscanf(line, "AMRGravitySolve_precmaxit = %"ISYM, &AMRGravitySolve_precmaxit);
+    ret += sscanf(line, "AMRGravitySolve_rlxtype   = %"ISYM, &AMRGravitySolve_rlxtype);
+    ret += sscanf(line, "AMRGravitySolve_npre      = %"ISYM, &AMRGravitySolve_npre);
+    ret += sscanf(line, "AMRGravitySolve_Jaciters  = %"ISYM, &AMRGravitySolve_Jaciters);
+    ret += sscanf(line, "AMRGravitySolve_restol    = %"FSYM, &AMRGravitySolve_restol);
  
     ret += sscanf(line, "GreensFunctionMaxNumber   = %"ISYM,
 		  &GreensFunctionMaxNumber);
@@ -1545,6 +1555,63 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
   if (SelfGravityConsistent) 
     ENZO_FAIL("SelfGravityConsistent requires HYPRE to be enabled!\n");
 #endif  
+
+  // if (SelfGravityConsistent) check for legal AMR gravity solver parameters 
+  if (SelfGravityConsistent) {
+    if ((AMRGravitySolve_solver < 0) || (AMRGravitySolve_solver > 2)) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "AMRGravitySolve_solver = %i undefined, setting to BiCGStab (0)\n");
+      AMRGravitySolve_solver = 0;
+    }
+
+    if ((AMRGravitySolve_useprec < 0) || (AMRGravitySolve_useprec > 1)) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "AMRGravitySolve_useprec = %i undefined, setting to TRUE (1)\n");
+      AMRGravitySolve_useprec = 1;
+    }
+
+    if ((AMRGravitySolve_zeroguess < 0) || (AMRGravitySolve_zeroguess > 1)) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "AMRGravitySolve_zeroguess = %i undefined, setting to FALSE (0)\n");
+      AMRGravitySolve_zeroguess = 0;
+    }
+
+    if (AMRGravitySolve_maxit < 1) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "illegal AMRGravitySolve_maxit = %i, setting to 500\n");
+      AMRGravitySolve_maxit = 500;
+    }
+
+    if (AMRGravitySolve_precmaxit < 1) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "illegal AMRGravitySolve_precmaxit = %i, setting to 1\n");
+      AMRGravitySolve_precmaxit = 1;
+    }
+
+    if ((AMRGravitySolve_rlxtype < 0) || (AMRGravitySolve_rlxtype > 3)) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "AMRGravitySolve_rlxtype = %i undefined, setting to weighted Jacobi (1)\n");
+      AMRGravitySolve_rlxtype = 1;
+    }
+
+    if (AMRGravitySolve_npre < 1) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "illegal AMRGravitySolve_npre = %i, setting to 1\n");
+      AMRGravitySolve_npre = 1;
+    }
+
+    if (AMRGravitySolve_Jaciters < 1) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "illegal AMRGravitySolve_Jaciters = %i, setting to 1\n");
+      AMRGravitySolve_Jaciters = 1;
+    }
+
+    if (AMRGravitySolve_restol < 0.0) {
+      if (MyProcessorNumber == ROOT_PROCESSOR)
+	fprintf(stderr, "illegal AMRGravitySolve_restol = %g, setting to 0.0\n");
+      AMRGravitySolve_restol = 0.0;
+    }
+  }
 
   // Keep track of number of outputs left until exit.
   MetaData.OutputsLeftBeforeExit = MetaData.NumberOfOutputsBeforeExit;
