@@ -986,6 +986,7 @@ AMRsolve_headers = AMRsolve_constants.h \
                    AMRsolve_error.h \
                    AMRsolve_faces.h \
                    AMRsolve_grid.h \
+                   AMRsolve_HG_prec.h \
                    AMRsolve_hierarchy.h \
                    AMRsolve_hypre_fld.h \
                    AMRsolve_hypre_grav.h \
