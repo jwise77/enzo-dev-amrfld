@@ -22,6 +22,8 @@ private:
 
   double               resid_;         // Solver residual
   int                  citer_;         // Coarse solver iterations
+  
+  int                  Jacobi_iters;   // number of Jacobi iterations to apply on full grid
 
   int                  BdryType_[3][2];   // boundary condition types (global problem)
 

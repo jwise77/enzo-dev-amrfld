@@ -97,15 +97,17 @@ int AMRsolve_HG_prec::Initialize_(AMRsolve_Parameters *parameters,
   std::string snpost   = parameters->value("prec_npost");
   std::string sprintl  = parameters->value("prec_printl");
   std::string slog     = parameters->value("prec_log");
+  std::string Jitmax   = parameters->value("prec_Jaciters");
 
   //   if not defined, then define them
-  if (sitmax   == "")  sitmax   = "20";
-  if (srestol  == "")  srestol  = "1.0e-6";
-  if (srlxtype == "")  srlxtype = "1";
-  if (snpre    == "")  snpre    = "1";
-  if (snpost   == "")  snpost   = "1";
-  if (sprintl  == "")  sprintl  = "1";
-  if (slog     == "")  slog     = "1";
+  if (sitmax   == "")  parameters->add_parameter("prec_itmax","20"); 
+  if (srestol  == "")  parameters->add_parameter("prec_restol","1.0e-6");
+  if (srlxtype == "")  parameters->add_parameter("prec_rlxtype","1");
+  if (snpre    == "")  parameters->add_parameter("prec_npre","1"); 
+  if (snpost   == "")  parameters->add_parameter("prec_npost","1");
+  if (sprintl  == "")  parameters->add_parameter("prec_printl","1");
+  if (slog     == "")  parameters->add_parameter("prec_log","1");
+  if (Jitmax   == "")  parameters->add_parameter("prec_Jaciters","1");
 
   // re-extract solver parameters now that everything is set
   sitmax   = parameters->value("prec_itmax");
@@ -115,15 +117,17 @@ int AMRsolve_HG_prec::Initialize_(AMRsolve_Parameters *parameters,
   snpost   = parameters->value("prec_npost");
   sprintl  = parameters->value("prec_printl");
   slog     = parameters->value("prec_log");
+  Jitmax   = parameters->value("prec_Jaciters");
 
-  //   set local variables
+  //   set local and saved variables
   double restol = atof(srestol.c_str());
-  int itmax   = atoi(sitmax.c_str());
-  int rlxtype = atoi(srlxtype.c_str());
-  int npre    = atoi(snpre.c_str());
-  int npost   = atoi(snpost.c_str());
-  int printl  = atoi(sprintl.c_str());
-  int log     = atoi(slog.c_str());
+  int itmax     = atoi(sitmax.c_str());
+  int rlxtype   = atoi(srlxtype.c_str());
+  int npre      = atoi(snpre.c_str());
+  int npost     = atoi(snpost.c_str());
+  int printl    = atoi(sprintl.c_str());
+  int log       = atoi(slog.c_str());
+  Jacobi_iters  = atoi(Jitmax.c_str());
 
   // determine the maximum number of MG levels (due to periodicity)
   int max_levels, Ndir, level=-1;
@@ -249,9 +253,11 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   ierr = AMRsolve_to_HYPRE_(&x, 1);
   if (ierr != 0)  ERROR("could not convert AMRsolve grid u vector into x\n");
 
-  // Perform one Jacobi smoothing step on full hierarchy, using temporary vector Y_
-  ierr = Jacobi_smooth_(A, x, b, *Y_);
-  if (ierr != 0)  ERROR("could not perform Jacobi smoother\n");
+  // perform Jacobi smoothing steps on full hierarchy, using temporary vector Y_
+  for (int Jit=0; Jit<Jacobi_iters; Jit++) {
+    ierr = Jacobi_smooth_(A, x, b, *Y_);
+    if (ierr != 0)  ERROR("could not perform Jacobi smoother\n");
+  }
 
   return ierr;
 }  // AMRsolve_HG_prec::Solve_

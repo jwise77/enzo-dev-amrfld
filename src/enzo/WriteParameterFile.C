@@ -411,6 +411,16 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
   fprintf(fptr, "BaryonSelfGravityApproximation = %"ISYM"\n",
 	  BaryonSelfGravityApproximation);
 
+  fprintf(fptr, "AMRGravitySolve_solver         = %"ISYM"\n", AMRGravitySolve_solver);
+  fprintf(fptr, "AMRGravitySolve_useprec        = %"ISYM"\n", AMRGravitySolve_useprec);
+  fprintf(fptr, "AMRGravitySolve_zeroguess      = %"ISYM"\n", AMRGravitySolve_zeroguess);
+  fprintf(fptr, "AMRGravitySolve_maxit          = %"ISYM"\n", AMRGravitySolve_maxit);
+  fprintf(fptr, "AMRGravitySolve_precmaxit      = %"ISYM"\n", AMRGravitySolve_precmaxit);
+  fprintf(fptr, "AMRGravitySolve_rlxtype        = %"ISYM"\n", AMRGravitySolve_rlxtype);
+  fprintf(fptr, "AMRGravitySolve_npre           = %"ISYM"\n", AMRGravitySolve_npre);
+  fprintf(fptr, "AMRGravitySolve_Jaciters       = %"ISYM"\n", AMRGravitySolve_Jaciters);
+  fprintf(fptr, "AMRGravitySolve_restol         = %"FSYM"\n", AMRGravitySolve_restol);
+
   fprintf(fptr, "InlineHaloFinder               = %"ISYM"\n", InlineHaloFinder);
   fprintf(fptr, "HaloFinderSubfind              = %"ISYM"\n", HaloFinderSubfind);
   fprintf(fptr, "HaloFinderCycleSkip            = %"ISYM"\n", 

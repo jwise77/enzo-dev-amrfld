@@ -83,21 +83,36 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   // Set amrsolve parameters
   AMRsolve_Parameters* amrsolve_params = new AMRsolve_Parameters();
   amrsolve_params->set_defaults();
-  //  amrsolve_params->set_parameter("solver","fac");
-  amrsolve_params->set_parameter("solver","bicgstab");
-  //  amrsolve_params->set_parameter("solver","bicgstab-boomer");  // [BROKEN]
-  //  amrsolve_params->set_parameter("solver","gmres");
-  //  amrsolve_params->set_parameter("solver","pfmg"); // [BROKEN]
-
-  amrsolve_params->set_parameter("solver_itmax","600");
-  amrsolve_params->set_parameter("solver_printl", "1");
+  
+  // set solver parameters based on inputs/defaults
+  char numstr[80];
+  switch (AMRGravitySolve_solver) {
+  case 1:  // GMRES
+    amrsolve_params->set_parameter("solver","gmres");
+    break;
+  case 2:  // FAC
+    amrsolve_params->set_parameter("solver","fac");
+    break;
+  default: // BiCGStab
+    amrsolve_params->set_parameter("solver","bicgstab");
+    break;
+  }
+  sprintf(numstr, "%i", AMRGravitySolve_maxit);
+  amrsolve_params->set_parameter("solver_itmax",numstr);
+  amrsolve_params->set_parameter("solver_printl", "0");
 
   // set preconditioning options for BiCGStab and GMRES solvers
-  amrsolve_params->set_parameter("prec_itmax",  "20");
-  amrsolve_params->set_parameter("prec_restol", "1.0e-6");
-  amrsolve_params->set_parameter("prec_rlxtype","1");
-  amrsolve_params->set_parameter("prec_npre",   "1");
-  amrsolve_params->set_parameter("prec_npost",  "1");
+  sprintf(numstr, "%i", AMRGravitySolve_precmaxit);
+  amrsolve_params->set_parameter("prec_itmax",numstr);
+  sprintf(numstr, "%e", AMRGravitySolve_restol);
+  amrsolve_params->set_parameter("prec_restol",numstr);
+  sprintf(numstr, "%i", AMRGravitySolve_rlxtype);
+  amrsolve_params->set_parameter("prec_rlxtype",numstr);
+  sprintf(numstr, "%i", AMRGravitySolve_npre);
+  amrsolve_params->set_parameter("prec_npre",numstr);
+  sprintf(numstr, "%i", AMRGravitySolve_Jaciters);
+  amrsolve_params->set_parameter("prec_Jaciters",numstr);
+  amrsolve_params->set_parameter("prec_npost",numstr);
   amrsolve_params->set_parameter("prec_printl", "0");
   amrsolve_params->set_parameter("prec_log",    "1");
  
@@ -133,11 +148,10 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   float f_scale = GravitationalConstant / a;
 
   // Initialize the AMRsolve linear system
-  Eint32 sol_prec   = 1;
-  Eint32 zero_guess = 1;
   LCAPERF_START("amrsolve_matrix");
   AMRsolve_Hypre_Grav amrgravsolve(*hierarchy, *amrsolve_params, 
-				   sol_prec, zero_guess);
+				   AMRGravitySolve_useprec, 
+				   AMRGravitySolve_zeroguess);
   amrgravsolve.init_hierarchy();
   amrgravsolve.init_stencil();
   amrgravsolve.init_graph();
