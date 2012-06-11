@@ -398,6 +398,7 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
   WriteListOfFloats(fptr, MetaData.TopGridRank, ExternalGravityOrientation);
 
   fprintf(fptr, "SelfGravity                    = %"ISYM"\n", SelfGravity);
+  fprintf(fptr, "SelfGravityConsistent          = %"ISYM"\n", SelfGravityConsistent);
   fprintf(fptr, "SelfGravityGasOff              = %"ISYM"\n", SelfGravityGasOff);
   fprintf(fptr, "AccretionKernal                = %"ISYM"\n", AccretionKernal);
   fprintf(fptr, "GravitationalConstant          = %e\n",
