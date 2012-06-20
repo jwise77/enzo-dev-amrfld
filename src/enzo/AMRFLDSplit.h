@@ -64,9 +64,15 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
                                  //    2 -> BiCGStab-BoomerAMG
                                  //    3 -> GMRES
                                  //    4 -> PFMG (unigrid only)
-  Eint32 sol_prec;               // enable HG preconditioner within AMRsolve
   Eint32 sol_printl;             // print output level
   Eint32 sol_log;                // amount of logging
+  Eint32 sol_prec;               // enable HG preconditioner within AMRsolve
+  int    sol_precmaxit;          // # PFMG iterations within preconditioner
+  int    sol_precnpre;           // # pre-relaxation sweeps within precond.
+  int    sol_precnpost;          // # post-relaxation sweeps within precond.
+  int    sol_precJacit;          // # Jacobi iterations within precond.
+  int    sol_precrelax;          // smoother type for PFMG iteration
+  float sol_precrestol;          // tolerance for coarse PFMG solve
 
   // FAC/PFMG-specific solver parameters
   Eint32 sol_rlxtype;            // relaxation type (PFMG only):
