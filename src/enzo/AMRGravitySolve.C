@@ -110,9 +110,9 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   amrsolve_params->set_parameter("prec_rlxtype",numstr);
   sprintf(numstr, "%i", AMRGravitySolve_npre);
   amrsolve_params->set_parameter("prec_npre",numstr);
+  amrsolve_params->set_parameter("prec_npost",numstr);
   sprintf(numstr, "%i", AMRGravitySolve_Jaciters);
   amrsolve_params->set_parameter("prec_Jaciters",numstr);
-  amrsolve_params->set_parameter("prec_npost",numstr);
   amrsolve_params->set_parameter("prec_printl", "0");
   amrsolve_params->set_parameter("prec_log",    "1");
  
