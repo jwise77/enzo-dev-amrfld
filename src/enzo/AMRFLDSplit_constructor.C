@@ -40,13 +40,19 @@ AMRFLDSplit::AMRFLDSplit()
   sol_tolerance = -1.0;
   sol_maxit = -1;
   sol_type = -1;
-  sol_prec = -1;
   sol_rlxtype = -1;
   sol_npre = -1;
   sol_npost = -1;
   sol_printl = -1;
   sol_log = -1;
   totIters = -1;
+  sol_prec = -1;
+  sol_precmaxit = -1;
+  sol_precnpre = -1;
+  sol_precnpost = -1;
+  sol_precJacit = -1;
+  sol_precrelax = -1;
+  sol_precrestol = -1.0;
 
   // initialize problem grid information to -1/NULL
   rank = -1;

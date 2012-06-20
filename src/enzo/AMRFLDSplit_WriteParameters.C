@@ -54,12 +54,20 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
     fprintf(fptr, "RadiationBoundaryX2Faces = %i %i\n", 
 	    BdryType[2][0], BdryType[2][1]);
   fprintf(fptr, "RadHydroSolType = %i\n", sol_type);
-  fprintf(fptr, "RadHydroSolPrec = %i\n", sol_prec);
   fprintf(fptr, "RadHydroSolTolerance = %22.16e\n", sol_tolerance);
   fprintf(fptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
   fprintf(fptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
   fprintf(fptr, "RadHydroMGPreRelax = %i\n", sol_npre);    
   fprintf(fptr, "RadHydroMGPostRelax = %i\n", sol_npost);    
+
+  fprintf(fptr, "RadHydroSolPrec = %i\n", sol_prec);
+  fprintf(fptr, "RadHydroSol_precmaxit = %i\n", sol_precmaxit);
+  fprintf(fptr, "RadHydroSol_precnpre = %i\n", sol_precnpre);
+  fprintf(fptr, "RadHydroSol_precnpost = %i\n", sol_precnpost);
+  fprintf(fptr, "RadHydroSol_precJacit = %i\n", sol_precJacit);
+  fprintf(fptr, "RadHydroSol_precrelax = %i\n", sol_precrelax);
+  fprintf(fptr, "RadHydroSol_precrestol = %g\n", sol_precrestol);
+
   fprintf(fptr, "WeakScaling = %i\n", &WeakScaling);    
 
   // if doing an ionization problem (ProblemTypes 410-415),

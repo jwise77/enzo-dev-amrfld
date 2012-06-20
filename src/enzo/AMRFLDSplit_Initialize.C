@@ -153,12 +153,20 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   sol_tolerance = 1e-8;  // HYPRE solver tolerance
   sol_maxit     = 200;   // HYPRE max linear iters
   sol_type      = 1;     // HYPRE solver
-  sol_prec      = 1;     // Enable HG preconditioner by default
   sol_printl    = 1;     // HYPRE print level
   sol_log       = 1;     // HYPRE logging level
   sol_rlxtype   = 1;     // HYPRE relaxation type
   sol_npre      = 1;     // HYPRE num pre-smoothing steps
   sol_npost     = 1;     // HYPRE num post-smoothing steps
+
+  // set default preconditioner parameters
+  sol_prec       = 1;    // Enable HG preconditioner by default
+  sol_precmaxit  = 1;    // one preconditioning sweep per Krylov iteration
+  sol_precnpre   = 1;    // one pre-relaxation sweep
+  sol_precnpost  = 1;    // one post-relaxation sweep
+  sol_precJacit  = 2;    // two Jacobi iterations per HG call
+  sol_precrelax  = 1;    // weighted Jacobi
+  sol_precrestol = 0.0;  // use an iteration-based stop criteria
 
   // set default ionization parameters
   NGammaDot    = 0.0;    // ionization strength
@@ -214,7 +222,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	  }
 	}
 	ret += sscanf(line, "RadHydroSolType = %i", &sol_type);
-	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
 	ret += sscanf(line, "RadHydroSolTolerance = %"FSYM, &sol_tolerance);
 	ret += sscanf(line, "RadHydroMaxMGIters = %i", &sol_maxit);
 	ret += sscanf(line, "RadHydroMGRelaxType = %i", &sol_rlxtype);
@@ -224,6 +231,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "EtaRadius = %"FSYM, &EtaRadius);
 	ret += sscanf(line, "EtaCenter = %"FSYM" %"FSYM" %"FSYM, 
 		      &(EtaCenter[0]), &(EtaCenter[1]), &(EtaCenter[2]));
+
+	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
+	ret += sscanf(line, "RadHydroSol_precmaxit = %i", &sol_precmaxit);
+	ret += sscanf(line, "RadHydroSol_precnpre = %i", &sol_precnpre);
+	ret += sscanf(line, "RadHydroSol_precnpost = %i", &sol_precnpost);
+	ret += sscanf(line, "RadHydroSol_precJacit = %i", &sol_precJacit);
+	ret += sscanf(line, "RadHydroSol_precrelax = %i", &sol_precrelax);
+	ret += sscanf(line, "RadHydroSol_precrestol = %"FSYM"", &sol_precrestol);
 
 	ret += sscanf(line, "WeakScaling = %"ISYM, &WeakScaling);
 	
@@ -510,13 +525,18 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // set preconditioning options for BiCGStab and GMRES solvers
   if (sol_type == 1 || sol_type==3) {
-    amrsolve_params->set_parameter("prec_itmax",  "20");
-    amrsolve_params->set_parameter("prec_restol", "1.0e-6");
-    amrsolve_params->set_parameter("prec_rlxtype","1");
-    amrsolve_params->set_parameter("prec_npre",   "1");
-    amrsolve_params->set_parameter("prec_npost",  "1");
-    amrsolve_params->set_parameter("prec_printl", "0");
-    amrsolve_params->set_parameter("prec_log",    "1");
+    sprintf(numstr, "%i", sol_precmaxit);
+    amrsolve_params->set_parameter("prec_itmax", numstr);
+    sprintf(numstr, "%e", sol_precrestol);
+    amrsolve_params->set_parameter("prec_restol", numstr);
+    sprintf(numstr, "%i", sol_precnpre);
+    amrsolve_params->set_parameter("prec_npre", numstr);
+    sprintf(numstr, "%i", sol_precnpost);
+    amrsolve_params->set_parameter("prec_npost", numstr);
+    sprintf(numstr, "%i", sol_precJacit);
+    amrsolve_params->set_parameter("prec_Jaciters", numstr);
+    sprintf(numstr, "%i", sol_precrelax);
+    amrsolve_params->set_parameter("prec_rlxtype", numstr);
   }
  
   if (debug) {
