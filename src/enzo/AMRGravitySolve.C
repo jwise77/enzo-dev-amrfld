@@ -64,6 +64,16 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
 {
   LCAPERF_START("amr_solve");
 
+  static float AMRGravSolTime = 0.0;
+  static float AMRGravSolTime2 = 0.0;
+  // start MPI timer for overall solver
+#ifdef USE_MPI
+  float stime = MPI_Wtime();
+#else
+  float stime = 0.0;
+#endif
+
+
   // Ensure that Grid arrays for the PotentialField on this processor 
   // (and for these levels) have been allocated
   LevelHierarchyEntry *Temp;
@@ -72,8 +82,6 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
     for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
       Temp->GridHierarchyEntry->GridData->ClearPotentialField();
   
-
-
 
 
   // Set up AMRsolve MPI object
@@ -158,6 +166,14 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   amrgravsolve.init_elements(f_scale);
   LCAPERF_STOP("amrsolve_matrix");
 
+
+  // start MPI timer for the solve itself
+#ifdef USE_MPI
+  float stime2 = MPI_Wtime();
+#else
+  float stime2 = 0.0;
+#endif
+
   // Solve the linear system
   LCAPERF_START("amrsolve_solve");
   amrgravsolve.solve();
@@ -165,6 +181,15 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   Eint32 Sits = amrgravsolve.iterations();
   if (debug) printf("   lin resid = %.1e, its = %i\n", finalresid, Sits);
   LCAPERF_STOP("amrsolve_solve");
+
+  // stop MPI timer for the solve itself, increment total
+#ifdef USE_MPI
+  float ftime2 = MPI_Wtime();
+#else
+  float ftime2 = 0.0;
+#endif
+  AMRGravSolTime2 += ftime2-stime2;
+    
 
   // Display solver results
   if (amrgravsolve.evaluate() != 0) {
@@ -264,6 +289,19 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
 #endif   // BITWISE_IDENTICALITY
   } // ENDFOR grid batches
 
+
+  // stop MPI timer for overall solver itself, increment total
+#ifdef USE_MPI
+  float ftime = MPI_Wtime();
+#else
+  flaot ftime = 0.0;
+#endif
+  AMRGravSolTime += ftime-stime;
+
+  // root node outputs timing information
+  if (debug)  printf("Cumulative AMRGravitySolve time = %g (infrastructure = %g)\n\n",
+		     AMRGravSolTime2, AMRGravSolTime-AMRGravSolTime2);
+    
 
   return SUCCESS;
 }
