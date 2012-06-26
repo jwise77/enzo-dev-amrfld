@@ -78,7 +78,7 @@ class grid
 //
   int GridRank;                        // number of dimensions
 
-  AMR_SOLVE_PUBLIC;
+  AMR_SOLVE_PUBLIC
 
   int GridDimension[MAX_DIMENSION];    // total dimensions of all grids
   int GridStartIndex[MAX_DIMENSION];   // starting index of the active region
@@ -88,7 +88,7 @@ class grid
   FLOAT GridLeftEdge[MAX_DIMENSION];   // starting pos (active problem space)
   FLOAT GridRightEdge[MAX_DIMENSION];  // ending pos (active problem space)
 
-  AMR_SOLVE_PRIVATE;
+  AMR_SOLVE_PRIVATE
 
   float dtFixed;                       // current (fixed) timestep
   FLOAT Time;                          // current problem time
@@ -99,11 +99,11 @@ class grid
 //  Baryon grid data
 //
 
-  AMR_SOLVE_PUBLIC;
+  AMR_SOLVE_PUBLIC
 
   FLOAT *CellWidth[MAX_DIMENSION];
 
-  AMR_SOLVE_PRIVATE;
+  AMR_SOLVE_PRIVATE
 
   int    NumberOfBaryonFields;                        // active baryon fields
   float *BaryonField[MAX_NUMBER_OF_BARYON_FIELDS];    // pointers to arrays
@@ -133,13 +133,13 @@ class grid
 //  Particle data
 //
 
-  AMR_SOLVE_PUBLIC;
+  AMR_SOLVE_PUBLIC
 
   int    NumberOfParticles;
   FLOAT *ParticlePosition[MAX_DIMENSION];  // pointers to position arrays
   float *ParticleMass;                     // pointer to mass array
 
-  AMR_SOLVE_PRIVATE;
+  AMR_SOLVE_PRIVATE
 
   float *ParticleVelocity[MAX_DIMENSION];  // pointers to velocity arrays
   float *ParticleAcceleration[MAX_DIMENSION+1];  // 
@@ -154,7 +154,7 @@ class grid
 //
 //  Gravity data
 // 
-  AMR_SOLVE_PUBLIC;
+  AMR_SOLVE_PUBLIC
 
   float *PotentialField;
   float *AccelerationField[MAX_DIMENSION]; // cell cntr acceleration at n+1/2
@@ -165,7 +165,7 @@ class grid
   float *GravitatingMassFieldParticles;     // for particles only
   int    GravitatingMassFieldParticlesDimension[MAX_DIMENSION];
 
-  AMR_SOLVE_PRIVATE;
+  AMR_SOLVE_PRIVATE
 
   FLOAT  GravitatingMassFieldParticlesLeftEdge[MAX_DIMENSION];
   FLOAT  GravitatingMassFieldParticlesCellSize;
@@ -192,9 +192,9 @@ class grid
 //
 //  Parallel Information
 //
-  AMR_SOLVE_PUBLIC;
+  AMR_SOLVE_PUBLIC
   int ProcessorNumber;
-  AMR_SOLVE_PRIVATE;
+  AMR_SOLVE_PRIVATE
 //
 // Movie Data Format
 //
@@ -2145,7 +2145,8 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				     float V2Const, float IEConst, 
 				     float EgConst, float HMassFrac, 
 				     float InitFracHII, float InitFracHeII, 
-				     float InitFracHeIII, int local);
+				     float InitFracHeIII, int NumParticles, 
+				     int local);
 
   /* FLD Radiation clump ionization problem: initialize grid (SUCCESS or FAIL) */
   int RHIonizationClumpInitializeGrid(int NumChem, float NumDensityIn, 

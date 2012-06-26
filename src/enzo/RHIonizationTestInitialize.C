@@ -70,6 +70,7 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   char *HeIIIName = "HeIII_Density";
   char *DeName    = "Electron_Density";
   char *EtaName   = "Emissivity";
+  char *GPotName  = "Grav_Potential";
 
   // local declarations
   char line[MAX_LINE_LENGTH];
@@ -99,6 +100,8 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroInitialFractionHeII  = 0.0;
   float RadHydroInitialFractionHeIII = 0.0;
   int   RadHydroChemistry            = 1;
+  int   TestGravityNumberOfParticles = 0;    // number of test particles
+
 
   // overwrite input from RadHydroParamFile file, if it exists
   if (MetaData.RadHydroParameterFname != NULL) {
@@ -120,6 +123,8 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroIEnergy);
 	ret += sscanf(line, "RadHydroRadiationEnergy = %"FSYM, 
 		      &RadHydroRadiationEnergy);
+	ret += sscanf(line, "TestGravityNumberOfParticles = %"ISYM,
+		      &TestGravityNumberOfParticles);
 	if (RadHydroChemistry > 0) {
 	  ret += sscanf(line, "RadHydroInitialFractionHII = %"FSYM, 
 			&RadHydroInitialFractionHII);
@@ -199,7 +204,8 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
 			RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
 			RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
 			RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
-			RadHydroInitialFractionHeIII, local) == FAIL) {
+			RadHydroInitialFractionHeIII, 
+			TestGravityNumberOfParticles, local) == FAIL) {
       ENZO_FAIL("Error in RHIonizationTestInitializeGrid!\n");
     }
     TempGrid = TempGrid->NextGridThisLevel;
@@ -243,6 +249,9 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   if (ImplicitProblem == 6) 
     DataLabel[BaryonField++] = EtaName;
 
+  // if using gravity, set a field for the gravitational potential
+  if (SelfGravity)
+    DataLabel[BaryonField++] = GPotName;
 
   for (int i=0; i<BaryonField; i++) 
     DataUnits[i] = NULL;
