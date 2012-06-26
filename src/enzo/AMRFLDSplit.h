@@ -164,7 +164,8 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   int FillRates(LevelHierarchyEntry *LevelArray[], int level);
 #ifdef AMR_SOLVE
   int RadStep(LevelHierarchyEntry *LevelArray[], int level, 
-	      AMRsolve_Hierarchy *hierarchy, Eflt64 *Echange);
+	      AMRsolve_Hierarchy *hierarchy, float Etyp, 
+	      float Emax, Eflt64 *Echange);
 #endif
 
  public:
