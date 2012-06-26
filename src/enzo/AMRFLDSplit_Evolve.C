@@ -73,7 +73,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 
   // scale radiation field on all relevant grids to solver units; output statistics
   LevelHierarchyEntry *Temp;
-  float Etyp=0.0, Emax=0.0, dV = 1.0;
+  float Etyp=0.0, Emax=0.0, Enum=0.0;
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel)
       if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
@@ -89,18 +89,15 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	  int x0len = n3[0] + 2*ghXl;
 	  int x1len = n3[1] + 2*ghYl;
 	  int x2len = n3[2] + 2*ghZl;
-	  for (int dim=0; dim<rank; dim++)
-	    dV *= (Temp->GridData->GetGridRightEdge(dim) -
-		   Temp->GridData->GetGridLeftEdge( dim)) 
-	        / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
+	  Enum += x0len*x1len*x2len;
 	  
 	  // scale radiation field
 	  float *Enew = Temp->GridHierarchyEntry->GridData->AccessRadiationFrequency0();
 	  for (int k=0; k<x0len*x1len*x2len; k++)  Enew[k]/=ErScale;
 
 	  for (int k=0; k<x0len*x1len*x2len; k++)  {
-	    Etyp += Enew[k]*Enew[k]*dV;
-	    Emax = max(Emax, fabs(Enew[k])*dV);
+	    Etyp += Enew[k]*Enew[k];
+	    Emax = max(Emax, fabs(Enew[k]));
 	  }
 
       }  // end loop over grids on this proc
@@ -109,13 +106,15 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 #ifdef USE_MPI
   MPI_Datatype FDataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
   MPI_Arg one = 1;
-  float dtmp;
-  MPI_Allreduce(&Emax, &dtmp, one, FDataType, MPI_MAX, MPI_COMM_WORLD);
-  Emax = dtmp;
-  MPI_Allreduce(&Etyp, &dtmp, one, FDataType, MPI_SUM, MPI_COMM_WORLD);
-  Etyp = sqrt(dtmp);
+  MPI_Arg two = 2;
+  float dtmpIn[] = {Etyp, Enum};
+  float dtmpOut[2];
+  MPI_Allreduce(&Emax, &dtmpOut, one, FDataType, MPI_MAX, MPI_COMM_WORLD);
+  Emax = dtmpOut[0];
+  MPI_Allreduce(&dtmpIn, &dtmpOut, two, FDataType, MPI_SUM, MPI_COMM_WORLD);
+  Etyp = sqrt(dtmpOut[0]/dtmpOut[1]);
 #else
-  Etyp = sqrt(Etyp);
+  Etyp = sqrt(Etyp/Enum);
 #endif
   if (debug) {
     printf("   current internal quantities:\n");
@@ -134,7 +133,6 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 
   // initialize variables that we'll use throughout the time subcycling
   float stime2, ftime2;   // radiation, chemistry timers
-  float thisdt;           // chemistry time-stepping variables
   Eflt64 Eerror;         // temporary used for computing time step
   int radstep, radstop;   // subcycle iterators
 
@@ -186,7 +184,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	       radstep,dt,tnew,dthydro,end_time);
       
       // take a radiation step
-      recompute_step = this->RadStep(LevelArray, level, hierarchy, &Eerror);
+      recompute_step = this->RadStep(LevelArray, level, hierarchy, Etyp, Emax, &Eerror);
 
       // if the radiation step was unsuccessful, update dtrad and try again
       if (recompute_step)  dtrad = max(dtrad/10, mindt);
@@ -308,7 +306,8 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 // likely much too large), it will return a flag to the calling routine to 
 // have the step recomputed with a smaller time step size.
 int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level, 
-			 AMRsolve_Hierarchy *hierarchy, Eflt64 *Eerror)
+			 AMRsolve_Hierarchy *hierarchy, float Etyp,
+			 float Emax, Eflt64 *Eerror)
 {
 
   // update internal Enzo units for current times
@@ -348,20 +347,20 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
 
   //   compute emissivity at this internal time step (if provided internally)
   int eta_set = 0;
+  float srcNorm = 0.0;
 #ifdef EMISSIVITY 
   if (StarMakerEmissivityField > 0)  eta_set = 1;
 #endif
-  if (eta_set == 0) {
-    float srcNorm = this->RadiationSource(LevelArray, level, tnew);
-    if (debug)   printf("   emissivity norm = %g\n",srcNorm);
-  }
+  if (eta_set == 0) 
+    srcNorm = this->RadiationSource(LevelArray, level, tnew);
     
   //   enforce boundary conditions on old/new radiation fields
   if (this->EnforceBoundary(LevelArray) != SUCCESS) 
     ENZO_FAIL("AMRFLDSplit_RadStep: EnforceBoundary failure!!");
     
   //   copy current radiation field into temporary field (KPhHI)
-  //   on all grids owned by this processor, all levels here and down
+  //   on all grids owned by this processor, all levels here and down;
+  //   calculate emissivty source norm (if not already calculated)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
 	 Temp=Temp->NextGridThisLevel)
@@ -382,12 +381,55 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
 	  // access old/new radiation fields (old stored in KPhHI)
 	  float *Eold = Temp->GridHierarchyEntry->GridData->AccessKPhHI();
 	  float *Enew = Temp->GridHierarchyEntry->GridData->AccessRadiationFrequency0();
+
+	  // update emissivity norm (if needed)
+	  if (eta_set) {
+	    float dVscale = 1;
+	    for (int dim=0; dim<rank; dim++)
+	      dVscale *= (Temp->GridData->GetGridRightEdge(dim) 
+			- Temp->GridData->GetGridLeftEdge(dim)) 
+		      / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
+	    float *eta = Temp->GridData->AccessEmissivity0();
+	    for (int k=ghZl; k<n3[2]+ghZl; k++) 
+	      for (int j=ghYl; j<n3[1]+ghYl; j++) 
+		for (int i=ghXl; i<n3[0]+ghXl; i++) 
+		  srcNorm += eta[(k*x1len+j)*x0len+i]*eta[(k*x1len+j)*x0len+i]*dVscale;
+	  }
 	  
 	  // copy new radiation field into into old field
 	  for (int k=0; k<x0len*x1len*x2len; k++)  Eold[k] = Enew[k];
 
       }  // end loop over grids on this proc
-    
+
+  // finish off emissivity norm (if needed)
+  if (eta_set) {
+    float glob_eta;
+#ifdef USE_MPI
+    MPI_Datatype DataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
+    MPI_Arg ONE = 1;
+    MPI_Allreduce(&srcNorm,&glob_eta,ONE,DataType,MPI_SUM,MPI_COMM_WORLD);
+#else
+    glob_eta = srcNorm;
+#endif
+    srcNorm = sqrt(glob_eta);
+  }
+  if (debug)   printf("   emissivity norm = %g\n",srcNorm*dt);
+
+
+  // determine if the radiation system needs to be solved in this step:
+  //   if not, set error = 0.0, reset units, return with a successful step; 
+  //   if so, continue
+  float srctol=1.0e-30;
+  float radtol=1.0e-8;
+  if ((srcNorm*dt < srctol) && (fabs(Etyp-Emax) < radtol)) {
+    *Eerror = 0.0;
+    dt   /= TimeUnits;
+    told /= TimeUnits;
+    tnew /= TimeUnits;
+    return 0;
+  }
+
+
   // set up and solve radiation equation via amrsolve
 
   // Initialize the amrsolve FLD solver
