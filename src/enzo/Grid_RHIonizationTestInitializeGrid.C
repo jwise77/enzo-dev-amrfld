@@ -23,6 +23,7 @@
 #include "GridList.h"
 #include "ExternalBoundary.h"
 #include "Grid.h"
+#include "phys_constants.h"
 
 
 // function prototypes
@@ -43,6 +44,7 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
 					 float InitialFractionHII, 
 					 float InitialFractionHeII, 
 					 float InitialFractionHeIII, 
+					 int   NumParticles,
 					 int   local)
 {
 #ifdef TRANSFER
@@ -69,7 +71,7 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
   // create necessary baryon fields
   int RhoNum, TENum, IENum, V0Num, V1Num, V2Num, EgNum, DeNum, 
     HINum, HIINum, HeINum, HeIINum, HeIIINum, kphHINum, kphHeINum, 
-    kphHeIINum, gammaNum, kdissH2INum, etaNum;
+    kphHeIINum, gammaNum, kdissH2INum, etaNum, gPotNum;
   NumberOfBaryonFields = 0;
   FieldType[RhoNum = NumberOfBaryonFields++] = Density;
   FieldType[TENum = NumberOfBaryonFields++]  = TotalEnergy;
@@ -103,10 +105,13 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
   // if using the AMRFLDSplit solver, set a field for the emissivity
   if (ImplicitProblem == 6) 
     FieldType[etaNum = NumberOfBaryonFields++] = Emissivity0;
+  // if using gravity, set a field for the gravitational potential
+  if (SelfGravity) 
+    FieldType[gPotNum = NumberOfBaryonFields++] = GravPotential;
 
 
   // set the subgrid static flag (necessary??)
-  SubgridsAreStatic = FALSE;
+  //  SubgridsAreStatic = FALSE;
 
   // Return if this doesn't concern us.
   if (ProcessorNumber != MyProcessorNumber)
@@ -193,8 +198,78 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
     if (ImplicitProblem == 6) 
       for (i=0; i<size; i++)  BaryonField[etaNum][i] = 0.0;
 
-    
-    if (debug1  &&  NewData) {
+    // if using self gravity, initialize the potential field
+    if (SelfGravity) 
+      for (i=0; i<size; i++)  BaryonField[gPotNum][i] = 0.0;
+
+
+    // if using SelfGravity and NumParticles>0, set the particles into the grid
+    if (SelfGravity && (NumParticles>0)) {
+
+      float phi, r, theta, dV;
+
+      // set cell volume for mass/density conversion
+      dV = 1.0;
+      for (dim=0; dim<GridRank; dim++)
+	dV *= (GridRightEdge[dim] - GridLeftEdge[dim]) 
+	    / (GridEndIndex[dim] - GridStartIndex[dim]);
+
+      // Set number of particles for this grid
+      NumberOfParticles = NumParticles;
+
+      // Allocate space
+      this->AllocateNewParticles(NumberOfParticles);
+ 
+      // Create random particle positions and set velocities to zero
+      for (dim=0; dim<GridRank; dim++)
+	for (i=1; i<NumberOfParticles; i++) {
+	  ParticleVelocity[dim][i] = 0.0;
+	  ParticleMass[i] = 1.0e-2*float(rand())/float(RAND_MAX);
+	}
+ 
+      // Set positions randomly distributed in log r from center of this grid
+      float r1 = log10(0.2*(*CellWidth[0]));
+      float r2 = log10(0.45*(GridRightEdge[0] - GridLeftEdge[0]));
+      for (i=0; i<NumberOfParticles; i++) {
+	// Compute random r, phi and theta
+	r     = POW(10, (r2 - r1)*float(rand())/float(RAND_MAX) + r1);
+	phi   = 2.0*pi*float(rand())/float(RAND_MAX);
+	theta =     pi*float(rand())/float(RAND_MAX);
+ 
+	// Turn these into x/y/z
+	if (GridRank == 1)
+	  ParticlePosition[0][i] = r*sign(phi - pi);
+	if (GridRank == 2) {
+	  ParticlePosition[0][i] = r*cos(phi);
+	  ParticlePosition[1][i] = r*sin(phi);
+	}
+	if (GridRank == 3) {
+	  ParticlePosition[0][i] = r*sin(theta)*cos(phi);
+	  ParticlePosition[1][i] = r*sin(theta)*sin(phi);
+	  ParticlePosition[2][i] = r*cos(theta);
+	}
+	
+	// Shift center from 0,0,0 to the middle of the grid
+	for (dim=0; dim<GridRank; dim++)
+	  ParticlePosition[dim][i] += 0.5*(GridLeftEdge[dim] + GridRightEdge[dim]);
+ 
+	// Set particle identifier
+	ParticleNumber[i] = i;
+	ParticleType[i]   = PARTICLE_TYPE_DARK_MATTER;
+      }
+ 
+      // Set central particle (0)
+      ParticleMass[0] = 1.0;
+      for (dim=0; dim<GridRank; dim++) {
+	ParticlePosition[dim][0] = 0.5*(GridLeftEdge[dim] +
+		  		        GridRightEdge[dim]);
+	ParticleVelocity[dim][0] = 0.0;
+      }
+    }
+
+
+    // output some information on the test problem
+    if (debug) {
       fprintf(stdout,"\n  Initializing constant fields using CGS values:\n");
       fprintf(stdout,"        density = %g\n",DensityConstant);
       fprintf(stdout,"   total energy = %g\n",TEConstant);
@@ -234,6 +309,8 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
 	fprintf(stdout,"          nHeII = %g\n",BaryonField[HeIINum][1]);
 	fprintf(stdout,"         nHeIII = %g\n",BaryonField[HeIIINum][1]);
       }
+      if (SelfGravity) 
+	fprintf(stdout,"   NumParticles = %"ISYM"\n",NumParticles);
     }
 
   } // end if NewData == TRUE
