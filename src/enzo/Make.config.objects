@@ -28,6 +28,7 @@ OBJS_CONFIG_LIB = \
 	AMRFLDSplit_Evolve.o \
 	AMRFLDSplit_FillRates.o \
 	AMRFLDSplit_Initialize.o \
+	AMRFLDSplit_Opacity.o \
 	AMRFLDSplit_RadiationSource.o \
 	AMRFLDSplit_RadiationSpectrum.o \
 	AMRFLDSplit_SetupBoundary.o \

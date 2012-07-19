@@ -158,6 +158,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   // private computation routines
   int EnforceBoundary(LevelHierarchyEntry *LevelArray[]);
   float RadiationSource(LevelHierarchyEntry *LevelArray[], int level, float time);
+  int Opacity(LevelHierarchyEntry *LevelArray[], int level, float time);
   float RadiationSpectrum(float nu);
   float CrossSections(float nu, int species);
   int ComputeRadiationIntegrals();

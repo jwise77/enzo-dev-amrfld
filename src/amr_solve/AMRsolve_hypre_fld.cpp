@@ -67,8 +67,7 @@ AMRsolve_Hypre_FLD::AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy,
     parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), 
     iter_(-1), citer_(-1), r_factor_(const_r_factor), Nchem_(-1), theta_(-1.0), 
     dt_(-1.0), aval_(-1.0), aval0_(-1.0), adot_(-1.0), adot0_(-1.0), 
-    HIconst_(-1.0), HeIconst_(-1.0), HeIIconst_(-1.0), nUn_(-1.0), 
-    nUn0_(-1.0), lUn_(-1.0), lUn0_(-1.0), rUn_(-1.0), rUn0_(-1.0)
+    nUn_(-1.0), nUn0_(-1.0), lUn_(-1.0), lUn0_(-1.0), rUn_(-1.0), rUn0_(-1.0)
 {
   // set preconditioner flag
   use_prec = (precflag != 0);
@@ -361,10 +360,8 @@ void AMRsolve_Hypre_FLD::init_graph()
 void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta, 
 				       double aval, double aval0, 
 				       double adot, double adot0, 
-				       double HIconst, double HeIconst, 
-				       double HeIIconst, double nUn, 
-				       double nUn0, double lUn, 
-				       double lUn0, double rUn, 
+				       double nUn, double nUn0, 
+				       double lUn, double lUn0, double rUn, 
 				       double rUn0, int BdryType[3][2])
 {
   // set input arguments into AMRsolve_Hypre_FLD object
@@ -375,9 +372,6 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
   aval0_     = aval0;
   adot_      = adot;
   adot0_     = adot0;
-  HIconst_   = HIconst;
-  HeIconst_  = HeIconst;
-  HeIIconst_ = HeIIconst;
   nUn_       = nUn;
   nUn0_      = nUn0;
   lUn_       = lUn;
@@ -911,11 +905,9 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
     for (i=0; i<n0*n1*n2; i++)  values[i] = 0.0;
 
     // access relevant arrays from this grid to compute RHS
-    Scalar* E    = grid->get_E();
-    Scalar* eta  = grid->get_eta();
-    Scalar* HI   = grid->get_HI();
-    Scalar* HeI  = grid->get_HeI();
-    Scalar* HeII = grid->get_HeII();
+    Scalar* E     = grid->get_E();
+    Scalar* eta   = grid->get_eta();
+    Scalar* kappa = grid->get_kap();
 
     // get buffering information on relating amrsolve grid to Enzo data
     int ghosts[3][2]; 
@@ -960,13 +952,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_000] + E[k_00l])*0.5;
 	  R  = MAX(dzi *fabs(Ed_zl)/Eavg, Rmin);
 	  R0 = MAX(dzi0*fabs(Ed_zl)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_00l])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_00l])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_00l])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_00l])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_00l])*0.5;
 	  D_zl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_zl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
@@ -976,13 +962,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_000] + E[k_0l0])*0.5;
 	  R  = MAX(dyi *fabs(Ed_yl)/Eavg, Rmin);
 	  R0 = MAX(dyi0*fabs(Ed_yl)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_0l0])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_0l0])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_0l0])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_0l0])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_0l0])*0.5;
 	  D_yl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_yl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
@@ -992,13 +972,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_000] + E[k_l00])*0.5;
 	  R  = MAX(dxi *fabs(Ed_xl)/Eavg, Rmin);
 	  R0 = MAX(dxi0*fabs(Ed_xl)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_l00])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_l00])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_l00])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_l00])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_l00])*0.5;
 	  D_xl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_xl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
@@ -1008,13 +982,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_r00] + E[k_000])*0.5;
 	  R  = MAX(dxi *fabs(Ed_xr)/Eavg, Rmin);
 	  R0 = MAX(dxi0*fabs(Ed_xr)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_r00])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_r00])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_r00])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_r00])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_r00])*0.5;
 	  D_xr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_xr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
@@ -1024,13 +992,7 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_0r0] + E[k_000])*0.5;
 	  R  = MAX(dyi *fabs(Ed_yr)/Eavg, Rmin);
 	  R0 = MAX(dyi0*fabs(Ed_yr)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_0r0])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_0r0])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_0r0])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_0r0])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_0r0])*0.5;
 	  D_yr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_yr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
@@ -1040,22 +1002,12 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  Eavg = (E[k_00r] + E[k_000])*0.5;
 	  R  = MAX(dzi *fabs(Ed_zr)/Eavg, Rmin);
 	  R0 = MAX(dzi0*fabs(Ed_zr)/Eavg, Rmin);
-	  if (Nchem_ == 1) {
-	    kap = (HI[k_000] + HI[k_00r])*HIconst_*0.5;
-	  } else {
-	    kap = ((HI[k_000]   + HI[k_00r])*HIconst_ +
-		   (HeI[k_000]  + HeI[k_00r])*HeIconst_ +
-		   (HeII[k_000] + HeII[k_00r])*HeIIconst_)*0.5;
-	  }
+	  kap = (kappa[k_000] + kappa[k_00r])*0.5;
 	  D_zr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	  D0_zr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
 
 	  // opacity values in this cell
-	  if (Nchem_ == 1) {
-	    kap = HI[k_000]*HIconst_;
-	  } else {
-	    kap = HI[k_000]*HIconst_ + HeI[k_000]*HeIconst_ + HeII[k_000]*HeIIconst_;
-	  }
+	  kap = kappa[k_000];
 	  kap0 = kap*nUn0_;
 	  kap *= nUn_;
 
@@ -1278,10 +1230,8 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
   double c = 2.99792458e10;
 
   // access relevant arrays from this grid to compute RHS
-  Scalar* E    = grid.get_E();
-  Scalar* HI   = grid.get_HI();
-  Scalar* HeI  = grid.get_HeI();
-  Scalar* HeII = grid.get_HeII();
+  Scalar* E     = grid.get_E();
+  Scalar* kappa = grid.get_kap();
   
   // get buffering information on relating amrsolve grid to Enzo data
   int ghosts[3][2]; 
@@ -1335,13 +1285,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_zl = E[k_000] - E[k_00l];
 	Eavg = (E[k_000] + E[k_00l])*0.5;
 	R = MAX(dzi*fabs(Ed_zl)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_00l])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_00l])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_00l])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_00l])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_00l])*0.5;
 	D_zl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	//--------------
@@ -1349,13 +1293,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_yl = E[k_000] - E[k_0l0];
 	Eavg = (E[k_000] + E[k_0l0])*0.5;
 	R = MAX(dyi*fabs(Ed_yl)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_0l0])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_0l0])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_0l0])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_0l0])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_0l0])*0.5;
 	D_yl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	//--------------
@@ -1363,13 +1301,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_xl = E[k_000] - E[k_l00];
 	Eavg = (E[k_000] + E[k_l00])*0.5;
 	R = MAX(dxi*fabs(Ed_xl)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_l00])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_l00])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_l00])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_l00])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_l00])*0.5;
 	D_xl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	//--------------
@@ -1377,13 +1309,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_xr = E[k_r00] - E[k_000];
 	Eavg = (E[k_r00] + E[k_000])*0.5;
 	R = MAX(dxi*fabs(Ed_xr)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_r00])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_r00])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_r00])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_r00])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_r00])*0.5;
 	D_xr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	//--------------
@@ -1391,13 +1317,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_yr = E[k_0r0] - E[k_000];
 	Eavg = (E[k_0r0] + E[k_000])*0.5;
 	R = MAX(dyi*fabs(Ed_yr)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_0r0])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_0r0])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_0r0])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_0r0])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_0r0])*0.5;
 	D_yr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	//--------------
@@ -1405,22 +1325,11 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	Ed_zr = E[k_00r] - E[k_000];
 	Eavg = (E[k_00r] + E[k_000])*0.5;
 	R = MAX(dzi*fabs(Ed_zr)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_000] + HI[k_00r])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_000]   + HI[k_00r])*HIconst_ +
-		 (HeI[k_000]  + HeI[k_00r])*HeIconst_ +
-		 (HeII[k_000] + HeII[k_00r])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_000] + kappa[k_00r])*0.5;
 	D_zr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 	
 	// opacity values in this cell
-	if (Nchem_ == 1) {
-	  kap = HI[k_000]*HIconst_;
-	} else {
-	  kap = HI[k_000]*HIconst_ + HeI[k_000]*HeIconst_ + HeII[k_000]*HeIIconst_;
-	}
-	kap *= nUn_;
+	kap = kappa[k_000]*nUn_;
 	
 	// get the linear grid index
 	i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
@@ -2232,10 +2141,8 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
     } else if (phase == phase_matrix) {
 
       // access relevant arrays from this grid to compute RHS
-      Scalar* E    = grid_fine.get_E();
-      Scalar* HI   = grid_fine.get_HI();
-      Scalar* HeI  = grid_fine.get_HeI();
-      Scalar* HeII = grid_fine.get_HeII();
+      Scalar* E     = grid_fine.get_E();
+      Scalar* kappa = grid_fine.get_kap();
 
       // fine->coarse off-diagonal scaling
       //      double val_s = 2.0 / 3.0;
@@ -2278,13 +2185,7 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 	Ed = E[k_row] - E[k_col];
 	Eavg = (E[k_row] + E[k_col])*0.5;
 	R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
-	if (Nchem_ == 1) {
-	  kap = (HI[k_row] + HI[k_col])*HIconst_*0.5;
-	} else {
-	  kap = ((HI[k_row]   + HI[k_col])*HIconst_ +
-		 (HeI[k_row]  + HeI[k_col])*HeIconst_ +
-		 (HeII[k_row] + HeII[k_col])*HeIIconst_)*0.5;
-	}
+	kap = (kappa[k_row] + kappa[k_col])*0.5;
 	D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 
 
@@ -2407,10 +2308,8 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
     // double c = 2.99792458e10;
     
     // // access relevant arrays from this grid to compute RHS
-    // Scalar* E    = grid_coarse.get_E();
-    // Scalar* HI   = grid_coarse.get_HI();
-    // Scalar* HeI  = grid_coarse.get_HeI();
-    // Scalar* HeII = grid_coarse.get_HeII();
+    // Scalar* E     = grid_coarse.get_E();
+    // Scalar* kappa = grid_coarse.get_kap();
     
     // // get active enzo grid size
     // int n3[3];
@@ -2446,13 +2345,7 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
     // Ed = E[k_row] - E[k_col];
     // Eavg = (E[k_row] + E[k_col])*0.5;
     // R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
-    // if (Nchem_ == 1) {
-    //   kap = (HI[k_row] + HI[k_col])*HIconst_*0.5;
-    // } else {
-    //   kap = ((HI[k_row]   + HI[k_col])*HIconst_ +
-    // 	     (HeI[k_row]  + HeI[k_col])*HeIconst_ +
-    // 	     (HeII[k_row] + HeII[k_col])*HeIIconst_)*0.5;
-    // }
+    // kap = (kappa[k_row] + kappa[k_col])*0.5;
     // D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
 
     // // set matrix entry across coarse/fine face

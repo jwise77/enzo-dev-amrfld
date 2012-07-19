@@ -44,9 +44,6 @@ private:
   double               aval0_;         // cosmological expansion constant (old time)
   double               adot_;          // rate of cosmological expansion
   double               adot0_;         // rate of cosmological expansion (old time)
-  double               HIconst_;       // opacity coefficient for HI
-  double               HeIconst_;      // opacity coefficient for HeI
-  double               HeIIconst_;     // opacity coefficient for HeII
   double               nUn_;           // number density units
   double               nUn0_;          // number density units (old time)
   double               lUn_;           // length units
@@ -66,8 +63,7 @@ public:
   void init_stencil();
   void init_graph();
   void init_elements(double dt, int Nchem, double theta, double aval, 
-		     double aval0, double adot, double adot0, 
-		     double HIconst, double HeIconst, double HeIIconst, 
+		     double aval0, double adot, double adot0, 		     
 		     double nUn, double nUn0, double lUn, double lUn0, 
 		     double rUn, double rUn0, int BdryType[3][2]);
   double rdiff_norm(double pnorm, double atol);
