@@ -90,9 +90,7 @@ class AMRsolve_Grid
   Scalar* E_;               /// ptr to Radiation energy density array
   Scalar* E0_;              /// ptr to old Radiation energy density array
   Scalar* eta_;             /// ptr to emissivity array
-  Scalar* HI_;              /// ptr to HI density array
-  Scalar* HeI_;             /// ptr to HeI density array
-  Scalar* HeII_;            /// ptr to HeII density array
+  Scalar* kap_;             /// ptr to opacity array
   Scalar* phi_;             /// ptr to PotentialField array
   Scalar* gmass_;           /// ptr to GravitatingMassField array
 
@@ -187,9 +185,7 @@ class AMRsolve_Grid
   Scalar* get_E()     throw() { assert(E_);     return E_;     }; 
   Scalar* get_E0()    throw() { assert(E0_);    return E0_;    }; 
   Scalar* get_eta()   throw() { assert(eta_);   return eta_;   };
-  Scalar* get_HI()    throw() { assert(HI_);    return HI_;    };
-  Scalar* get_HeI()   throw() { assert(HeI_);   return HeI_;   };
-  Scalar* get_HeII()  throw() { assert(HeII_);  return HeII_;  };
+  Scalar* get_kap()   throw() { assert(kap_);   return kap_;   };
   Scalar* get_phi()   throw() { assert(phi_);   return phi_;   };
   Scalar* get_gmass() throw() { assert(gmass_); return gmass_; };
 
@@ -198,9 +194,7 @@ class AMRsolve_Grid
   void set_E(Scalar* E)         throw() { E_     = E;     };
   void set_E0(Scalar* E0)       throw() { E0_    = E0;    };
   void set_eta(Scalar* eta)     throw() { eta_   = eta;   };
-  void set_HI(Scalar* HI)       throw() { HI_    = HI;    };
-  void set_HeI(Scalar* HeI)     throw() { HeI_   = HeI;   };
-  void set_HeII(Scalar* HeII)   throw() { HeII_  = HeII;  };
+  void set_kap(Scalar* kap)     throw() { kap_   = kap;   };
   void set_phi(Scalar* phi)     throw() { phi_   = phi;   };
   void set_gmass(Scalar* gmass) throw() { gmass_ = gmass; };
 

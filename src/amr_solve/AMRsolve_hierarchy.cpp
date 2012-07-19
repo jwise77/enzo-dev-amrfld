@@ -311,7 +311,7 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 	  assert(ptr);
 	}
 	grid->set_E(ptr);
-	ptr = enzo_grid->AccessKPhHI();  
+	ptr = enzo_grid->AccessKPhHI();       // temporary field for old radiation arrays
 	if (!ptr) {
 	  printf("grid %i, proc %i: cannot get E0 from Enzo!\n",grid->id(),grid->ip());
 	  assert(ptr);
@@ -323,24 +323,12 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 	  assert(ptr);
 	}
 	grid->set_eta(ptr);
-	ptr = enzo_grid->AccessHIDensity();  
+	ptr = enzo_grid->AccessPhotoGamma();  // temporary field for opacity arrays
 	if (!ptr) {
-	  printf("grid %i, proc %i: cannot get HI from Enzo!\n",grid->id(),grid->ip());
+	  printf("grid %i, proc %i: cannot get PhotoGamma from Enzo!\n",grid->id(),grid->ip());
 	  assert(ptr);
 	}
-	grid->set_HI(ptr);
-	ptr = enzo_grid->AccessHeIDensity();  
-	if (!ptr) {
-	  printf("grid %i, proc %i: cannot get HeI from Enzo!\n",grid->id(),grid->ip());
-	  assert(ptr);
-	}
-	grid->set_HeI(ptr);
-	ptr = enzo_grid->AccessHeIIDensity();  
-	if (!ptr) {
-	  printf("grid %i, proc %i: cannot get HeII from Enzo!\n",grid->id(),grid->ip());
-	  assert(ptr);
-	}
-	grid->set_HeII(ptr);
+	grid->set_kap(ptr);
 
 	// Set Enzo ghost zone information for this grid
 	int enzo_ghosts[][2] = { {DEFAULT_GHOST_ZONES, DEFAULT_GHOST_ZONES}, 

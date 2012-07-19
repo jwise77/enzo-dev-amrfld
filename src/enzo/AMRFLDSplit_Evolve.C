@@ -354,6 +354,10 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   if (eta_set == 0) 
     srcNorm = this->RadiationSource(LevelArray, level, tnew);
     
+  //   compute opacity at this internal time step
+  if (this->Opacity(LevelArray, level, tnew) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_RadStep: Opacity failure!!");
+    
   //   enforce boundary conditions on old/new radiation fields
   if (this->EnforceBoundary(LevelArray) != SUCCESS) 
     ENZO_FAIL("AMRFLDSplit_RadStep: EnforceBoundary failure!!");
@@ -440,16 +444,13 @@ int AMRFLDSplit::RadStep(LevelHierarchyEntry *LevelArray[], int level,
   amrfldsolve.init_graph();
 
   //    initialize amrfldsolve system
-  Eflt64 HIconst   = intSigESigHI   / intSigE;
-  Eflt64 HeIconst  = intSigESigHeI  / intSigE / 4.0;
-  Eflt64 HeIIconst = intSigESigHeII / intSigE / 4.0;
   Eflt64 a_ = a;
   Eflt64 a0_ = a0;
   Eflt64 adot_  = (ESpectrum == -1) ? 0.0 : adot;
   Eflt64 adot0_ = (ESpectrum == -1) ? 0.0 : adot0;
-  amrfldsolve.init_elements(dt, Nchem, theta, a_, a0_, adot_, adot0_, HIconst, 
-			    HeIconst, HeIIconst, NiUnits, NiUnits0, 
-			    LenUnits, LenUnits0, ErUnits, ErUnits0, BdryType);
+  amrfldsolve.init_elements(dt, Nchem, theta, a_, a0_, adot_, 
+			    adot0_, NiUnits, NiUnits0, LenUnits, 
+			    LenUnits0, ErUnits, ErUnits0, BdryType);
 
   if (debug)  printf(" ----------------------------------------------------------------------\n");
 
