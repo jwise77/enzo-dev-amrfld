@@ -100,14 +100,14 @@ int AMRsolve_HG_prec::Initialize_(AMRsolve_Parameters *parameters,
   std::string Jitmax   = parameters->value("prec_Jaciters");
 
   //   if not defined, then define them
-  if (sitmax   == "")  parameters->add_parameter("prec_itmax","20"); 
-  if (srestol  == "")  parameters->add_parameter("prec_restol","1.0e-6");
-  if (srlxtype == "")  parameters->add_parameter("prec_rlxtype","1");
-  if (snpre    == "")  parameters->add_parameter("prec_npre","1"); 
-  if (snpost   == "")  parameters->add_parameter("prec_npost","1");
+  if (sitmax   == "")  parameters->add_parameter("prec_itmax","1"); 
+  if (srestol  == "")  parameters->add_parameter("prec_restol","0.0");
+  if (srlxtype == "")  parameters->add_parameter("prec_rlxtype","2");
+  if (snpre    == "")  parameters->add_parameter("prec_npre","2"); 
+  if (snpost   == "")  parameters->add_parameter("prec_npost","2");
   if (sprintl  == "")  parameters->add_parameter("prec_printl","1");
   if (slog     == "")  parameters->add_parameter("prec_log","1");
-  if (Jitmax   == "")  parameters->add_parameter("prec_Jaciters","1");
+  if (Jitmax   == "")  parameters->add_parameter("prec_Jaciters","3");
 
   // re-extract solver parameters now that everything is set
   sitmax   = parameters->value("prec_itmax");

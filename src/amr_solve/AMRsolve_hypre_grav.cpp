@@ -1644,6 +1644,25 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
   // set up the preconditioner (if requested)
   AMRsolve_HG_prec *precond;
   if (use_prec_) {
+
+    // set default solver parameters for HG preconditioner (if unset)
+    if (parameters->value("prec_itmax") == "")
+      parameters->add_parameter("prec_itmax","1"); 
+    if (parameters->value("prec_restol") == "")  
+      parameters->add_parameter("prec_restol","0.0");
+    if (parameters->value("prec_rlxtype") == "")  
+      parameters->add_parameter("prec_rlxtype","2");
+    if (parameters->value("prec_npre") == "")  
+      parameters->add_parameter("prec_npre","2"); 
+    if (parameters->value("prec_npost") == "")  
+      parameters->add_parameter("prec_npost","2");
+    if (parameters->value("prec_printl") == "")  
+      parameters->add_parameter("prec_printl","1");
+    if (parameters->value("prec_log") == "")  
+      parameters->add_parameter("prec_log","1");
+    if (parameters->value("prec_Jaciters") == "")  
+      parameters->add_parameter("prec_Jaciters","3");
+
     int BdryType_[3][2];
     for (int i=0; i<3; i++)
       for (int j=0; j<2; j++)
@@ -1838,6 +1857,25 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
   // set up the preconditioner (if requested)
   AMRsolve_HG_prec *precond;
   if (use_prec_) {
+
+    // set default solver parameters for HG preconditioner (if unset)
+    if (parameters->value("prec_itmax") == "")
+      parameters->add_parameter("prec_itmax","1"); 
+    if (parameters->value("prec_restol") == "")  
+      parameters->add_parameter("prec_restol","0.0");
+    if (parameters->value("prec_rlxtype") == "")  
+      parameters->add_parameter("prec_rlxtype","2");
+    if (parameters->value("prec_npre") == "")  
+      parameters->add_parameter("prec_npre","2"); 
+    if (parameters->value("prec_npost") == "")  
+      parameters->add_parameter("prec_npost","2");
+    if (parameters->value("prec_printl") == "")  
+      parameters->add_parameter("prec_printl","1");
+    if (parameters->value("prec_log") == "")  
+      parameters->add_parameter("prec_log","1");
+    if (parameters->value("prec_Jaciters") == "")  
+      parameters->add_parameter("prec_Jaciters","3");
+
     int BdryType_[3][2];
     for (int i=0; i<3; i++)
       for (int j=0; j<2; j++)
