@@ -27,6 +27,9 @@ LOCAL_HDF5_INSTALL = /usr/local/hdf5/1.8.2s
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 MACH_CPP       = cpp # C preprocessor command
 
 # With MPI

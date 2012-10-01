@@ -1,0 +1,12 @@
+This test performs an i-front expansion test using the split grey FLD
+solver on a dynamic AMR hierarchy.  Refinement is determined by local
+spatial gradients in the opacity field
+(Grid_FlagCellsToBeRefinedByOpacity).  The ionization source is in the
+center of the domain, which is initially set to a coarse 16^3 spatial
+grid.  As is required with the AMRsolve framework (that AMRFLD is
+built on top of), refined factors use a factor of 2 refinement.
+
+The test emulates Iliev et al. #1 (fixed temperature, static
+hydrodynamics), in which we examine only the radiation propagation and
+resulting chemical ionization (see RHIonization1_sp test problem).
+

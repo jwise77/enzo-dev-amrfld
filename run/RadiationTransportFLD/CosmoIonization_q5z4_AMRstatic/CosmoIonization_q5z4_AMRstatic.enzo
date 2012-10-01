@@ -1,0 +1,54 @@
+#
+#  Shapiro & Giroux, isothermal, cosmological I-front test
+#
+#  Daniel R. Reynolds, reynolds@smu.edu
+#
+#############################
+# 
+# problem and general modules 
+# 
+ProblemType                = 415           // CosmoIonizationInitialize init
+RadiativeTransferFLD       = 2             // use FLD solver for radiation
+ImplicitProblem            = 6             // use AMRFLDSplit module
+ComovingCoordinates        = 1             // Expansion ON
+MultiSpecies               = 1             // use Enzo chemistry
+RadiativeCooling           = 1             // use Enzo chemistry
+HydrogenFractionByMass     = 1.0           // hydrogen only
+RateDataCaseBRecombination = 1             // use case-B rates
+UseHydro                   = 0             // no hydro
+SelfGravity                = 0             // no gravity
+RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
+RadHydroParamfile = CosmoIonization_q5z4_AMRdynamic.amrfld
+#
+# grid and boundary 
+#
+TopGridRank                = 3
+LeftFaceBoundaryCondition  = 0 0 0         // reflecting
+RightFaceBoundaryCondition = 0 0 0
+TopGridDimensions          = 16 16 16
+#
+# AMR parameters
+#
+StaticHierarchy            = 0
+RefineBy                   = 2
+CellFlaggingMethod         = 22
+MaximumRefinementLevel     = 2
+#
+# runtime and I/O
+#
+StopCycle                  = 999999
+dtDataDump                 = 0.125
+ParallelRootGridIO         = 0
+# 
+# cosmology
+# 
+CosmologyOmegaMatterNow    = 1.0           // OmegaBaryonNow + OmegaCDMNow
+CosmologyOmegaLambdaNow    = 0.0           // 1.0-OmegaMatterNow
+CosmologyHubbleConstantNow = 0.5           // [km/s/Mpc]
+CosmologyComovingBoxSize   = 0.25          // 0.125 Mpc [Mpc/h]
+CosmologyMaxExpansionRate  = 0.015         // max delta(a)/a
+CosmologyInitialRedshift   = 4.0
+CosmologyFinalRedshift     = 1.0
+GravitationalConstant      = 1
+
+#############################

@@ -25,10 +25,13 @@
 #ifdef USE_MPI
 #include "mpi.h"
 #endif
-#include <stdlib.h>
+/* #include <stdlib.h> */
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef AMR_SOLVE
+#include "AMRsolve.h"
+#endif
 #ifdef USE_HYPRE
 #include "HYPRE_sstruct_ls.h"
 #endif

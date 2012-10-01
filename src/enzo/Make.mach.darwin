@@ -50,6 +50,9 @@ LOCAL_PYTHON_INSTALL = $(YT_DEST)
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 MACH_CPP       = /usr/bin/cpp
 
 # With MPI
@@ -75,7 +78,7 @@ MACH_LD_NOMPI  = g++ # Linker when not using MPI
 
 # Note: When compiling against HDF5 version 1.8 or greater, you need to
 # compile HDF5 with --with-default-api-version=v16, or Enzo with
-# -DH5_USE_16_API.
+# H5_USE_16_API.
 
 MACH_DEFINES   = -DLINUX -DH5_USE_16_API 
 

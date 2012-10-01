@@ -33,6 +33,9 @@ LOCAL_CUDA_INSTALL   = /usr/local/cuda
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 MACH_CPP       = /usr/bin/cpp 
 
 # With MPI

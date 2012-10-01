@@ -24,6 +24,9 @@
 #ifdef TRANSFER
 #include "gFLDSplit.h"
 #include "CosmologyParameters.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 // character strings
 EXTERN char outfilename[];
@@ -31,6 +34,7 @@ EXTERN char outfilename[];
 
 // function prototypes
 int InitializeRateData(FLOAT Time);
+int FreezeRateData(FLOAT Time, HierarchyEntry &TopGrid);
 int CosmologyComputeExpansionFactor(FLOAT time, FLOAT *a, FLOAT *dadt);
 int GetUnits(float *DensityUnits, float *LengthUnits,
 	     float *TemperatureUnits, float *TimeUnits,
@@ -84,6 +88,15 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     ENZO_FAIL("Error in gFLDSplit_Initialize");
   }
 
+  
+#ifdef _OPENMP
+  // output number of OpenMP threads that will be used in this run
+  int nthreads = omp_get_max_threads();
+  printf("FLD Initialize: MPI task %"ISYM" has %"ISYM" available OpenMP threads\n",
+	 MyProcessorNumber,nthreads);
+#endif
+
+
 #ifndef MPI_INT
   // in case MPI is not included
   int MPI_PROC_NULL = -3;
@@ -114,6 +127,8 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   ESpectrum = 1;        // T=10^5 blackbody spectrum
   HFrac  = 1.0;         // all Hydrogen
   theta  = 1.0;         // backwards euler implicit time discret.
+  maxsubcycles = 1.0;   // step ratio between radiation and hydro
+  maxchemsub = 1.0;     // step ratio between chemistry and radiation
   dtnorm = 2.0;         // use 2-norm for time step estimation
   ErScale = 1.0;        // no radiation equation scaling
   ecScale = 1.0;        // no energy equation scaling
@@ -177,6 +192,8 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "RadHydroMaxDt = %"FSYM, &maxdt);
 	ret += sscanf(line, "RadHydroMinDt = %"FSYM, &mindt);
 	ret += sscanf(line, "RadHydroInitDt = %"FSYM, &initdt);
+	ret += sscanf(line, "RadHydroMaxSubcycles = %"FSYM, &maxsubcycles);
+	ret += sscanf(line, "RadHydroMaxChemSubcycles = %"FSYM, &maxchemsub);
 	ret += sscanf(line, "RadHydroDtNorm = %"FSYM, &dtnorm);
 	ret += sscanf(line, "RadHydroDtRadFac = %"FSYM, &dtfac[0]);
 	ret += sscanf(line, "RadHydroDtGasFac = %"FSYM, &dtfac[1]);
@@ -305,6 +322,34 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     initdt = huge_number;  // default is no limit
   }
 
+  // maxsubcycles gives the maximum desired ratio between hydro time step 
+  // size and radiation time step size (dt_rad <= dt_hydro)
+  if (maxsubcycles < 1.0) {
+    fprintf(stderr,"gFLDSplit Initialize: illegal RadHydroMaxSubcycles = %g\n",maxsubcycles);
+    fprintf(stderr,"   re-setting to 1.0\n");
+    maxsubcycles = 1.0;    // default is to synchronize steps
+  }
+
+  // maxchemsub gives the maximum desired ratio between radiation time step 
+  // size and chemistry time step size (dt_chem <= dt_rad)
+  if (maxchemsub < 1.0) {
+    fprintf(stderr,"gFLDSplit Initialize: illegal RadHydroMaxChemSubcycles = %g\n",maxchemsub);
+    fprintf(stderr,"   re-setting to %g\n",1.0);
+    maxchemsub = 100.0;    // default is to synchronize steps
+  }
+
+  // if using Enzo's chemistry module, warn if subcycling radiation, and reset chemsub
+  if (RadiativeCooling) {
+    if (maxsubcycles > 1.0) {
+      fprintf(stderr,"\n**************************************************************\n");
+      fprintf(stderr," WARNING: radiation subcycling (RadHydroMaxSubcycles = %g > 1.0)\n",
+	      maxsubcycles);
+      fprintf(stderr,"          may not work properly with Enzo chemistry module!\n");
+      fprintf(stderr,"**************************************************************\n\n");
+    }
+    maxchemsub = 1.0;
+  }
+
   // a, adot give cosmological expansion & rate
   a = 1.0;
   a0 = 1.0;
@@ -355,7 +400,7 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     dtnorm = 2.0;  // default is 2-norm
   }
 
-  // Theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
+  // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
   if ((theta < 0.0) || (theta > 1.0)) {
     fprintf(stderr,"gFLDSplit Initialize: illegal theta = %g\n",
 	    theta);
@@ -410,12 +455,15 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     aUnits = 1.0/(1.0 + InitialRedshift);
   }
 
-  // dt gives the time step size
-  dt = initdt;
-  dtchem = 0.1*initdt*TimeUnits;  // use the radiation dt/10 (raw units)
+  // dt* gives the time step sizes for each piece of physics
+  dtrad  = initdt;                        // use the input value (scaled units)
+  dtchem = max(dtrad/maxchemsub,mindt);   // use the subcycled input value
+
+  // set a bound on the global initial dt as a factor of the radiation timestep
+  dt = initdt*maxsubcycles;
 
   // set initial time step into TopGrid
-  ThisGrid->GridData->SetMaxRadiationDt(initdt);
+  ThisGrid->GridData->SetMaxRadiationDt(dt);
   
   // compute global dimension information
   for (dim=0; dim<rank; dim++)
@@ -501,12 +549,15 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
 //   if (debug)  printf("  Initialize: setting up CoolData object\n");
 
-  // ensure that CoolData object has been set up
+  // ensure that CoolData object has been set up, and reset Hydrogen fraction
   if (CoolData.ceHI == NULL) 
     if (InitializeRateData(MetaData.Time) == FAIL) 
       ENZO_FAIL("Error in InitializeRateData.");
-  // un-scale rates for use within RadHydro solver (handles its own units)
-  {
+  CoolData.HydrogenFractionByMass = HFrac;
+
+  // if performing chemistry in this module, un-scale rates for use 
+  // within RadHydro solver (handles its own units) 
+  if (RadiativeCooling == 0) {
     float mp = 1.67262171e-24;   // Mass of a proton [g]
     float tbase1 = TimeUnits;
     float xbase1 = LenUnits/(a*aUnits);
@@ -575,6 +626,11 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
 #ifdef USE_HYPRE
 
+#ifdef USE_MPI
+  float stime = MPI_Wtime();
+#else
+  float stime = 0.0;
+#endif
   // initialize HYPRE stuff
   //    initialize the diagnostic information
   totIters = 0;
@@ -668,6 +724,13 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   HYPRE_StructVectorInitialize(rhsvec);
   HYPRE_StructVectorCreate(MPI_COMM_WORLD, grid, &solvec);
   HYPRE_StructVectorInitialize(solvec);
+
+#ifdef USE_MPI
+  float ftime = MPI_Wtime();
+#else
+  float ftime = 0.0;
+#endif
+  HYPREtime += ftime-stime;
 
 #else  // ifdef USE_HYPRE
 
@@ -1096,6 +1159,12 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   }
   ////////////////////////////////
 
+  // if using an isothermal "model", freeze rate data, now that ICs exist
+  if (Model == 4) 
+    if (FreezeRateData(MetaData.Time, TopGrid) == FAIL) 
+      ENZO_FAIL("Error in FreezeRateData.");
+
+
   if (debug)  printf("  Initialize: outputting parameters to log file\n");
 
   // output RadHydro solver parameters to output log file 
@@ -1113,6 +1182,8 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       fprintf(outfptr, "RadHydroMaxDt = %g\n", maxdt);
       fprintf(outfptr, "RadHydroMinDt = %g\n", mindt);
       fprintf(outfptr, "RadHydroInitDt = %g\n", initdt);
+      fprintf(outfptr, "RadHydroMaxSubcycles = %g\n", maxsubcycles);
+      fprintf(outfptr, "RadHydroMaxChemSubcycles = %g\n", maxchemsub);
       fprintf(outfptr, "RadHydroDtNorm = %"FSYM"\n", dtnorm);
       fprintf(outfptr, "RadHydroDtRadFac = %g\n", dtfac[0]);
       fprintf(outfptr, "RadHydroDtGasFac = %g\n", dtfac[1]);

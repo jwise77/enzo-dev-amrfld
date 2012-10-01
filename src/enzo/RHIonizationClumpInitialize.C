@@ -29,12 +29,17 @@
 
 
 /* default constants */
-#define DEFAULT_MU 0.6       // mean molecular mass
-#define MIN_TEMP 1.0         // minimum temperature [K]
+#define DEFAULT_MU 0.6           // mean molecular mass
+#define MIN_TEMP 1.0             // minimum temperature [K]
+#define MAX_INITIAL_PATCHES 100  // max number of parameter file defined subgrids
 
 
 // function prototypes
 int InitializeRateData(FLOAT Time);
+void AddLevel(LevelHierarchyEntry *Array[], HierarchyEntry *Grid, int level);
+int RebuildHierarchy(TopGridData *MetaData,
+		     LevelHierarchyEntry *LevelArray[], int level);
+
 
 
 int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr, 
@@ -42,9 +47,14 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 				TopGridData &MetaData, int local)
 {
 #ifdef TRANSFER
-  if (MyProcessorNumber == ROOT_PROCESSOR)
-    printf("Entering RHIonizationClumpInitialize routine\n");
+//   if (MyProcessorNumber == ROOT_PROCESSOR)
+//     printf("Entering RHIonizationClumpInitialize routine\n");
 
+  char *kphHIName    = "HI_kph";
+  char *kphHeIName   = "HeI_kph";
+  char *kphHeIIName  = "HeII_kph";
+  char *gammaName    = "PhotoGamma";
+  char *kdissH2IName = "H2I_kdiss";
   char *DensName  = "Density";
   char *TEName    = "TotalEnergy";
   char *IEName    = "Internal_Energy";
@@ -54,11 +64,15 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   char *RadName   = "Grey_Radiation_Energy";
   char *HIName    = "HI_Density";
   char *HIIName   = "HII_Density";
+  char *HeIName   = "HeI_Density";
+  char *HeIIName  = "HeII_Density";
+  char *HeIIIName = "HeIII_Density";
   char *DeName    = "Electron_Density";
+  char *EtaName   = "Emissivity";
 
   // local declarations
   char line[MAX_LINE_LENGTH];
-  int  dim, ret;
+  int  i, j, dim, gridnum, ret, level, patch;
 
   // Setup and parameters:
   //  1. ambient density (should be very small) - free parameter
@@ -79,8 +93,9 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroRadiationEnergy      = 1.0e-20;
   float RadHydroHydrogenMassFraction = 1.0;
   float RadHydroInitialFractionHII   = 0.0;
+  float RadHydroInitialFractionHeII  = 0.0;
+  float RadHydroInitialFractionHeIII = 0.0;
   int   RadHydroChemistry            = 1;
-  int   RadHydroModel                = 1;
   float ClumpCenterX                 = 1.54285e22;  // cm (5 kpc)
   float ClumpCenterY                 = 1.018281e22; // cm (3.3 kpc)
   float ClumpCenterZ                 = 1.018281e22; // cm (3.3 kpc)
@@ -98,8 +113,6 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroX2Velocity);
 	ret += sscanf(line, "RadHydroChemistry = %"ISYM, 
 		      &RadHydroChemistry);
-	ret += sscanf(line, "RadHydroModel = %"ISYM, 
-		      &RadHydroModel);
 	ret += sscanf(line, "RadHydroNumDensityIn = %"FSYM, 
 		      &RadHydroNumDensityIn);
 	ret += sscanf(line, "RadHydroNumDensityOut = %"FSYM, 
@@ -112,10 +125,19 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroRadiationEnergy);
 	ret += sscanf(line, "RadHydroInitialFractionHII = %"FSYM, 
 		      &RadHydroInitialFractionHII);
+	ret += sscanf(line, "RadHydroHFraction = %"FSYM, 
+		      &RadHydroHydrogenMassFraction);
+	if ((RadHydroChemistry == 3) || (MultiSpecies == 1)) {
+	  ret += sscanf(line, "RadHydroInitialFractionHeII = %"FSYM, 
+			&RadHydroInitialFractionHeII);
+	  ret += sscanf(line, "RadHydroInitialFractionHeIII = %"FSYM, 
+			&RadHydroInitialFractionHeIII);
+	}
 	
 	ret += sscanf(line, "ClumpCenter = %"FSYM" %"FSYM" %"FSYM,
 		      &ClumpCenterX, &ClumpCenterY, &ClumpCenterZ);
 	ret += sscanf(line, "ClumpRadius = %"FSYM, &ClumpRadius);
+
       } // end input from parameter file
       fclose(RHfptr);
     }
@@ -140,39 +162,59 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
     }
 
   // if temperature specified and not internal energy, perform conversion here
-  RadHydroTemperatureIn = max(RadHydroTemperatureIn,MIN_TEMP); // enforce minimum
+  RadHydroTemperatureIn  = max(RadHydroTemperatureIn, MIN_TEMP); // enforce minimum
   RadHydroTemperatureOut = max(RadHydroTemperatureOut,MIN_TEMP); // enforce minimum
   float mp = 1.67262171e-24;    // proton mass [g]
   float kb = 1.3806504e-16;     // boltzmann constant [erg/K]
-  float nH, HI, HII, ne, num_dens, mu;
-  HI = 1.0 - RadHydroInitialFractionHII;
-  HII = RadHydroInitialFractionHII;
-  ne = HII;
-  num_dens = HI + HII + ne;
-  mu = 1.0/num_dens;
-  // correct mu if using a special model
-  if ((RadHydroModel == 4) || (RadHydroModel == 5)) 
+  float nH, HI, HII, nHe, HeI, HeII, HeIII, ne, num_dens, mu;
+  if (RadHydroChemistry == 0) 
     mu = DEFAULT_MU;
+  else if (RadHydroChemistry == 1) {
+    HI = 1.0 - RadHydroInitialFractionHII;
+    HII = RadHydroInitialFractionHII;
+    ne = HII;
+    num_dens = HI + HII + ne;
+    mu = 1.0/num_dens;
+  }
+  else if (RadHydroChemistry == 3) {
+    nH = RadHydroHydrogenMassFraction;
+    nHe = (1.0 - RadHydroHydrogenMassFraction);
+    HI = nH*(1.0 - RadHydroInitialFractionHII);
+    HII = nH*RadHydroInitialFractionHII;
+    HeII = nHe*RadHydroInitialFractionHeII;
+    HeIII = nHe*RadHydroInitialFractionHeIII;
+    HeI = nHe - HeII - HeIII;
+    ne = HII + HeII/4.0 + HeIII/2.0;
+    num_dens = 0.25*(HeI + HeII + HeIII) + HI + HII + ne;
+    mu = 1.0/num_dens;
+  }
+  else {
+    fprintf(stderr,"Initialize error: NChem != {0,1,3}\n");
+    return FAIL;	
+  }
   // compute the internal energy
   float RadHydroIEnergyIn  = kb*RadHydroTemperatureIn/mu/mp/(Gamma-1.0);
   float RadHydroIEnergyOut = kb*RadHydroTemperatureOut/mu/mp/(Gamma-1.0);
   
-  // set up the grid(s) on this level
-  HierarchyEntry *Temp = &TopGrid;
-  while (Temp != NULL) {
-    if (Temp->GridData->RHIonizationClumpInitializeGrid(
+  /////////////////
+  // Set up the TopGrid as usual
+  HierarchyEntry *TempGrid = &TopGrid;
+  while (TempGrid != NULL) {
+    if (TempGrid->GridData->RHIonizationClumpInitializeGrid(
 			RadHydroChemistry, RadHydroNumDensityIn, 
 			RadHydroNumDensityOut, RadHydroX0Velocity, 
 			RadHydroX1Velocity, RadHydroX2Velocity, 
 			RadHydroIEnergyIn, RadHydroIEnergyOut, 
 			RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
-			RadHydroInitialFractionHII, ClumpCenterX, ClumpCenterY, 
+			RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
+			RadHydroInitialFractionHeIII, ClumpCenterX, ClumpCenterY, 
 			ClumpCenterZ, ClumpRadius, local) == FAIL) {
       fprintf(stderr, "Error in RHIonizationClumpInitializeGrid.\n");
       return FAIL;
     }
-    Temp = Temp->NextGridThisLevel;
+    TempGrid = TempGrid->NextGridThisLevel;
   }
+
 
   // set up field names and units
   int BaryonField = 0;
@@ -187,6 +229,28 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   DataLabel[BaryonField++] = DeName;
   DataLabel[BaryonField++] = HIName;
   DataLabel[BaryonField++] = HIIName;
+  if ((RadHydroChemistry == 3) || (MultiSpecies > 0)) {
+    DataLabel[BaryonField++] = HeIName;
+    DataLabel[BaryonField++] = HeIIName;
+    DataLabel[BaryonField++] = HeIIIName;
+  }
+
+  // if using external chemistry/cooling, set rate labels
+  if (RadiativeCooling) {
+    DataLabel[BaryonField++] = kphHIName;
+    DataLabel[BaryonField++] = gammaName;
+    if (RadiativeTransferHydrogenOnly == FALSE) {
+      DataLabel[BaryonField++] = kphHeIName;
+      DataLabel[BaryonField++] = kphHeIIName;
+    }
+    if (MultiSpecies > 1)
+      DataLabel[BaryonField++] = kdissH2IName;
+  }
+
+  // if using the AMRFLDSplit solver, set a field for the emissivity
+  if (ImplicitProblem == 6) 
+    DataLabel[BaryonField++] = EtaName;
+
 
   for (int i=0; i<BaryonField; i++) 
     DataUnits[i] = NULL;

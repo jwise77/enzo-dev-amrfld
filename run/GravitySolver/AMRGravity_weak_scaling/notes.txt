@@ -1,0 +1,20 @@
+= AMRGravitySolve weak scaling tests =
+
+(Daniel R. Reynolds, June 2012)
+
+
+These tests use a similar setup to AMRGravityTest, but instead of
+assigning a static grid with one nested level, we run with up to 3
+levels of mesh refinement, using dynamic AMR that refines based on the
+dark matter density.
+
+Since Enzo's entire gravity setup requires a uniform TopGrid, we
+perform two kinds of weak scaling.  When running with P processes:
+* Let N3 be the largest perfect cube smaller than P, with N^3 = N3
+* We allocate a BaryonField of size 32N x 32N x 32N.
+* We allocate 50000 particles per process, i.e. 50000P particles.
+
+While this is an imperfect set of weak scaling tests, it does increase
+the size of the gravity problem with each perfect cube, and it
+increases the severity of the gravity problem through the increasing
+particle count.
