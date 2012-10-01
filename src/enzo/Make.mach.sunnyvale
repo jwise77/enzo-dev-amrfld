@@ -32,6 +32,9 @@ LOCAL_PYTHON_INSTALL = /u/ki/mturk/Research/local/yt-x86_64/
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 MACH_CPP       = /usr/bin/cpp 
 
 # With MPI

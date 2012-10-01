@@ -1,0 +1,290 @@
+=======================================================
+README file for the AMRFLD-enabled version of Enzo
+
+Daniel R. Reynolds
+reynolds@smu.edu
+January 9, 2012
+=======================================================
+
+
+Warnings:
+---------
+
+The AMRFLD solver module is not ready for official release, however I
+feel that progress will be much more rapid with more people hammering
+on it.  Plus, I trust that the saying "many hands make light work"
+will be relevant in this context.  So, here I will list issues that 
+DO NOT WORK at present.  As people find more, please add them; as they
+get fixed they'll be removed.
+
+* Time stepping currently occurs through the radiation module taking
+  time steps (for the full AMR hierarchy) at the root grid step size.  
+  At every subcycled child-grid iteration, the radiation solver is not
+  called since it has already evolved further in time.  There are a
+  large number of potential time-stepping strategies that could be
+  explored, I'd like assistance in setting some of them up and trying
+  them out.  The AMRsolve framework that AMRFLD relies on can solve
+  any subset of levels in a given hierarchy (e.g. levels 2-6), so the
+  current levels 0-max is only one possibility.
+
+* AMRsolve (which AMRFLD is built on top of) requires a strict nesting
+  of the AMR hierarchy, i.e. there cannot exist subgrid boundaries
+  that jump multiple levels of refinement to neighbors.  Instead, all
+  refined levels require at least one layer of surrounding zones at
+  the next-coarser grid.
+
+  *** THIS IS VIOLATED ON EVEN SIMPLE DYNAMIC TEST PROBLEMS WITH ENZO ***
+
+  While AMRsolve has this technical restriction, it still runs and
+  seems to give reasonable results, as long as these level jumps don't
+  occur at the domain boundary.  It has therefore been difficult to
+  work on this item, since problems are difficult to predict.
+
+  However, I believe that all of these problems should be avoidable
+  when using statically-nested grids.  Unfortunately, I have only been
+  able to set up statically-nested test problems for serial runs, and
+  I'd appreciate assistance in testing larger-scale parallel runs of
+  statically-nested grids.
+
+* Time step-size selection for the hierarchical radiation problem is
+  still an open question (to me).  I believe that what I have
+  implemented provides a reasonable approach, in which the requisite
+  number of time steps is roughly independent of the mesh refinement,
+  but suggestions/improvements are welcome.  The relevant files are 
+  src/amr_solve/AMRsolve_hypre_fld.cpp (rdiff_norm) and
+  src/enzo/AMRFLDSplit_ComputeTimeStep.C
+
+* At taking each AMRFLD implicit time step, I must exchange boundary
+  values with all neighbors (and parents), around line 217 of the file
+  AMRFLDSplit_Evolve.C.  Currently, Enzo has one routine to do this
+  (SetBoundaryConditions), that unnecessarily exchanges boundary
+  conditions in ALL FIELDS, not just the one I need.  This is not
+  exactly a bug, but the AMRFLD module would be much more efficient
+  for parallel runs if Enzo had a routine to set boundary conditions
+  on only a single field.
+
+* The FAC solver is currently unusable.  This is a solver from HYPRE,
+  called by AMRsolve, which is in turn called by AMRFLD.  Hence the
+  default solver is currently BiCGStab.  While BiCGStab works fine, it
+  is not scalable to large problem sizes (whereas FAC has optimal
+  scalability, at least in theory).  This is therefore a higher
+  priority on my end than other AMRFLD limitations.
+
+
+
+
+Building the code:
+------------------
+
+This version of Enzo should be built using the same approach as is
+typical, but with a few additional requirements, as detailed below.
+
+Compilation Requirements (beyond standard Enzo):
+* Hypre >= 2.6.0b
+
+Configuration requirements:
+* precision-64
+* use-mpi-yes
+* photon-yes
+* hypre-yes
+* amr-solve-yes
+
+Configuration recommendations:
+* integers-64
+* emissivity-yes
+
+
+
+
+Test problem examples:
+----------------------
+
+I have run a number of test problems using the AMRFLD solver.  These
+test problems have parameter files and YT-based analysis scripts
+included in the repository in the directories:
+1. run/RadiationTransportFLD/RHIonization1_AMRstatic
+2. run/RadiationTransportFLD/RHIonization1_AMRdynamic
+3. run/RadiationTransportFLD/RHIonization2_AMRstatic
+4. run/RadiationTransportFLD/RHIonization2_AMRdynamic
+5. run/RadiationTransportFLD/CosmoIonization_q05z4_AMRdynamic
+6. run/RadiationTransportFLD/CosmoIonization_q5z4_AMRdynamic
+7. run/RadiationTransportFLD/CosmoIonization_q05z10_AMRdynamic
+8. run/RadiationTransportFLD/CosmoIonization_q5z10_AMRdynamic
+
+Of these, 1 and 3 use a static hierarchy, while 2, 4, 5, 6, 7 and 8
+use dynamic AMR.
+
+
+
+
+Runtime parameters:
+-------------------
+
+In addition to the standard Enzo parameters to start a simulation,
+there are a number of additional parameters that are required for
+running with AMRFLD enabled.  These are organized into two groups:
+parameters that must be included in the main Enzo parameter file, and
+parameters that must be included in a separate AMRFLD-only parameter
+file. 
+
+Main parameter file:
+* RadiativeTransferFLD = 2
+* ImplicitProblem = 6 
+* RadiativeTransferOpticallyThinH2 = 0
+* RadHydroParamfile = <filename>.  This parameter holds the name of a
+  secondary parameter file that holds AMRFLD-specific parameters, and
+  must be supplied for a functional simulation.
+
+Secondary parameter file.  If any parameter is left out, the default
+will be used:
+* RadHydroESpectrum -- assumed radiation spectrum type (default 1):
+      -1 gives monochromatic at 13.6 eV, 
+       1 gives a T=1e5 K blackbody spectrum, 
+       all others give a power law spectrum with slope -1.5  
+
+* RadHydroModel -- type of model to use for chemistry coupling
+  (default 1):
+       1 gives a standard temperature-dependent model
+       4 gives an isothermal model, frozen at the temperature of the
+         first active zone on the overall grid (see FreezeRateData.C)
+
+* RadHydroChemistry -- number of chemical species to include in
+  radiation-based interactions (default 1):
+       1 gives a hydrogen-only model, i.e. HI and HII
+       3 gives a hydrogen+helium model, i.e. HI, HII, HeI, HeII, HeIII
+  NOTE: Enzo may be run with more species than these, but this
+  parameter is used to determine the photo-ionization and
+  photo-heating rates that will be passed to Enzo's chemistry routines.
+
+* RadHydroMaxDt -- largest allowable [normalized] time step size (default 1e20)
+
+* RadHydroMinDt -- smallest allowable [normalized] time step size (default 0.0)
+
+* RadHydroInitDt -- initial [normalized] time step to use (default
+  1e20, i.e. it will use the hydro time step)
+
+* RadHydroMaxSubcycles -- desired number of radiation steps per hydro
+  time step (default 1).  Radiation will never take a step larger than
+  Enzo's root-grid hydro step, but it can subcycle.  However, since
+  chemistry is only evolved externally by Enzo's chemistry and cooling
+  routines, subcycling further decouples these tightly-knit processes,
+  and is not recommended.
+
+* RadHydroDtNorm -- vector p-norm used for measuring time accuracy.
+  See AMRsolve_Hypre_FLD::rdiff_norm and AMRFLDSplit::ComputeTimeStep
+  in the files amr_solve/AMRsolve_hypre_fld.cpp and
+  enzo/AMRFLDSplit_ComputeTimeStep.C (default 2.0) 
+
+* RadHydroDtRadFac -- desired accuracy tolerance for radiation
+  evolution.  See comments above for RadHydroDtNorm.  If this is left
+  unset, AMRFLD will take the main Enzo time steps, limited only by
+  RadHydroMaxDt and RadHydroMinDt.  If this is set, it will limit the
+  main Enzo time step size to match the value required for radiation
+  accuracy (default 1.0e20).
+
+* RadiationScaling -- Additional scaling for radiation units within
+  solver, if standard Enzo non-dimensionalization is insufficient
+  (default 1.0). 
+
+* RadHydroTheta -- time-stepping method parameter (default 1.0):
+       1.0 gives implicit Euler (a.k.a. backwards Euler)
+       0.5 gives trapezoidal (a.k.a. Crank-Nicolson)
+
+* RadiationBoundaryX0Faces, RadiationBoundaryX1Faces,
+  RadiationBoundaryX2Faces -- parameters governing type of boundary
+  conditions to be enforced in implicit radiation solver (default 0):
+       0 gives periodic BCs (both faces must match along a direction)
+       1 gives Dirichlet
+       2 gives Neumann
+  NOTE: values of Dirichlet and Neumann conditions for a specific
+  problem type must be added to the bottom of the file
+  AMRFLDSplit_Initialize.C, and will default to homogeneous (0.0) if
+  not set. 
+
+* RadHydroSolType -- choice of linear solver from HYPRE package
+  (default 1): 
+       0 gives FAC (unless there is only one level, then PFMG)
+       1 gives BiCGStab
+       2 gives BiCGStab, preconditioned with BoomerAMG
+       3 gives GMRES
+       4 gives PFMG (unigrid only)
+
+* RadHydroSolTolerance -- linear solver relative residual tolerance,
+  measured in a 2-norm (default 1e-8)
+
+* RadHydroMaxMGIters -- maximum allowed linear solver iterations
+  (default 200).
+
+* RadHydroMGRelaxType -- relaxation method used for smoother in
+  multigrid methods (FAC and PFMG); see HYPRE documentation for
+  details (default 1). 
+
+* RadHydroMGPreRelax -- number of pre-smoothing steps at each level of
+  the V- or W- cycle, for multigrid solvers (default 1)
+
+* RadHydroMGPostRelax -- number of post-smoothing steps at each level
+  of the V- or W- cycle, for multigrid solvers (default 1)
+
+
+
+
+
+New refinement criteria:
+------------------------
+
+In testing the AMRFLD framework in a dynamic AMR setting, I've added
+three new refinement criteria:
+
+* Grid_FlagCellsToBeRefinedByRadiationGradient (Flagging method 19)
+  This approach computes the magnitude of the gradient of the
+  radiation energy density (in normalized units).  This value is
+  compared against a threshold contained in the first entry in the
+  MinimumSlopeForRefinement array.  In initial tests, a value of 1.3
+  here did a reasonable job.
+
+* Grid_FlagCellsToBeRefinedByOpacity (Flagging method 20)
+  This approach computes the magnitude of the gradient of the opacity
+  (again in normalized units). This value is compared against a
+  threshold contained in the second entry in the
+  MinimumSlopeForRefinement array.  In initial tests, a value of 1.0
+  did a reasonable job. 
+
+* Grid_FlagCellsToBeRefinedByIonizedFraction (Flagging method 21)
+  This approach computes the magnitude of the gradient of the ionized
+  fraction (normalized units).  This value is compared against a
+  threshold contained in the third entry in the MinimumSlopeForRefinement
+  array, and initial testing gave 1.25 as a reasonable value for the
+  threshold. 
+
+
+
+
+
+New problem types:
+------------------
+
+A variety of problem types have already been set up that may be used
+with the AMRFLD solver:
+ * 30, CosmologySimulationInitialize.C
+ * 400 or 416, RadHydroConstTestInitialize.C
+ * 410 or 411, RHIonizationTestInitialize.C
+ * 412, RHIonizationClumpInitialize.C
+ * 413, RHIonizationSteepInitialize.C
+ * 414 or 415, CosmoIonizationInitialize.C
+
+To set up a new problem type, I recommend that you should follow one
+of these files as an example.  However, if you wish to add AMRFLD to
+an existing problem type, here are a few pointers:
+ (a) You will need a BaryonField for RadiationFreq0.
+ (b) To couple with Hydrogen-only chemistry/cooling, you'll need to
+     have BaryonFields for kphHI nad PhotoGamma.
+ (c) To coupling with Hydrogen+Helium chemistry/cooling, you'll need
+     the above two fields, plus kphHeI and kphHeII.
+ (d) If you wish to set "MultiSpecies > 1" in your Enzo chemistry, you
+     will need an additional BaryonField for kdissH2I.
+ (e) If you would like to use star formation and feedback (as
+     implemented by Geoffrey So), you will also need an "Emissivity0"
+     BaryonField.
+ (f) You should call InitializeRateData to set up the Enzo cooling
+     tables, if they have not been set up already.
+ 

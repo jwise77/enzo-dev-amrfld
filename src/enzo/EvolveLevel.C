@@ -224,6 +224,11 @@ int RadiativeTransferPrepare(LevelHierarchyEntry *LevelArray[], int level,
 			     float dtLevelAbove);
 int RadiativeTransferCallFLD(LevelHierarchyEntry *LevelArray[], int level,
 			     TopGridData *MetaData, Star *AllStars, 
+			     HierarchyEntry *Grids[], int NumberOfGrids,
+			     ExternalBoundary *Exterior, 
+#ifdef FAST_SIB
+			     SiblingGridList SiblingList[],
+#endif
 			     ImplicitProblemABC *ImplicitSolver);
 #endif
 
@@ -414,6 +419,10 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
     RadiativeTransferPrepare(LevelArray, level, MetaData, AllStars, 
 			     dtLevelAbove);
     RadiativeTransferCallFLD(LevelArray, level, MetaData, AllStars, 
+			     Grids, NumberOfGrids, Exterior, 
+#ifdef FAST_SIB
+			     SiblingList,
+#endif
 			     ImplicitSolver);
 
     /* Solve the radiative transfer */

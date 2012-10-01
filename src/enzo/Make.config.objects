@@ -19,6 +19,21 @@ OBJS_CONFIG_LIB = \
         AdiabaticExpansionInitialize.o \
         AdjustRefineRegion.o \
         AdjustMustRefineParticlesRefineToLevel.o \
+	AMRFLDSplit_ComputeRadiationIntegrals.o \
+	AMRFLDSplit_ComputeTimeStep.o \
+	AMRFLDSplit_constructor.o \
+	AMRFLDSplit_CrossSections.o \
+	AMRFLDSplit_destructor.o \
+	AMRFLDSplit_EnforceBoundary.o \
+	AMRFLDSplit_Evolve.o \
+	AMRFLDSplit_FillRates.o \
+	AMRFLDSplit_Initialize.o \
+	AMRFLDSplit_Opacity.o \
+	AMRFLDSplit_RadiationSource.o \
+	AMRFLDSplit_RadiationSpectrum.o \
+	AMRFLDSplit_SetupBoundary.o \
+	AMRFLDSplit_WriteParameters.o \
+	AMRGravitySolve.o \
         AMRH5writer.o \
         AnalysisBaseClass.o \
         AnalysisBaseClass_HDF5Utils.o \
@@ -81,6 +96,7 @@ OBJS_CONFIG_LIB = \
         CommunicationShareGrids.o \
         CommunicationShareParticles.o \
         CommunicationShareStars.o \
+	CommunicationSolvePotential.o \
         CommunicationSyncNumberOfParticles.o \
         CommunicationTransferParticlesOpt.o \
         CommunicationTransferStarsOpt.o \
@@ -212,6 +228,7 @@ OBJS_CONFIG_LIB = \
 	fourn.o \
 	FreeRealMem.o \
 	FreeExpansionInitialize.o \
+	FreezeRateData.o \
         FriendOfFriend.o \
 	FSMultiSourceInitialize.o \
 	FSProb_ComputeOpacityLW.o \
@@ -281,6 +298,7 @@ OBJS_CONFIG_LIB = \
 	gFLDSplit_EnforceBoundary.o \
 	gFLDSplit_Evolve.o \
 	gFLDSplit_FInterface.o \
+	gFLDSplit_FillRates.o \
 	gFLDSplit_GasEnergySource.o \
 	gFLDSplit_InitialGuess.o \
 	gFLDSplit_Initialize.o \
@@ -325,7 +343,8 @@ OBJS_CONFIG_LIB = \
 	Grid_ClearParticleAccelerations.o \
 	Grid_ClearParticleMassFlaggingField.o \
 	Grid_ClusterInitializeGrid.o \
-	Grid_CollapseTestInitializeGrid.o \
+    Grid_ClearPotentialField.o \	
+    Grid_CollapseTestInitializeGrid.o \
         Grid_CollectGridInformation.o \
         Grid_CollectParticles.o \
         Grid_CollectParticleMassFlaggingField.o \
@@ -409,17 +428,21 @@ OBJS_CONFIG_LIB = \
         Grid_FlagCellsToAvoidRefinement.o \
         Grid_FlagCellsToAvoidRefinementRegion.o \
 	Grid_FlagCellsToBeRefinedByCoolingTime.o \
+	Grid_FlagCellsToBeRefinedByIonizedFraction.o \
 	Grid_FlagCellsToBeRefinedByJeansLength.o \
 	Grid_FlagCellsToBeRefinedByTotalJeansLength.o \
 	Grid_FlagCellsToBeRefinedByMass.o \
 	Grid_FlagCellsToBeRefinedByMetallicity.o \
 	Grid_FlagCellsToBeRefinedByMustRefineParticles.o \
 	Grid_FlagCellsToBeRefinedByMustRefineRegion.o \
+	Grid_FlagCellsToBeRefinedByOpacity.o \
+	Grid_FlagCellsToBeRefinedByRadiationGradient.o \
 	Grid_FlagCellsToBeRefinedByResistiveLength.o \
 	Grid_FlagCellsToBeRefinedByShear.o \
 	Grid_FlagCellsToBeRefinedByShocks.o \
 	Grid_FlagCellsToBeRefinedByShockwaves.o \
 	Grid_FlagCellsToBeRefinedBySlope.o \
+	Grid_FlagCellsToBeRefinedForWeakScaling.o \
 	Grid_FlagRefinedCells.o \
 	Grid_FlagGridArray.o \
 	Grid_FreeExpansionInitializeGrid.o \
@@ -466,6 +489,7 @@ OBJS_CONFIG_LIB = \
         Grid_InterpolateStarParticlesToGrid.o \
 	Grid_KHInitializeGrid.o \
         Grid_MagneticFieldResetter.o \
+	Grid_MFIonizationTestInitializeGrid.o \
 	Grid_MirrorStarParticles.o \
 	Grid_MoveAllParticles.o \
 	Grid_MoveAllStars.o \
@@ -638,6 +662,49 @@ OBJS_CONFIG_LIB = \
         MemoryAllocationRoutines.o \
 	MemoryPoolRoutines.o \
 	MersenneTwister.o \
+	MFIonizationTestInitialize.o \
+	MFProb_AnalyticalEqns.o \
+	MFProb_ComputeRadiationIntegrals.o \
+	MFProb_ComputeTimeStep.o \
+	MFProb_constructor.o \
+	MFProb_destructor.o \
+	MFProb_Dump.o \
+	MFProb_EnforceBoundary.o \
+	MFProb_Evolve.o \
+	MFProb_FInterface.o \
+	MFProb_InitialGuess.o \
+	MFProb_Initialize.o \
+	MFProb_LocResid.o \
+	MFProb_lsetup.o \
+	MFProb_lsolve.o \
+	MFProb_nlresid.o \
+	MFProb_RadInit.o \
+	MFProb_RadJac.o \
+	MFProb_RadResid.o \
+	MFProb_SetupBoundary.o \
+	MFProb_SetupSystem.o \
+	MFProb_Sources.o \
+	MFProb_WriteParameters.o \
+	MFSplit_AnalyticChemistry.o \
+	MFSplit_ComputeRadiationIntegrals.o \
+	MFSplit_ComputeTimeStep.o \
+	MFSplit_constructor.o \
+	MFSplit_destructor.o \
+	MFSplit_Dump.o \
+	MFSplit_EnforceBoundary.o \
+	MFSplit_EnforceRadiationBounds.o \
+	MFSplit_Evolve.o \
+	MFSplit_FInterface.o \
+	MFSplit_FSRadiationMask.o \
+	MFSplit_InitialGuess.o \
+	MFSplit_Initialize.o \
+	MFSplit_LinearSolve.o \
+	MFSplit_RadInit.o \
+	MFSplit_SetupBoundary.o \
+	MFSplit_SetupSystem.o \
+	MFSplit_Sources.o \
+	MFSplit_Spectra.o \
+	MFSplit_WriteParameters.o \
         mg_calc_defect.o \
         mg_prolong2.o \
         mg_prolong.o \
@@ -1049,6 +1116,20 @@ OBJS_HYDRO_RK = \
 	hydro_rk/Riemann_HLLD_MHD.o \
 	hydro_rk/Riemann_LLF_MHD.o
 
+OBJS_AMR_SOLVE = \
+            AMRsolve_domain.o \
+            AMRsolve_faces.o \
+            AMRsolve_grid.o \
+            AMRsolve_hierarchy.o \
+            AMRsolve_hypre_fld.o \
+            AMRsolve_hypre_grav.o \
+            AMRsolve_HG_prec.o \
+            AMRsolve_level.o \
+            AMRsolve_mpi.o \
+            AMRsolve_parameters.o \
+            AMRsolve_point.o \
+            AMRsolve_problem.o
+
 # Objects for the CUDA GPU-computing support
 OBJS_ECUDA_ALL = \
 	hydro_rk/CUDA_Rec_PLM.o \
@@ -1056,3 +1137,4 @@ OBJS_ECUDA_ALL = \
 	hydro_rk/MHDSweep_CUDA.o
 #	hydro_rk/overlapping_MHDSweep_CUDA.o
 #
+

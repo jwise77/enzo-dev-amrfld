@@ -34,6 +34,9 @@ LOCAL_PYTHON_INSTALL = /scinet/gpc/tools/Python/Python262/
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 #MACH_CPP       = $(LOCAL_MPI_INSTALL)/bin/mpicc 
 MACH_CPP        = /usr/bin/cpp
 

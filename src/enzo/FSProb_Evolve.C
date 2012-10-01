@@ -41,13 +41,27 @@ int GetUnits(float *DensityUnits, float *LengthUnits,
 
 
 
-int FSProb::Evolve(HierarchyEntry *ThisGrid, float deltat) 
+//int FSProb::Evolve(HierarchyEntry *ThisGrid, float deltat) 
+//int FSProb::Evolve(LevelHierarchyEntry *LevelArray[], int level, float deltat) 
+int FSProb::Evolve(LevelHierarchyEntry *LevelArray[], int level, 
+		   HierarchyEntry *Grids[], int NumberOfGrids,
+		   TopGridData *MetaData, ExternalBoundary *Exterior, 
+#ifdef FAST_SIB
+		   SiblingGridList SiblingList[],
+#endif
+		   float deltat) 
 {
   //  if (debug)  printf("Entering FSProb::Evolve routine\n");
 
+  // Iterate over all grids on this level
+  LevelHierarchyEntry *Temp;
+  HierarchyEntry* ThisGrid;
+  for (Temp = LevelArray[0]; Temp; Temp = Temp->NextGridThisLevel) {
+    ThisGrid = Temp->GridHierarchyEntry;
+
   // Only continue if we own this grid
   if (MyProcessorNumber != ThisGrid->GridData->ReturnProcessorNumber())
-    return SUCCESS;
+    continue;
 
   // declare some variables
   int i, j, k;
@@ -272,6 +286,41 @@ int FSProb::Evolve(HierarchyEntry *ThisGrid, float deltat)
 //   if (debug)  printf("Writing out initial guess to file x.vec\n");
 //   HYPRE_StructVectorPrint("x.vec",solvec,0);
 
+  //       for periodic dims, only coarsen until grid no longer divisible by 2
+  Eint32 max_levels, level=-1;
+  int Ndir;
+  if (BdryType[0][0] == 0) {
+    level = 0;
+    Ndir = GlobDims[0];
+    while ( Ndir%2 == 0 ) {
+      level++;
+      Ndir /= 2;
+    }
+  }
+  max_levels = level;
+  if (rank > 1) {
+    if (BdryType[1][0] == 0) {
+      level = 0;
+      Ndir = GlobDims[0];
+      while ( Ndir%2 == 0 ) {
+	level++;
+	Ndir /= 2;
+      }
+    }
+    max_levels = min(level,max_levels);
+  }
+  if (rank > 2) {
+    if (BdryType[2][0] == 0) {
+      level = 0;
+      Ndir = GlobDims[0];
+      while ( Ndir%2 == 0 ) {
+	level++;
+	Ndir /= 2;
+      }
+    }
+    max_levels = min(level,max_levels);
+  }
+
   //       set up the solver [GMRES] and preconditioner [PFMG]
   //          create the solver & preconditioner
   HYPRE_StructSolver solver;
@@ -280,6 +329,8 @@ int FSProb::Evolve(HierarchyEntry *ThisGrid, float deltat)
   HYPRE_StructPFMGCreate(MPI_COMM_WORLD, &preconditioner);
 
   //          set preconditioner options
+  if (max_levels > -1) 
+    HYPRE_StructPFMGSetMaxLevels(preconditioner, max_levels);
   HYPRE_StructPFMGSetMaxIter(preconditioner, sol_maxit);
   HYPRE_StructPFMGSetRelaxType(preconditioner, sol_rlxtype);
   HYPRE_StructPFMGSetNumPreRelax(preconditioner, sol_npre);
@@ -472,6 +523,8 @@ int FSProb::Evolve(HierarchyEntry *ThisGrid, float deltat)
 
   if (debug)
     printf("  =====================================================================\n");
+
+  } // for Temp = ...
 
   // return success
   return SUCCESS;

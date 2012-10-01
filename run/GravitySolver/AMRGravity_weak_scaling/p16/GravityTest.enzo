@@ -1,0 +1,56 @@
+#
+# AMR PROBLEM DEFINITION FILE: Gravity Test Problem
+#
+#  define problem
+#
+ProblemType            = 23      // Gravity test
+TopGridRank            = 3
+TopGridDimensions      = 64 64 64
+SelfGravity            = 1       // gravity on
+TopGridGravityBoundary = 0       // Periodic BCs
+PressureFree           = 1       // turn off pressure
+S2ParticleSize         = 3.4
+GravityResolution      = 1.0
+#
+TestGravityNumberOfParticles = 800000
+TestGravityUseBaryons        = 1
+#
+#  new AMR gravity solver parameters
+#
+SelfGravityConsistent     = 1       // use new AMR-enabled gravity solver
+AMRGravitySolve_solver    = 0       // BiCGStab
+AMRGravitySolve_useprec   = 1       // T/F
+AMRGravitySolve_zeroguess = 0       // T/F
+AMRGravitySolve_maxit     = 100     // max outer solve iters/step
+AMRGravitySolve_precmaxit = 20      // max precond. solve iters/call
+AMRGravitySolve_rlxtype   = 1       // weighted Jacobi
+AMRGravitySolve_npre      = 1       // one sweep per MG level
+AMRGravitySolve_Jaciters  = 1       // num Jacobi iters on full hierarchy
+AMRGravitySolve_restol    = 1.e-4   // preconditioner tolerance
+#
+#  set I/O and stop/start parameters
+#
+StopTime               = 0.003
+dtDataDump             = 0.001
+#
+#  set hydro parameters
+#
+CourantSafetyNumber    = 0.5     // 
+PPMDiffusionParameter  = 0       // diffusion off
+#
+#  set grid refinement parameters
+#
+StaticHierarchy           = 0    // dynamic hierarchy
+MaximumRefinementLevel    = 3    // use up to 4 total levels
+RefineBy                  = 2    // refinement factor
+CellFlaggingMethod        = 4    // refine by particle mass field
+MinimumMassForRefinement  = 3e-13
+MinimumMassForRefinementLevelExponent = -0.5 -0.6 -0.7
+#
+#  set some global parameters
+#
+tiny_number            = 1.0e-10 // fixes velocity slope problem
+#
+#  output the potential field for visualization
+#
+WritePotential = 1

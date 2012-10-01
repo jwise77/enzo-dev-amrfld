@@ -41,6 +41,7 @@ int TestGravityInitialize(FILE *fptr, FILE *Outfptr, HierarchyEntry &TopGrid,
   char *Vel1Name = "x-velocity";
   char *Vel2Name = "y-velocity";
   char *Vel3Name = "z-velocity";
+  char *GPotName  = "Grav_Potential";
  
   /* declarations */
  
@@ -156,12 +157,15 @@ int TestGravityInitialize(FILE *fptr, FILE *Outfptr, HierarchyEntry &TopGrid,
   DataLabel[count++] = Vel1Name;
   DataLabel[count++] = Vel2Name;
   DataLabel[count++] = Vel3Name;
+  if (WritePotential)
+    DataLabel[count++] = GPotName;  
  
   DataUnits[0] = NULL;
   DataUnits[1] = NULL;
   DataUnits[2] = NULL;
   DataUnits[3] = NULL;
   DataUnits[4] = NULL;
+  DataUnits[5] = NULL;
   DataUnits[5] = NULL;
  
   /* Write parameters to parameter output file */

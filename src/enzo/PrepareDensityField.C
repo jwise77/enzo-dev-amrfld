@@ -58,31 +58,58 @@ int PrepareGravitatingMassField2a(HierarchyEntry *Grid, int grid1,
 				 SiblingGridList SiblingList[],
 				 TopGridData *MetaData, int level,
 				 FLOAT When);
+
+int ComputePotentialFieldLevelZero(TopGridData *MetaData,
+				   SiblingGridList SiblingList[],
+				   HierarchyEntry *Grids[], int NumberOfGrids);
+
+int CommunicationSolvePotential(LevelHierarchyEntry *LevelArray[], 
+				SiblingGridList SiblingList[],
+				int level, int reallevel, 
+				TopGridData *MetaData, 
+				HierarchyEntry **Grids,
+				int NumberOfGrids,
+				FLOAT EvaluateTime);
+
+int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],	
+		    HierarchyEntry **Grids, TopGridData *MetaData,
+		    SiblingGridList SiblingList[],
+		    int NumberOfGrids, int level_coarse, 
+		    int level_fine, FLOAT EvaluateTime);
+
 #else
+
 int PrepareGravitatingMassField2a(HierarchyEntry *Grid, TopGridData *MetaData,
 				 LevelHierarchyEntry *LevelArray[], int level,
 				 FLOAT When);
+
+int ComputePotentialFieldLevelZero(TopGridData *MetaData,
+				   HierarchyEntry *Grids[], int NumberOfGrids);
+
+int CommunicationSolvePotential(LevelHierarchyEntry *LevelArray[], 
+				int level, int reallevel, 
+				TopGridData *MetaData, 
+				HierarchyEntry **Grids,
+				int NumberOfGrids,
+				FLOAT EvaluateTime);
+
+int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],	
+		    HierarchyEntry **Grids, TopGridData *MetaData,
+		    int NumberOfGrids, int level_coarse, 
+		    int level_fine, FLOAT EvaluateTime);
 #endif
 
 int PrepareGravitatingMassField2b(HierarchyEntry *Grid, int level);
  
-#ifdef FAST_SIB
-int ComputePotentialFieldLevelZero(TopGridData *MetaData,
-				   SiblingGridList SiblingList[],
-				   HierarchyEntry *Grids[], int NumberOfGrids);
-#else
-int ComputePotentialFieldLevelZero(TopGridData *MetaData,
-				   HierarchyEntry *Grids[], int NumberOfGrids);
-#endif
-
 int GenerateGridArray(LevelHierarchyEntry *LevelArray[], int level,
 		      HierarchyEntry **Grids[]);
- 
- 
- 
+
+
 extern int CopyPotentialFieldAverage;
  
 #define GRIDS_PER_LOOP 100000
+
+
 
  
 #ifdef FAST_SIB
@@ -371,223 +398,42 @@ int PrepareDensityField(LevelHierarchyEntry *LevelArray[],
   CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
  
   /************************************************************************/
-  /* Compute the potential for the top grid. */
- 
-  if (level == 0) {
-    TIME_MSG("ComputePotentialFieldLevelZero");
-    LCAPERF_START("ComputePotentialFieldLevelZero");
-    TIMER_START("ComputePotentialFieldLevelZero");
-    if (traceMPI) 
-      fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): CPFLZero "
-	      "(send-receive)\n", MyProcessorNumber);
+  // Compute the potential, either using original Enzo approach, or new
+  // approach based on AMRsolve.
+  if (SelfGravityConsistent) {
+    int level_coarse = 0;
+    int level_fine = level;
 #ifdef FAST_SIB
-    ComputePotentialFieldLevelZero(MetaData, SiblingList,
-				   Grids, NumberOfGrids);
+    if (AMRGravitySolve(LevelArray, Grids, MetaData, SiblingList, NumberOfGrids, 
+			level_coarse, level_fine, EvaluateTime) != SUCCESS) 
+      ENZO_FAIL("Error in AMRGravitySolve");
 #else
-    ComputePotentialFieldLevelZero(MetaData, Grids, NumberOfGrids);
+    if (AMRGravitySolve(LevelArray, Grids, MetaData, NumberOfGrids, 
+			level_coarse, level_fine, EvaluateTime) != SUCCESS) 
+      ENZO_FAIL("Error in AMRGravitySolve");
 #endif
-    TIMER_STOP("ComputePotentialFieldLevelZero");
-    LCAPERF_STOP("ComputePotentialFieldLevelZero");
+  } else {
+#ifdef FAST_SIB
+    if (CommunicationSolvePotential(LevelArray, SiblingList, level, 
+				    reallevel, MetaData, Grids, NumberOfGrids, 
+				    EvaluateTime) != SUCCESS)
+      ENZO_FAIL("Error in CommunicationSolvePotential");
+#else
+    if (CommunicationSolvePotential(LevelArray, level, reallevel, MetaData, 
+				    Grids, NumberOfGrids, EvaluateTime) != SUCCESS)
+      ENZO_FAIL("Error in CommunicationSolvePotential");
+#endif 
   }
-       
-  /************************************************************************/
-  /* Compute a first iteration of the potential and share BV's. */
- 
-  int iterate;
-  if (level > 0) {
-    LCAPERF_START("SolveForPotential");
-    TIMER_START("SolveForPotential");
-    CopyPotentialFieldAverage = 1;
-    for (iterate = 0; iterate < PotentialIterations; iterate++) {
-      
-      if (iterate > 0)
-	CopyPotentialFieldAverage = 2;
 
- 
-      for (grid1 = 0; grid1 < NumberOfGrids; grid1++) {
-	Grids[grid1]->GridData->SolveForPotential(level, EvaluateTime);
-	if (CopyGravPotential)
-	  Grids[grid1]->GridData->CopyPotentialToBaryonField();
-      }
- 
-      if (traceMPI) fprintf(tracePtr, "ITPOT post-recv\n");
-	
-#ifdef FORCE_MSG_PROGRESS 
-      CommunicationBarrier();
-#endif
-
-      TIME_MSG("CopyPotentialField");
-      for (StartGrid = 0; StartGrid < NumberOfGrids; 
-	   StartGrid += GRIDS_PER_LOOP) {
-	EndGrid = min(StartGrid + GRIDS_PER_LOOP, NumberOfGrids);
-  
-#ifdef BITWISE_IDENTICALITY
-	CommunicationDirection = COMMUNICATION_SEND_RECEIVE;
-#else
-    CommunicationDirection = COMMUNICATION_POST_RECEIVE;
-#endif
-	CommunicationReceiveIndex = 0;
-	CommunicationReceiveCurrentDependsOn = COMMUNICATION_NO_DEPENDENCE;
-#ifdef FAST_SIB
-	for (grid1 = StartGrid; grid1 < EndGrid; grid1++) {
- 
-	  //fprintf(stderr, "#SIBSend on cpu %"ISYM": %"ISYM"\n", MyProcessorNumber, SiblingList[grid1].NumberOfSiblings);
- 
-	  // for (grid2 = SiblingList[grid1].NumberOfSiblings-1; grid2 = 0; grid2--)
-	  for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
-	    Grids[grid1]->GridData->
-	      CheckForOverlap(SiblingList[grid1].GridList[grid2],
-			      MetaData->LeftFaceBoundaryCondition,
-			      MetaData->RightFaceBoundaryCondition,
-			      &grid::CopyPotentialField);
-	    
-	  grid2 = grid1;
-	  Grids[grid1]->GridData->
-	    CheckForOverlap(Grids[grid2]->GridData,
-			    MetaData->LeftFaceBoundaryCondition,
-			    MetaData->RightFaceBoundaryCondition,
-			    &grid::CopyPotentialField);
-	  
-	} // ENDFOR grid1
-#else
-	for (grid1 = StartGrid; grid1 < EndGrid; grid1++)
-	  for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
-	    Grids[grid1]->GridData->
-	      CheckForOverlap(Grids[grid2]->GridData,
-			      MetaData->LeftFaceBoundaryCondition,
-			      MetaData->RightFaceBoundaryCondition,
-			      &grid::CopyPotentialField);
-#endif
-
-#ifndef BITWISE_IDENTICALITY
-#ifdef FORCE_MSG_PROGRESS 
-	CommunicationBarrier();
-#endif
-
-	if (traceMPI) fprintf(tracePtr, "ITPOT send\n");
- 
-	CommunicationDirection = COMMUNICATION_SEND;
-
- 
-#ifdef FAST_SIB
-	for (grid1 = StartGrid; grid1 < EndGrid; grid1++) {
- 
-	  //fprintf(stderr, "#SIBRecv on cpu %"ISYM": %"ISYM"\n", MyProcessorNumber, SiblingList[grid1].NumberOfSiblings);
- 
-	  // for (grid2 = SiblingList[grid1].NumberOfSiblings-1; grid2 = 0; grid2--)
-	  for (grid2 = 0; grid2 < SiblingList[grid1].NumberOfSiblings; grid2++)
-	    Grids[grid1]->GridData->
-	      CheckForOverlap(SiblingList[grid1].GridList[grid2],
-			      MetaData->LeftFaceBoundaryCondition,
-			      MetaData->RightFaceBoundaryCondition,
-			      &grid::CopyPotentialField);
- 
-	  grid2 = grid1;
-	  Grids[grid1]->GridData->
-	    CheckForOverlap(Grids[grid2]->GridData,
-			    MetaData->LeftFaceBoundaryCondition,
-			    MetaData->RightFaceBoundaryCondition,
-			    &grid::CopyPotentialField);
- 
-	} // ENDFOR grid1
-#else
-	for (grid1 = StartGrid; grid1 < EndGrid; grid1++)
-	  for (grid2 = 0; grid2 < NumberOfGrids; grid2++)
-	    Grids[grid1]->GridData->
-	      CheckForOverlap(Grids[grid2]->GridData,
-			      MetaData->LeftFaceBoundaryCondition,
-			      MetaData->RightFaceBoundaryCondition,
-			      &grid::CopyPotentialField);
-#endif
-
-	CommunicationReceiveHandler();
-#endif
-
-      } // ENDFOR grid batches
-    } // ENDFOR iterations
-    CopyPotentialFieldAverage = 0;
-    TIMER_STOP("SolveForPotential");
-    LCAPERF_STOP("SolveForPotential");
-  } // ENDIF level > 0
-  
-  /* if level > MaximumGravityRefinementLevel, then do final potential
-     solve (and acceleration interpolation) here rather than in the main
-     EvolveLevel since it involves communications. */
-  
-  if (reallevel > MaximumGravityRefinementLevel) {
- 
-    /* compute potential and acceleration on coarser level [LOCAL]
-       (but only if there is at least a subgrid -- it should be only
-       if there is a subgrrid on reallevel, but this is ok). */
- 
-    for (grid1 = 0; grid1 < NumberOfGrids; grid1++)
-      if (Grids[grid1]->NextGridNextLevel != NULL) {
-	Grids[grid1]->GridData->SolveForPotential(MaximumGravityRefinementLevel);
-	if (CopyGravPotential)
-	  Grids[grid1]->GridData->CopyPotentialToBaryonField();
-	else
-	  Grids[grid1]->GridData->ComputeAccelerationField
-	    ((HydroMethod == Zeus_Hydro) ? DIFFERENCE_TYPE_STAGGERED : 
-	     DIFFERENCE_TYPE_NORMAL, MaximumGravityRefinementLevel);
-      }
- 
-    /* Interpolate potential for reallevel grids from coarser grids. */
- 
-    if (!CopyGravPotential) {
- 
-      int Dummy, GridCount;
-      LevelHierarchyEntry *Temp, *LastTemp;
-      HierarchyEntry *Temp3;
-      LevelHierarchyEntry *FirstTemp = LevelArray[reallevel];
-	
-#ifdef FORCE_MSG_PROGRESS 
-      CommunicationBarrier();
-#endif
-
-      do {
-
-	GridCount = 0;
-	CommunicationDirection = COMMUNICATION_POST_RECEIVE;
-	CommunicationReceiveIndex = 0;
-	CommunicationReceiveCurrentDependsOn = COMMUNICATION_NO_DEPENDENCE;
-	Temp = FirstTemp;
-	while (Temp != NULL && GridCount++ < GRIDS_PER_LOOP) {
-	  Temp3 = Temp->GridHierarchyEntry;
-	  for (Dummy = reallevel; Dummy > MaximumGravityRefinementLevel; Dummy--)
-	    Temp3 = Temp3->ParentGrid;
-	  Temp->GridData->InterpolateAccelerations(Temp3->GridData);
-	  Temp = Temp->NextGridThisLevel;
-	} // ENDWHILE
-	LastTemp = Temp;
-
-	CommunicationDirection = COMMUNICATION_SEND;
-	Temp = FirstTemp;
-	while (Temp != LastTemp) {
-	  Temp3 = Temp->GridHierarchyEntry;
-	  for (Dummy = reallevel; Dummy > MaximumGravityRefinementLevel; Dummy--)
-	    Temp3 = Temp3->ParentGrid;
-	  Temp->GridData->InterpolateAccelerations(Temp3->GridData);
-	  Temp = Temp->NextGridThisLevel;
-	}
-	FirstTemp = LastTemp;
-
-	CommunicationReceiveHandler();
-
-      } while (LastTemp != NULL);
-
-    } // end:  if (!CopyGravPotential)
- 
-  } // end: if (reallevel > MaximumGravityRefinementLevel)
-
-    // --------------------------------------------------
-    // MEMORY LEAK FIX
-    //
-    // valgrind error: "1,388,304 (67,352 direct, 1,320,952 indirect)
-    // bytes in 130 blocks are definitely lost in loss record 22 of 46"
-    //
-    // Adding missing delete [] () for Grids[] allocated in
-    // GenerateGridArray()
-    // --------------------------------------------------
+  // --------------------------------------------------
+  // MEMORY LEAK FIX
+  //
+  // valgrind error: "1,388,304 (67,352 direct, 1,320,952 indirect)
+  // bytes in 130 blocks are definitely lost in loss record 22 of 46"
+  //
+  // Adding missing delete [] () for Grids[] allocated in
+  // GenerateGridArray()
+  // --------------------------------------------------
 
   delete [] Grids;
 

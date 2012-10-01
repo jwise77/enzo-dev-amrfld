@@ -36,6 +36,9 @@ LOCAL_HYPRE_INSTALL  =
 # Compiler settings
 #-----------------------------------------------------------------------
 
+MACH_CDEF      = -D
+MACH_FDEF      = -D
+
 MACH_CPP       = /lib/cpp 
 
 # With MPI
