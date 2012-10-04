@@ -1838,22 +1838,22 @@ void AMRsolve_Hypre_FLD::solve_bicgstab_(int itmax, double restol)
   if (use_prec) {
 
     // set default solver parameters for HG preconditioner (if unset)
-    if (parameters->value("prec_itmax") == "")
-      parameters->add_parameter("prec_itmax","1"); 
-    if (parameters->value("prec_restol") == "")  
-      parameters->add_parameter("prec_restol","0.0");
-    if (parameters->value("prec_rlxtype") == "")  
-      parameters->add_parameter("prec_rlxtype","2");
-    if (parameters->value("prec_npre") == "")  
-      parameters->add_parameter("prec_npre","3"); 
-    if (parameters->value("prec_npost") == "")  
-      parameters->add_parameter("prec_npost","3");
-    if (parameters->value("prec_printl") == "")  
-      parameters->add_parameter("prec_printl","1");
-    if (parameters->value("prec_log") == "")  
-      parameters->add_parameter("prec_log","1");
-    if (parameters->value("prec_Jaciters") == "")  
-      parameters->add_parameter("prec_Jaciters","5");
+    if (parameters_->value("prec_itmax") == "")
+      parameters_->add_parameter("prec_itmax","1"); 
+    if (parameters_->value("prec_restol") == "")  
+      parameters_->add_parameter("prec_restol","0.0");
+    if (parameters_->value("prec_rlxtype") == "")  
+      parameters_->add_parameter("prec_rlxtype","2");
+    if (parameters_->value("prec_npre") == "")  
+      parameters_->add_parameter("prec_npre","3"); 
+    if (parameters_->value("prec_npost") == "")  
+      parameters_->add_parameter("prec_npost","3");
+    if (parameters_->value("prec_printl") == "")  
+      parameters_->add_parameter("prec_printl","1");
+    if (parameters_->value("prec_log") == "")  
+      parameters_->add_parameter("prec_log","1");
+    if (parameters_->value("prec_Jaciters") == "")  
+      parameters_->add_parameter("prec_Jaciters","5");
 
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
@@ -2030,22 +2030,22 @@ void AMRsolve_Hypre_FLD::solve_gmres_(int itmax, double restol)
   if (use_prec) {
 
     // set default solver parameters for HG preconditioner (if unset)
-    if (parameters->value("prec_itmax") == "")
-      parameters->add_parameter("prec_itmax","1"); 
-    if (parameters->value("prec_restol") == "")  
-      parameters->add_parameter("prec_restol","0.0");
-    if (parameters->value("prec_rlxtype") == "")  
-      parameters->add_parameter("prec_rlxtype","2");
-    if (parameters->value("prec_npre") == "")  
-      parameters->add_parameter("prec_npre","3"); 
-    if (parameters->value("prec_npost") == "")  
-      parameters->add_parameter("prec_npost","3");
-    if (parameters->value("prec_printl") == "")  
-      parameters->add_parameter("prec_printl","1");
-    if (parameters->value("prec_log") == "")  
-      parameters->add_parameter("prec_log","1");
-    if (parameters->value("prec_Jaciters") == "")  
-      parameters->add_parameter("prec_Jaciters","5");
+    if (parameters_->value("prec_itmax") == "")
+      parameters_->add_parameter("prec_itmax","1"); 
+    if (parameters_->value("prec_restol") == "")  
+      parameters_->add_parameter("prec_restol","0.0");
+    if (parameters_->value("prec_rlxtype") == "")  
+      parameters_->add_parameter("prec_rlxtype","2");
+    if (parameters_->value("prec_npre") == "")  
+      parameters_->add_parameter("prec_npre","3"); 
+    if (parameters_->value("prec_npost") == "")  
+      parameters_->add_parameter("prec_npost","3");
+    if (parameters_->value("prec_printl") == "")  
+      parameters_->add_parameter("prec_printl","1");
+    if (parameters_->value("prec_log") == "")  
+      parameters_->add_parameter("prec_log","1");
+    if (parameters_->value("prec_Jaciters") == "")  
+      parameters_->add_parameter("prec_Jaciters","5");
 
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
