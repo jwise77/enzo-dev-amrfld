@@ -138,6 +138,7 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   nHII   = ThisGrid->GridData->AccessHIIDensity();
   nHeI   = ThisGrid->GridData->AccessHeIDensity();
   nHeII  = ThisGrid->GridData->AccessHeIIDensity();
+  nHeIII = ThisGrid->GridData->AccessHeIIIDensity();
   ne     = ThisGrid->GridData->AccessElectronDensity();
   //    check that we accessed the required species for Nchem
   if (Nchem > 0) 
