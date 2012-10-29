@@ -186,6 +186,74 @@ interface most closely with \enzo.
 \section{The {\tt AMRGravitySolve} Routine}
 \label{sec:AMRGravitySolve}
 
+The {\tt AMRGravitySolve} routine provides an \enzo interface to the
+{\tt AMRsolve\_Hypre\_Grav} class within \amrsolve.  As with the
+existing split gravity solver ({\tt CommunicationSolvePotential})
+within \enzo, {\tt AMRGravitySolve} is called within 
+{\tt PrepareDensityField}.  The choice between these two solvers is
+made through the \\ 
+{\tt SelfGravityConsistent} input parameter (0
+implies {\tt CommunicationSolvePotential} and nonzero implies 
+{\tt AMRGravitySolve}, with 0 the default).  In order to use this
+solver, both of the compile-time options {\tt AMR\_SOLVE} and 
+{\tt USE\_HYPRE} must be enabled.  
+
+When using {\tt AMRGravitySolve}, the self-gravity equation
+\begin{equation}
+\label{eq:self_gravity}
+  \nabla^2 \phi = \frac{4\pi G}{a}(\rho_b + \rho_{dm} + <\!\!\rho_0\!\!>)
+\end{equation}
+is set up and solved over the AMR hierarchy defined from the root grid
+level to the level input to the {\tt PrepareDensityField} function.
+Since {\tt PrepareDensityField} is called within {\tt EvolveLevel},
+i.e.~on each level in the AMR hierarchy, then {\tt AMRGravitySolve}
+will be called on successively deeper or shallower AMR hierarchies as
+the W-cycle through the levels is traversed.  The Laplacian is
+discretized using a standard second-order accurate finite difference
+approximation within each grid patch, with piecewise-constant
+interpolation to bridge coarse-fine interface boundaries.
+
+In solving the system \eqref{eq:self_gravity}, {\tt AMRGravitySolve}
+will use one of three solver algorithms: GMRES, BiCGStab, or FAC.  The
+first two of these are Krylov iterative solver algorithms, while the
+third is a multigrid variant called the ``Fast Adaptive Composite''
+method \cite{McCormick1989}.  The choice of solver algorithm is
+determined by the input parameter {\tt AMRGravitySolve\_solver}, where
+1 corresponds to GMRES, 2 to FAC, and otherwise to BiCGStab (0 is the
+default).  Of these three methods, only BiCGStab and GMRES are
+recommended, as the FAC algorithm seems less robust.
+
+As all of these linear solvers are iterative, a maximum iteration
+count may be applied through the input parameter 
+{\tt AMRGravitySolve\_maxit}, that has default value 200.
+
+When using either of the Krylov linear solvers, the linear system may
+be preconditioned using the multigrid-like hierarchical grid
+preconditioner defined by the \amrsolve class {\tt AMRsolve\_HG\_Prec}
+mentioned above.  This is enabled with the input parameter 
+{\tt AMRGravitySolve\_useprec}, where 0 disables the preconditioner
+and all other options enable it (1 is the default).  When using this
+preconditioner, a number of other options may be specified:
+\begin{itemize}
+\item As the HG preconditioner may also be applied iteratively, a
+  maximum number of iterations may be specified through the parameter
+  {\tt AMRGravitySolve\_precmaxit} (defaults to 1).
+\item Similarly, a linear-residual-based stopping criteria for the HG
+  solve may be specified through the parameter {\tt
+  AMRGravitySolve\_restol} (defaults to 0.0, i.e.~disabled).
+\item The internal number of Jacobi smoothing iterations that HG
+  applies to the full AMR hierarchy may be specified through the input
+  parameter {\tt AMRGravitySolve\_Jaciters} (defaults to 3).
+\item The inner \hypre geometric multigrid solver may be controlled
+  through the input parameters \\
+  {\tt AMRGravitySolve\_rlxtype} and  
+  {\tt AMRGravitySolve\_npre}, that specify the relaxation type
+  (default is 2, i.e.~symmetric red/black Gauss-Seidel) and the number
+  of pre- and post-smoothing iterations (default is 2).
+\end{itemize}
+
+
+
 
 \section{The {\tt AMRFLDSplit} Class}
 \label{sec:AMRFLDSplit}
