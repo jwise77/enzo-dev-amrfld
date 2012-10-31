@@ -291,7 +291,8 @@ solver and the {\tt AMRGravitySolve} solver are shown in Figure
 \caption{Test results using original (left) gravity solver and 
   {\tt AMRGravitySolve} (right).  Both tests use 10000 particles on a
   $64^3$ grid.  The RMS error for both tests is
-  0.0755394996641 and 0.0732282943262, respectively.} 
+  0.0755 and 0.0732, respectively, and appears to arise from reduced
+  error at the coarse-fine grid boundary seen at approximately $r=4$.} 
 \label{fig:AMRGravityTest_results}
 \end{figure}
 
@@ -302,7 +303,81 @@ investigation of weak scaling, entitled
 heavy particle and a large number of randomly-placed light particles
 within it's root-grid processor tile.  While the test problem no
 longer admits a simple semi-analytical solution, it does allow
-parallel tests with an AMR hierarchy of a specified depth.
+parallel tests with an AMR hierarchy of a specified depth.  The test
+does not initialize a static hierarchy, but instead initializes only
+the root grid and enables adaptive mesh refinement.  We use a
+refinement factor of 2 between levels, and refine at each level
+geometrically to ensure that each refinement level contains the same
+total number of cells as its parent level.  We ran tests of this
+solver using AMR depths ranging from 1 through 9 levels, and processor
+counts $p=k^3, k=1,\ldots,7$ (from 1 to 343 processors).  Each test
+was performed for 8 root-grid time steps, to ensure that AMR
+refinement had proceeded fully to the finest level, and timing
+statistics were taken for only the final gravity solve in this time
+step.  These tests were performed using both an un-preconditioned
+BiCGStab linear solver for the gravity system, and a BiCGStab solver
+preconditioned using the {\tt AMRsolve\_HG\_Prec} class (HG prec.).
+Unfortunately, the un-preconditioned solver was unable to converge
+within a maximum allowed 5000 iterations for the two deepest
+hierarchies (8 and 9 levels, respectively), so results from those
+tests are omitted.
+
+In figure \ref{fig:AMRGravity_weak_scaling_results1} we plot the total
+solution time versus processor count for each AMR depth, to
+demonstrate the weak-scaling performance of the solvers.  As is
+clearly evident in these plots, after an expected increase in solution
+time when going from 1 to 8 processes, the total solution time for
+each hierarchy depth remains relatively flat, increasing at the
+optimal $O(log p)$ rate indicative of multigrid solvers, with the
+HG-preconditioned results uniformly outperforming the
+un-preconditioned solver.
+
+\begin{figure}[h]
+\[
+  \centerline{\myfigpdf{scaling_np}{2.5in}
+    \myfigpdf{scaling_p}{2.5in} }
+\]
+\caption{Weak scaling results using an un-preconditioned (left) and
+  HG-preconditioned (right) gravity solver.  Curves are shown for
+  differening AMR hierarchy depths, and indicate near-optimal weak
+  scaling as the parallelism is increased, after an expected run-time
+  increase when transitioning from serial (1 process) to parallel (8
+  processes).  Additionally, the benefit from preconditioning is
+  clearly evident, with curves on the right plot uniformly lower than
+  corresponding curves on the left.} 
+\label{fig:AMRGravity_weak_scaling_results1}
+\end{figure}
+
+Similarly, in figure \ref{fig:AMRGravity_weak_scaling_results2} we
+plot the average solution time per computational cell as levels are
+added to the AMR hierarchy, for a variety of different processor
+counts.  The solution time increase when going from 1 to 2 levels may
+be easily understood due to the sudden increase in computational
+infrastructure required when going from a uniform to an adaptive
+mesh.  Moreover, in these plots the benefit of the HG preconditioner
+is more obvious due to the significantly flatter curves in the plot at
+the right.  However, it is also clear that the efficacy of the HG
+preconditioner reduces for deeper AMR hierarchies, seen here through
+the increase when going deeper than 7 levels of refinement.  From
+these plots, it is evident that additional research is needed to
+construct a preconditioner for deep AMR runs.
+
+\begin{figure}[h]
+\[
+  \centerline{\myfigpdf{timing_np}{2.5in}
+    \myfigpdf{timing_p}{2.5in} }
+\]
+\caption{Results showing average solution per computational cell as
+  the mesh is refined.  The un-preconditioned BiCGStab solver is shown
+  at left, and the HG-preconditioned solver at right, with curves
+  shown for runs using differing processor counts.  Note the much
+  flatter curves when using the HG-preconditioner, at least through 7
+  levels of mesh refinement, notwithstanding the expected increase
+  when transitioning from unigrid (1 level) to AMR (2 levels).  Note:
+  without preconditioning the solver could no longer converge within a
+  maximum allowed 5000 iterations when using 8- and 9-level hierarchies.}
+\label{fig:AMRGravity_weak_scaling_results2}
+\end{figure}
 
 
 
