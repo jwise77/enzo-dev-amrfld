@@ -441,10 +441,11 @@ FLD-specific parameter file:
 
 
 
+
 \subsection{Flux-limited diffusion radiation model}
 \label{sec:rad_model}
 
-We begin with the equation for flux-limited diffusion radiative
+We begin with the equation for flux-limited diffusive radiative
 transfer in a cosmological medium \cite{ReynoldsHayesPaschosNorman2009},
 \begin{equation}
 \label{eq:radiation_PDE}
@@ -732,11 +733,35 @@ $g=0$, depending on the user input boundary condition type.
 \subsection{Refinement Strategies}
 \label{sec:AMRFLDSplit_refinement}
 
+\begin{itemize}
+\item {\tt Grid\_FlagCellsToBeRefinedByIonizedFraction.C}
+\item {\tt Grid\_FlagCellsToBeRefinedByOpacity.C}
+\item {\tt Grid\_FlagCellsToBeRefinedByRadiationGradient.C}
+\item {\tt Grid\_FlagCellsToBeRefinedForWeakScaling.C}
+\end{itemize}
+
 
 
 
 \subsection{{\tt AMRFLDSplit} Results}
 \label{sec:AMRFLDSplit_results}
+
+\begin{itemize}
+\item AMRFLDSplit\_weak\_scaling
+\item CosmoIonization\_q05z10\_AMRstatic
+\item CosmoIonization\_q05z10\_AMRdynamic
+\item CosmoIonization\_q05z4\_AMRstatic
+\item CosmoIonization\_q05z4\_AMRdynamic
+\item CosmoIonization\_q5z10\_AMRstatic
+\item CosmoIonization\_q5z10\_AMRdynamic
+\item CosmoIonization\_q5z4\_AMRstatic
+\item CosmoIonization\_q5z4\_AMRdynamic
+\item RHIonization1\_AMRdynamic
+\item RHIonization1\_AMRstatic
+\item RHIonization2\_AMRdynamic
+\item RHIonization2\_AMRstatic
+\end{itemize}
+
 
 
 
