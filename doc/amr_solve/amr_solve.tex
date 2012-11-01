@@ -205,12 +205,6 @@ implies {\tt CommunicationSolvePotential} and nonzero implies
 solver, both of the compile-time options {\tt AMR\_SOLVE} and 
 {\tt USE\_HYPRE} must be enabled.  
 
-Assumed code fields:
-\begin{itemize}
-\item PotntialField
-\item GravitatingMassField
-\end{itemize}
-
 When using {\tt AMRGravitySolve}, the self-gravity equation
 \begin{equation}
 \label{eq:self_gravity}
@@ -395,19 +389,38 @@ near the beginning of {\tt EvolveLevel}, and is enabled through the
 {\tt AMRGravitySolve}, the compile-time options {\tt AMR\_SOLVE} and
 {\tt USE\_HYPRE} are required.
 
-Assumed code fields:
+We note that in order to use the {\tt AMRFLDSplit} class, the
+following {\tt BaryonField}s must exist within the \enzo grids:
 \begin{itemize}
-\item RadiationFreq0
-\item Emissivity0
-\item kphHI
-\item kphHeI
-\item kphHeII
-\item PhotoGamma
-\item kdissH2I
-\item HIDensity
-\item HeIDensity
-\item HeIIDensity
+\item {\tt RadiationFreq0} -- contains the
+  frequency-integrated radiation field,
+\item {\tt Emissivity0} -- contains the emissivity field that
+  acts as the source of ionizing photons for the radiation field,
+\item {\tt HIDensity} -- used to calculate the opacity of
+  each grid cell,
+\item {\tt kphHI} -- used to temporarily hold the old radiation field
+  during the radiation solve, and afterwards is used to communicate HI
+  photo-ionization rates to {\tt Enzo}'s chemistry routines,
+\item {\tt PhotoGamma} -- used to temporarily hold the opacity field
+  during the radiation solve, and afterwards is used to communicate
+  photo-heating rates to {\tt Enzo}'s cooling routines.
 \end{itemize}
+In other words, the {\tt AMRFLDSplit} class assumes that it will only
+be used in simulations that at a minimum include Hydrogen chemistry.
+Optionally, if Helium chemistry is also present, the {\tt AMRFLDSplit}
+class will interact with the \enzo grids' {\tt BaryonField}s:
+\begin{itemize}
+\item {\tt HeIDensity} -- used in computing the opacity of each grid cell,
+\item {\tt HeIIDensity} -- used in computing the opacity of each grid cell,
+\item {\tt kphHeI} -- used to communicate HeI photo-ionization rates to
+  {\tt Enzo}'s chemistry routines,
+\item {\tt kphHeII} -- used to communicate HeI photo-ionization rates to
+  {\tt Enzo}'s chemistry routines.
+\end{itemize}
+Lastly, since the radiation fields evolved by {\tt AMRFLDSplit} do not
+include frequencies below $\nu_{HI}$, the \enzo baryon field 
+{\tt kdissH2I} is always set to 0.  It is only accessed if the \enzo
+input parameter {\tt MultiSpecies} is greater than 1.
 
 
 
