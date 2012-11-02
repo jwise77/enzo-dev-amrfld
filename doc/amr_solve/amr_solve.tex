@@ -197,13 +197,9 @@ The {\tt AMRGravitySolve} routine provides an \enzo interface to the
 {\tt AMRsolve\_Hypre\_Grav} class within {\tt AMRSolve}.  As with the
 existing split gravity solver ({\tt CommunicationSolvePotential})
 within \enzo, {\tt AMRGravitySolve} is called within 
-{\tt PrepareDensityField}.  The choice between these two solvers is
-made through the \\ 
-{\tt SelfGravityConsistent} input parameter (0
-implies {\tt CommunicationSolvePotential} and nonzero implies 
-{\tt AMRGravitySolve}, with 0 the default).  In order to use this
-solver, both of the compile-time options {\tt AMR\_SOLVE} and 
-{\tt USE\_HYPRE} must be enabled.  
+{\tt PrepareDensityField}.  In order to use this solver, both of the
+compile-time options {\tt AMR\_SOLVE} and {\tt USE\_HYPRE} must be
+enabled.
 
 When using {\tt AMRGravitySolve}, the self-gravity equation
 \begin{equation}
@@ -224,40 +220,47 @@ In solving the system \eqref{eq:self_gravity}, {\tt AMRGravitySolve}
 will use one of three solver algorithms: GMRES, BiCGStab, or FAC.  The
 first two of these are Krylov iterative solver algorithms, while the
 third is a multigrid variant called the ``Fast Adaptive Composite''
-method \cite{McCormick1989}.  The choice of solver algorithm is
-determined by the input parameter {\tt AMRGravitySolve\_solver}, where
-1 corresponds to GMRES, 2 to FAC, and otherwise to BiCGStab (0 is the
-default).  Of these three methods, only BiCGStab and GMRES are
-recommended, as the FAC algorithm seems less robust.
-
-As all of these linear solvers are iterative, a maximum iteration
-count may be applied through the input parameter 
-{\tt AMRGravitySolve\_maxit}, that has default value 200.
+method \cite{McCormick1989}.  Of these three methods, only BiCGStab
+and GMRES are recommended, as the FAC algorithm seems less robust.
 
 When using either of the Krylov linear solvers, the linear system may
 be preconditioned using the multigrid-like hierarchical grid
 preconditioner defined by the \amrsolve class {\tt AMRsolve\_HG\_Prec}
-mentioned above.  This is enabled with the input parameter 
-{\tt AMRGravitySolve\_useprec}, where 0 disables the preconditioner
-and all other options enable it (1 is the default).  When using this
-preconditioner, a number of other options may be specified:
+mentioned above.  
+
+The available input parameters that control the behavior of 
+{\tt AMRGravitySolve}, with available options specified in \{\}, and
+the default value specified in [], include:
 \begin{itemize}
-\item As the HG preconditioner may also be applied iteratively, a
-  maximum number of iterations may be specified through the parameter
-  {\tt AMRGravitySolve\_precmaxit} (defaults to 1).
-\item Similarly, a linear-residual-based stopping criteria for the HG
-  solve may be specified through the parameter {\tt
-  AMRGravitySolve\_restol} (defaults to 0.0, i.e.~disabled).
-\item The internal number of Jacobi smoothing iterations that HG
-  applies to the full AMR hierarchy may be specified through the input
-  parameter {\tt AMRGravitySolve\_Jaciters} (defaults to 3).
-\item The inner \hypre geometric multigrid solver may be controlled
-  through the input parameters \\
-  {\tt AMRGravitySolve\_rlxtype} and  
-  {\tt AMRGravitySolve\_npre}, that specify the relaxation type
-  (default is 2, i.e.~symmetric red/black Gauss-Seidel) and the number
-  of pre- and post-smoothing iterations (default is 2).
+\item {\tt SelfGravityConsistent} \{0, 1\; [0]\} -- choice between
+  {\tt CommunicationSolvePotential} (0) and \\
+  {\tt AMRGravitySolve} (1) within {\tt PrepareDensityField.C};
+\item {\tt AMRGravitySolve\_solver} \{0, 1, 2\; [0]\} -- choice of
+  linear solver algorithm, where 1 is GMRES, 2 is FAC, 0 is BiCGStab;
+\item {\tt AMRGravitySolve\_maxit} \{$>0$\; [200]\} -- maximum number
+  of iterations allowed by linaer solver;
+\item {\tt AMRGravitySolve\_useprec} \{0, 1\; [1]\} -- flag to enable
+  the {\tt AMRsolve\_HG\_Prec} preconditioner;
+\item {\tt AMRGravitySolve\_precmaxit} \{$>0$\; [1]\} -- maximum
+  number of preconditioning iterations when using 
+  {\tt AMRsolve\_HG\_Prec};
+\item {\tt AMRGravitySolve\_restol} \{$\ge 0.0$\; [0.0]\} -- relative
+  linear residual tolerance for preconditioner system (0.0 disables
+  the residual check, forcing a fixed number of iterations);
+\item {\tt AMRGravitySolve\_Jaciters} \{$>0$\; [3]\} -- internal
+  number of Jacobi smoothing iterations that preconditioner applies to
+  the full AMR hierarchy;
+\item {\tt AMRGravitySolve\_rlxtype} \{0, 1, 2, 3\; [2]\} -- choice of 
+  relaxation method for inner multigrid solver within preconditioner
+  (Jacobi 0, weighted Jacobi 1, symmetric red/black Gauss-Seidel 2,
+  nonsymmetric red/black Gauss-Seidel 3);
+\item {\tt AMRGravitySolve\_npre} \{$>0$\; [2]\} -- number of pre- and
+  post-smoothing relaxation iterations applied in the inner multigrid
+  solver within preconditioner. 
 \end{itemize}
+
+
+
 
 
 \subsection{{\tt AMRGravitySolve} Results}
@@ -428,29 +431,111 @@ input parameter {\tt MultiSpecies} is greater than 1.
 \subsection{Input Parameters}
 \label{sec:AMRFLDSplit_parameters}
 
-Main \enzo parameter file:
+In addition to compiling \enzo to enable the \amrsolve framework and
+the \hypre linear solver library, there are a small number of
+input parameters required to enable the {\tt AMRFLDSplit} class.
+These are separated into two groups, one set of parameters resides in
+the main \enzo parameter file, and another set may reside in a
+separate FLD-specific parameter file.  First, the arguments that go in
+the main \enzo parameter file are primarily used to inform \enzo in
+how to to enable and use {\tt AMRFLDSplit}.  The allowed parameters
+when using {\tt AMRFLDSplit} are specified in \{\}:
 \begin{itemize}
-\item {\tt RadiativeTransferFLD} = 2
-\item {\tt ImplicitProblem} = 6
-\item {\tt RadiativeTransferOpticallyThinH2} = 0
-\item {\tt MultiSpecies}
-\item {\tt RadiativeCooling}
-\item {\tt RadHydroParamfile}
+\item {\tt RadiativeTransferFLD} \{2\} -- this informs \enzo to run the
+  FLD module as a stand-alone solver (other configurations have it
+  work with the ray-tracing solver);
+\item {\tt ImplicitProblem} \{6\} -- this informs \enzo to use {\tt
+  AMRFLDSplit} as opposed to the other (unigrid) FLD solvers;
+\item {\tt RadiativeTransferOpticallyThinH2} \{0\} -- this enables H2
+  cooling for Lyman-Werner radiation (requires {\tt
+    RadiativeTransferFLD} set to 1), so should be disabled when
+  running FLD as a stand-alone radiation solver;
+\item {\tt MultiSpecies} \{0, 1\} -- this enables {\tt Enzo}'s chemistry
+  solvers;
+\item {\tt RadiativeCooling} \{0, 1\} -- this enables {\tt Enzo}'s gas
+  cooling solvers;
+\item {\tt RadHydroParamfile} -- this should specify a filename
+  (relative to the runtime directory) that contains FLD-specific
+  solver parameters (see below).  This can be the name of this same
+  file, or it can specify a different file.
 \end{itemize}
 
-FLD-specific parameter file:
+The second (and larger) set of parameters control the inner workings
+of the {\tt AMRFLDSplit} solver.  All parameters have a recommended
+default value shown in [], but may be overridden by the user: 
 \begin{itemize}
-\item {\tt RadHydroESpectrum}
-\item {\tt RadHydroModel}
-\item {\tt RadHydroMaxDt}
-\item {\tt RadHydroMinDt}
-\item {\tt RadHydroInitDt}
-\item {\tt RadHydroDtRadFac}
-\item {\tt RadHydroSolType}
-\item {\tt RadHydroMaxMGIters}
-\item {\tt RadHydroMGPreRelax}
-\item {\tt RadHydroMGPostRelax}
+\item {\tt RadHydroESpectrum} \{-1, 0, 1\; [1]\} -- choice of assumed
+  radiation spectrum (see section \ref{sec:AMRFLDSplit_spectrum});
+\item {\tt RadHydroModel} \{1, 4\; [1]\} -- choice of isothermal (4)
+  vs temperature-dependent (1) chemistry rates;
+\item {\tt RadHydroChemistry} \{1, 3\; [1]\} -- choice of
+  Hydrogen+Helium (3) or Hydrogen-only (1) chemistry model;
+\item {\tt RadHydroMaxDt} \{$>0$\; [$\infty$]\} -- maximum allowed radiation
+  time step size (in internal, i.e.~normalized, \enzo units);
+\item {\tt RadHydroMinDt} \{$\ge 0$\; [0.0]\} -- minimum allowed
+  radiation time step size (in normalized units);
+\item {\tt RadHydroInitDt} \{$>0$\; [$\infty$]\} -- initial radiation time
+  step size (in normalized units, will be limited by main \enzo time
+  step size);
+\item {\tt RadHydroDtControl} \{0, 1, 2\; [2]\} -- choice of time step
+  adaptivity algorithm (I is 0, PI is 1, PID is 2; see section
+  \ref{sec:AMRFLDSplit_dt_selection} for further details);
+\item {\tt RadHydroMaxSubcycles} \{$\ge 1.0$\; [1.0]\} -- maximum
+  desired ratio between \enzo time step and radiation time step
+  ($\Delta t_{\enzo} / \Delta t_{rad}$);
+\item {\tt RadHydroDtNorm} \{$\ge 0.0$\; [2.0]\} -- choice of norm in
+  estimating temporal error (see section \ref{sec:AMRFLDSplit_dt_selection});
+\item {\tt RadHydroDtRadFac} \{$>0.0$\; [$\infty$]\} -- desired relative
+  accuracy of radiation field (see section \ref{sec:AMRFLDSplit_dt_selection});
+\item {\tt RadiationScaling} \{$>0.0$\; [1.0]\} -- unit scaling factor
+  to convert between \enzo radiation units and {\tt AMRFLDSplit}
+  radiation units (unnecessary if \enzo normalization sufficient, see
+  section \ref{sec:AMRFLDSplit_variable_rescaling});
+\item {\tt RadHydroTheta} \{$0.0 \le \theta \le 1.0$\; [1.0]\} --
+  implicitness parameter within time-stepping method (0 is explicit
+  Euler, 0.5 is trapezoidal, 1.0 is implicit Euler);
+\item {\tt RadiationBoundaryX0Faces, RadiationBoundaryX1Faces,
+  RadiationBoundaryX2Faces} \{0, 1, 2\; [0 0]\} -- integer pairs
+  specifying boundary condition type at each face (0 periodic, 1
+  Dirichlet, 2 Neumann), zero-valued fields are set by default but may
+  be overridden by {\tt ProblemType}-specific calls within {\tt
+    AMRFLDSplit\_Initialize.C};
+\item {\tt RadHydroSolType} \{0, 1, 2, 3, 4\; [1]\} -- choice of
+  \hypre algorithm for the main FLD linear system (0 FAC, 1 BiCGStab,
+  2 BiCGStab with BoomerAMG preconditioner, 3 GMRES, 4 PFMG),
+  currently only 1 and 3 are known to work for AMR simulations, while
+  4 is recommended for unigrid simulations;
+\item {\tt RadHydroSolTolerance} \{1e-15 $\le$ tol $\le$ 1.0\;
+  [1e-8]\} -- relative tolerance for FLD linear system residual;
+\item {\tt RadHydroMaxMGIters} \{$>0$\; [200]\} -- number of allowed
+  iterations in the main \hypre linear solver;
+\item {\tt RadHydroMGRelaxType} \{0, 1, 2, 3\; [1]\} -- choice of
+  relaxation method if using {\tt RadHydroSolType} of 4 (Jacobi 0,
+  weighted Jacobi 1, symmetric red/black Gauss-Seidel 2, nonsymmetric
+  red/black Gauss-Seidel 3);
+\item {\tt RadHydroMGPreRelax} \{$>0$\; [1]\} -- number of pre-relaxation
+  sweeps when using {\tt RadHydroSolType} of 4;
+\item {\tt RadHydroMGPostRelax} \{$>0$\; [1]\} --number of
+  post-relaxation sweeps when using {\tt RadHydroSolType} of 4;
+\item {\tt RadHydroSolPrec} \{0, 1\; [1]\} -- flag to enable the {\tt
+  AMRsolve\_HG\_Prec} class to precondition the \hypre solver (only
+  available for {\tt RadHydroSolType} 1 and 3);
+\item {\tt RadHydroSol\_precmaxit} \{$>0$\; [1]\} -- maximum number of
+  preconditioner sweeps per outer solver iteration;
+\item {\tt RadHydroSol\_precnpre} \{$>0$\; [1]\} -- number of
+  pre-relaxation sweeps per preconditioner iteration;
+\item {\tt RadHydroSol\_precnpost} \{$>0$\; [1]\} -- number of
+  post-relaxation sweeps per preconditioner iteration;
+\item {\tt RadHydroSol\_precJacit} \{$>0$\; [2]\} -- number of Jacobi
+  iterations on the full AMR hierarchy per preconditioner iteration;
+\item {\tt RadHydroSol\_precrelax} \{0, 1, 2, 3\; [1]\} -- relaxation
+  type for root-grid PFMG solve within the preconditioner (same values
+  as listed for {\tt RadHydroMGRelaxType} above;
+\item {\tt RadHydroSol\_precrestol} \{$\ge 0.0$\; [0.0]\} -- relative
+  linear residual tolerance for preconditioner system (0.0 disables
+  the residual check, forcing a fixed number of iterations).
 \end{itemize}
+
 
 
 
@@ -469,172 +554,237 @@ where here the comoving radiation energy density $E$, emissivity
 $\eta$ and opacity $\kappa$ are functions of space and time.  In this
 equation, the frequency-dependence of the radiation energy has been
 integrated out, under the premise of an assumed radiation energy
-spectrum, 
-\begin{align}
-  \notag
-  & E_{\nu}(\nu,\xvec,t) = \tilde{E}(\xvec,t) \chi(\nu), \\
-  \notag
-  \Rightarrow & \\
-  \label{eq:spectrum}
-  & E(\xvec,t) = \int_{\nu_{HI}}^{\infty} E_{\nu}(\nu,\xvec,t)\,\mathrm{d}\nu 
-    = \tilde{E}(\xvec,t) \int_{\nu_{HI}}^{\infty} \chi(\nu)\,\mathrm{d}\nu,
-\end{align}
-where $\tilde{E}$ is an intermediate quantity (for analysis) that is
-never computed.  We note that if the assumed spectrum is the Dirac
-delta function, $\chi(\nu) = \delta_{\nu_{HI}}(\nu)$, $E$ is a
-monochromatic radiation energy density at the ionization threshold of
-HI, and the $-\frac{\dot{a}}{a}E$ term (obtained through integration
-by parts of the redshift term
-$\frac{\dot{a}}{a}\partial_{\nu}E_{\nu}$) is omitted from
-\eqref{eq:radiation_PDE}. Similarly, the emissivity function
-$\eta(\xvec,t)$ relates to the true emissivity 
-$\eta_{\nu}(\nu,\xvec,t)$ by the formula
-\begin{equation}
-\label{eq:emissivity}
-  \eta(\xvec,t) = \int_{\nu_{HI}}^{\infty}\eta_{\nu}(\nu,\xvec,t)\,\mathrm{d}\nu.
-\end{equation}
+spectrum (see section \ref{sec:AMRFLDSplit_spectrum}).
 
 The function $D$ in the above equation \eqref{eq:radiation_PDE} is
 the {\em flux-limiter} that depends on $E$, $\nabla E$ and the 
 opacity $\kappa$,  
 \[
-   D(E) = \text{diag}\( D_1(E),\, D_2(E),\, D_3(E) \),
+   D = \left[\begin{array}{ccc} D^{1} & & \\ & D^{2} & \\ & & D^{3} \end{array}\right],
 \]
-where the directional limiters $D_i(E)$ are given by \cite{Morel2000}
+where the directional limiters $D^i$ are given by \cite{Morel2000}
 \begin{align}
   \label{eq:Larsen_limiter}
-   D_i(E) = \frac{c}{\sqrt{(3\kappa)^2 + R_i^2}}, \qquad
-   R_i(E) = \max\left\{\frac{|\partial_i E|}{E}, 10^{-20} \right\}.
+   D^{i}\left(E,\tfrac{\partial E}{\partial x_i},\kappa\right) = 
+     c \left[ 9\kappa^2 + 
+     \left(R\left(E,\tfrac{\partial E}{\partial x_i}\right)\right)^2\right]^{-1/2}, \qquad
+   R^i\left(E,\tfrac{\partial E}{\partial x_i}\right) = 
+     \max\left\{\frac{\left|\tfrac{\partial E}{\partial x_i} \right|}{E}, 10^{-20} \right\}. 
 \end{align}
+Within each uniform grid patch, the Laplace operator in
+\eqref{eq:radiation_PDE} is discretized using second-order centered
+differences on a standard cell-centered finite-volume mesh, with the
+flux limiters computed at cell faces, i.e.~in the $x_1$ direction we
+use 
+\begin{align*}
+  &\left[\frac{\partial}{\partial x_1}\left(D_1
+    \frac{\partial E}{\partial x_1}\right)\right]_{i,j,k} \ \approx \ 
+  \frac{1}{\Delta x_1} \left[
+    D^1_{i+1/2,j,k}\frac{E_{i+1,j,k}-E_{i,j,k}}{\Delta x_1} -
+    D^1_{i-1/2,j,k}\frac{E_{i,j,k}-E_{i-1,j,k}}{\Delta x_1} \right],\\
+  \text{where, e.g.} & \\
+  & D^1_{i+1/2,j,k} = D^{i}\left(
+     \tfrac{E_{i+1,j,k}+E_{i,j,k}}{2},
+     \tfrac{E_{i+1,j,k}-E_{i,j,k}}{\Delta x_1},
+     \tfrac{\kappa_{i+1,j,k}+\kappa_{i,j,k}}{2}\right).
+\end{align*}
+At coarse/fine grid boundaries, we use piecewise constant
+interpolation to shift dependence from non-existent same-grid
+neighbors to the coarser/finer neighbor across the level boundary,
+and adjust the relevant differencing parameters $\Delta x_i$
+appropriately. 
 
 
 
 \subsection{Radiation Spectrum}
 \label{sec:AMRFLDSplit_spectrum}
 
-
-
-\subsection{Emissivity}
-\label{sec:AMRFLDSplit_emissivity}
-
-
-
-\subsection{Opacity}
-\label{sec:AMRFLDSplit_opacity}
-
-
-
-\subsection{Chemical Ionization and Gas Cooling}
-\label{sec:AMRFLDSplit_chemistry}
-
-In general, radiation calculations in Enzo are used in simulations
-where chemical ionization states are important.  For these situations, 
-we couple the radiation equation \eqref{eq:radiation_PDE} with
-equations for both the specific gas energy correction and the
-ionization dynamics of Hydrogen,
+As mentioned in section \ref{sec:rad_model}, the frequency-dependence
+of the radiation field has been integrated out, under the premise of
+an assumed radiation energy spectrum.  Assuming the frequency, space
+and time-dependent radiation field is denoted $E_{\nu}(\nu,\xvec,t)$,
+we first assume the radiation field exhibits the same frequency
+spectrum throughout the spatial domain and time evolution of the
+simulation, denoted $\chi(\nu)$, i.e.
 \begin{align}
-  \notag
-  \partial_t e_c &= -\frac{2\dot{a}}{a}e_c + G - \Lambda, \\
-  \label{eq:hydrogen_ionization}
-  \partial_t \mn_{HI} + \frac{1}{a}\nabla\cdot\(\mn_{HI}\vb\) &=
-    \alpha^{rec} \mn_e \mn_{HII} - \mn_{HI} \Gamma_{HI}^{ph}. 
+  \label{eq:spectrum}
+  E_{\nu}(\nu,\xvec,t) = \tilde{E}(\xvec,t) \chi(\nu),
 \end{align}
-Here, $\mn_{HI}$ is the comoving Hydrogen I number density.  The
-recombination rate $\alpha^{rec}$ is given by the case-B
-recombination rate, 
+where $\tilde{E}$ is an intermediate quantity (for analysis) that is
+never computed.  We then form a so-called ``grey'' model through
+integration over frequency space, i.e.
+\begin{align}
+  \label{eq:greyFLD}
+  E(\xvec,t) = \int_{\nu_{HI}}^{\infty} E_{\nu}(\nu,\xvec,t)\,\mathrm{d}\nu 
+    = \tilde{E}(\xvec,t) \int_{\nu_{HI}}^{\infty} \chi(\nu)\,\mathrm{d}\nu,
+\end{align}
+We note that if the assumed spectrum is the Dirac delta function,
+$\chi(\nu) = \delta_{\nu_{HI}}(\nu)$, $E$ is a monochromatic radiation
+energy density at the ionization threshold of HI, and the
+$\left(-\frac{\dot{a}}{a}E\right)$ term (obtained through integration
+by parts of the redshift term
+$\left(\frac{\dot{a}}{a}\partial_{\nu}E_{\nu}\right)$ present in the
+corresponding frequency-dependent equation) is omitted from
+\eqref{eq:radiation_PDE}.
+
+The {\tt AMRFLDSplit} solver allows for user control over this assumed
+spectrum, $\chi(\nu)$.  We currently have three pre-defined options in
+the code, although more can easily be added within the function \\
+{\tt AMRFLDSplit\_RadiationSpectrum.C}.  The three current options may
+be selected through the input parameter {\tt RadHydroESpectrum}
+discussed above, and consist of:
+\begin{itemize}
+\item[(-1)] monochromatic spectrum at frequency $h\nu_{HI} = 13.6$ eV, i.e.
+  $\chi(\nu) = \delta_{\nu_{HI}}(\nu)$.  
+\item[(0)] power law spectrum,
+  \[
+  \chi(\nu) = \left(\frac{\nu}{\nu_{HI}}\right)^{-1.5}
+  \]
+\item[(1)] $T=10^5$ K blackbody spectrum, 
+  \[
+  \chi(\nu) = \frac{8 \pi h
+    \left(\frac{\nu}{c}\right)^3}{\exp\left(\frac{h\nu}{k_b 10^5}\right)-1}.
+  \]
+\end{itemize}
+Additional spectra may be easily added by modifying the file 
+{\tt AMRFLDSplit\_RadiationSpectrum.C} to implement a new 
+{\tt RadHydroESpectrum}-dependent function $\chi(\nu)$, along with use
+of the new value for {\tt RadHydroESpectrum} in a user's FLD parameter
+file.  The units of this function do not matter, since we assume
+$\chi(\nu)$ to be dimensionless.
+
+The choice of spectrum affects the interactions between the radiation
+field and the chemistry.  Specifically, since gas photo-heating
+rate $G$ for a Hydrogen+Helium simulation depends on radiation through
+the equation 
+\[
+  G = \sum_{i} \frac{c\,\mn_{i}}{\rhob}
+    \int_{\nu_{i}}^{\infty} \sigma_{i}(\nu)\, E_{\nu}(\nu)
+    \left(1-\frac{\nu_{i}}{\nu}\right)\, \mathrm{d}\nu, 
+    \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\},
+\]
+where we denote $\nu_{i}$ as the ionization threshold of the species
+$\mn_i$, then under assumption \eqref{eq:spectrum} this becomes
 \begin{equation}
-\label{eq:alphaB}
-\alpha^{rec} = 2.753\times 10^{-14} \left(\frac{3.15614\times 10^5}{T}\right)^{3/2} 
-                   \left(1+\left(\frac{3.15614\times 10^5}{2.74\, T}\right)^{0.407}\right)^{-2.242}.
+  \label{eq:G_nLTE}
+  G = \sum_{i} \frac{c\,\mn_{i}\,E}{\rhob} 
+    \left[\int_{\nu_i}^{\infty} \sigma_i(\nu)\, \chi(\nu)
+    \left(1-\frac{\nu_i}{\nu}\right)\, \mathrm{d}\nu\right] \bigg/
+    \left[\int_{\nu_{HI}}^{\infty} \chi(\nu)\, \mathrm{d}\nu\right],
+    \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\}.
 \end{equation}
 
-In this model, the gas heating and cooling rates are
-chemistry-dependent, 
-\begin{align}
-  \label{eq:G_nLTE}
-  G &= \frac{c\,E\,\mn_{HI}}{\rhob} 
-    \left[\int_{\nu_{HI}}^{\infty} \sigma_{HI}\, \chi_E
-    \left(1-\frac{\nu_{HI}}{\nu}\right)\, d\nu\right] \bigg/
-    \left[\int_{\nu_{HI}}^{\infty} \chi_E d\nu\right], \\
-\label{eq:Lambda_nLTE}
-  \Lambda &= \frac{\mn_e}{\rhob}\bigg[\text{ce}_{HI}\, \mn_{HI} 
-  + \text{ci}_{HI}\, \mn_{HI} + \text{re}_{HII}\, \mn_{HII} + \text{brem}\,
-  \mn_{HII} \\
-  \notag &\qquad+ \frac{m_h}{\rho_{units}\, a^3} \left(\text{comp}_1\, (T-\text{comp}_2) 
-    + \text{comp}_{X}\, (T-\text{comp}_{T})\right) \bigg].
-\end{align}
-The temperature-dependent cooling rates
-$\text{ce}_{HI}$, $\text{ci}_{HI}$, $\text{re}_{HII}$, $\text{brem}$,
-$\text{comp}_1$, $\text{comp}_2$, $\text{comp}_{X}$ and
-$\text{comp}_{T}$ are all taken from Enzo's built-in rate tables.
+Similarly, the photo-ionization rates resulting from a
+frequency-dependent radiation field may be written
+\[
+  \Gamma_i^{ph} = \int_{\nu_{i}}^{\infty} \frac{c\, \sigma_{i}(\nu)\,
+    E_{\nu}}{h\nu}\, \mathrm{d}\nu,
+    \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\}.
+\]
+Again, under the assumption of a fixed frequency spectrum
+\eqref{eq:spectrum} this simplifies to
+\begin{equation}
+\label{eq:Gamma}
+  \Gamma_i^{ph} = \frac{c\,E}{h}
+  \left[\int_{\nu_{i}}^{\infty} \frac{\sigma_{i}(\nu)\,\chi(\nu)}{\nu}\,
+    \mathrm{d}\nu\right] \bigg/
+    \left[\int_{\nu_{HI}}^{\infty} \chi(\nu)\, \mathrm{d}\nu\right],
+    \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\}.
+\end{equation}
 
-Moreover, the frequency-integrated opacity is now chemistry-dependent,
+Moreover, a frequency-dependent opacity $\kappa_{\nu}$ of a
+Hydrogen+Helium medium to radiation transport may be given by the
+formula
+\[
+  \kappa_{\nu} = \sum_i \sigma_i(\nu)\, \mn_i, 
+  \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\}.
+\]
+However, for simulation of our integrated radiation equation
+\eqref{eq:radiation_PDE}, we need the term
+\[
+   c\,\kappa\,E = c\int_{\nu_{HI}}^{\infty} \kappa_{\nu}
+   E_{\nu}\,\mathrm{d}\nu.
+\]
+Relating these formulas to the assumption \eqref{eq:spectrum}, we
+may compute the integrated opacity due to Hydrogen+Helium as
 \begin{equation}
 \label{eq:opacityHI}
-  \kappa \ = \ 
-  \left[\int_{\nu_{HI}}^{\infty} \kappa_{\nu}\,E_{\nu}\,d\nu\right] \bigg/
-  \left[\int_{\nu_{HI}}^{\infty} E_{\nu}\,d\nu\right] \ = \ 
-  \left[\mn_{HI} \int_{\nu_{HI}}^{\infty}
-    \chi_E\,\sigma_{HI}\,d\nu\right] \bigg/
-  \left[\int_{\nu_{HI}}^{\infty} \chi_E\,d\nu\right],
+  \kappa \ = \ \sum_i
+  \left[\mn_{i} \int_{\nu_{i}}^{\infty}
+    \sigma_{i}(\nu)\,\chi(\nu)\,\mathrm{d}\nu\right] \bigg/
+  \left[\int_{\nu_{HI}}^{\infty} \chi(\nu)\,\mathrm{d}\nu\right].
 \end{equation}
-where these integrals with the assumed radiation spectrum $\chi(\nu)$
-handle the change from the original frequency-dependent radiation
-equation to the integrated grey radiation equation.
+
+The final component that must be accounted for in using a
+frequency-integrated radiation field is the emissivity.  Given a
+frequency-, space- and time-dependent emissivity function of the form
+$\eta_{\nu}(\nu,\xvec,t)$, we must source the FLD radiation equation
+\eqref{eq:radiation_PDE} using a space- and time-dependent emissivity
+field 
+\begin{equation}
+\label{eq:emissivity}
+  \eta(\xvec,t) =
+  \int_{\nu_{HI}}^{\infty}\eta_{\nu}(\nu,\xvec,t)\,\mathrm{d}\nu. 
+\end{equation}
+The {\tt AMRFLDSplit} solver currently implements a wide variety of
+{\tt ProblemType}-dependent emissivity fields in the function 
+{\tt AMRFLDSplit\_RadiationSource.C}.  Additional user-specified 
+{\tt ProblemType}-dependent emissivity functions may be easily 
+inserted into this file.  We assume that this integrated emissivity is
+specified in CGS units of erg cm$^{-3}$ s$^{-1}$, and perform internal
+rescaling to convert this to code units within the solver.
 
 
 
-\subsection{Interface to external Enzo chemistry/cooling solvers}
-\label{sec:chem_model_external}
 
-If {\tt AMRFLDSplit} is not used to evolve equations
-\eqref{eq:cons_energy_correction} or \eqref{eq:hydrogen_ionization},
-then {\tt AMRFLDSplit} will instead fill in the spatially-dependent
-coupling terms $G$, $\Gamma_{HI}^{ph}$ and possibly
-$\Gamma_{HeI}^{ph}$ and $\Gamma_{HeII}^{ph}$, for use by external
-ionization/heating solvers.  These are held in the baryon fields 
-{\tt PhotoGamma}, {\tt kphHI}, {\tt kphHeI} and {\tt kphHeII},
-respectively.  We note that since the radiation fields evolved by 
-{\tt AMRFLDSplit} do not include frequencies below $\nu_{HI}$, the
-baryon field {\tt kdissH2I} is always set to 0.
-
-
-
-\subsection{Numerical Solution Approach}
+\subsection{Implicit Solution Approach}
 \label{sec:AMRFLDSplit_rad_solve}
 
-We discretize the radiation equation \eqref{eq:radiation_PDE} using a
-standard two-level $\theta$-method,
+Since we treat the radiation as a density field the advective portion
+of \eqref{eq:radiation_PDE}, i.e. 
+\[
+  \partial_{t} E = -\frac1a \nabla\cdot\(E\vb\),
+\]
+is evolved using {\tt Enzo}'s hydrodynamics routines.  The 
+{\tt AMRFLDSplit} solver therefore focuses on evolution of the
+remainder of \eqref{eq:radiation_PDE}, i.e.
+\[
+  \partial_{t} E = \nabla\cdot\(D\,\nabla E\) - \frac{\dot{a}}{a} E - c\kappa E + \eta.
+\]
+We lag the nonlinearity in the limiter to the previous time step, and
+then discretize the remainder of the equation in time using a standard
+two-level $\theta$-method,
 \begin{align}
   \label{eq:radiation_PDE_theta}
-  E^n - E^{n-1} &- \theta\dt\left(\nabla\cdot\(D\,\nabla E^n\) - \frac{\dot{a}}{a} E^n -
+  E^n - E^{n-1} &- \theta\dt\left(\nabla\cdot\(D^{n-1}\,\nabla E^n\) - \frac{\dot{a}}{a} E^n -
     c\kappa^n E^n + \eta^n\right) \\ 
   \notag
-  & - (1-\theta)\dt\left(\nabla\cdot\(D\,\nabla E^{n-1}\) - \frac{\dot{a}}{a} E^{n-1} -
+  & - (1-\theta)\dt\left(\nabla\cdot\(D^{n-1}\,\nabla E^{n-1}\) - \frac{\dot{a}}{a} E^{n-1} -
     c\kappa^{n-1} E^{n-1} + \eta^{n-1}\right) = 0,
 \end{align}
-where $0\le\theta\le 1$ defines the time-discretization, and where we
-have assumed that the advective portion of \eqref{eq:radiation_PDE}
-has already been taken care of through Enzo's hydrodynamics routines
-via color field advection.  Recommended values of $\theta$ are 1
-(backwards Euler) and $\frac12$ (trapezoidal, a.k.a.~Crank-Nicolson).
-
-Whichever $\theta$ value we use (as long as it is nonzero), the
-equation \eqref{eq:radiation_PDE_theta} is linearly-implicit in the
+where $0\le\theta\le 1$ defines the time-discretization.  As discussed
+in section \ref{sec:AMRFLDSplit_parameters}, the value of $\theta$ may
+be specified by the user in the FLD parameter input file. Recommended
+values of $\theta$ are 1.0 (implicit Euler -- $O(\Delta t)$ accurate,
+$A$ and $L$ stable) and $0.5$ (trapezoidal -- $O(\Delta t^2)$
+accurate, $A$ stable).  However, any nonzero value of $\theta$ will
+result in a linearly-implicit system of equations for the
 time-evolved radiation energy density $E^n$.  We write this in
-predictor-corrector form, which we will write as
+predictor-corrector form as
 \begin{align}
 \label{eq:linear_system}
-  J s = b, \qquad E^n = E^{n-1} + s.
+  J s = b, \quad\text{where}\quad s = E^n - E^{n-1}.
 \end{align}
-We approximately solve this linear equation for the update $s$,
-to a tolerance $\delta$,
+We then approximately solve this linear equation for the update $s$,
+to a relative residual tolerance $\delta$,
 \begin{align}
 \label{eq:linear_system_approx}
-  \| J s - b \|_2 \le \delta,
+  \| J s - b \|_2 \le \delta \|b\|_2.
 \end{align}
-using one out of the same set of solvers as available to the 
-{\tt AMRGravitySolve} routine.
+As discussed in section \ref{sec:AMRFLDSplit_parameters}, the
+tolerance $\delta$ may be specified through the input parameter \\
+{\tt RadHydroSolTolerance}, and control over the solver algorithm and
+its parameters may be controlled through a myriad of input parameters.
 
 
 
@@ -645,35 +795,82 @@ using one out of the same set of solvers as available to the
 Time steps are chosen adaptively in an attempt to control error in the
 calculated solution.  To this end, we first define an heuristic
 measure of the time accuracy error in a specific variable $u$ as
+either
 \begin{align}
 \label{eq:time_error}
-  err = \left(\frac1N \sum_{i=1}^N
-    \left(\frac{u_i^{n}-u_i^{n-1}}{\omega_i}\right)^p\right)^{1/p}, 
+  err = \left(\frac{1}{V} \sum_{i} \Delta V_i 
+    \left(\frac{E_i^{n}-E_i^{n-1}}{\omega_i}\right)^p\right)^{1/p}, 
 \end{align}
-where the weighting vector $\omega$ is given by
+or
+\begin{align}
+\label{eq:time_error_inf}
+  err = \max_i\left|\frac{E_i^{n}-E_i^{n-1}}{\omega_i}\right|,
+  \quad\text{if}\; p=0.0,
+\end{align}
+where the weights $\omega_i$ are given by
 \begin{align}
 \label{eq:time_weighting}
-  \omega_i &= \sqrt{u_i^n u_i^{n-1}} + 10^{-3}, \quad i=1,\ldots,N, \\
-  \omega_i &= |e_{c,i} + e_{h,i}| + 10^{-3}, \quad i=1,\ldots,N,
+  \omega_i &= \sqrt{\left|E_i^n E_i^{n-1}\right|} + 10^{-1},
 \end{align}
-i.e.~we scale the radiation and chemistry change by the geometric mean
-of the old and new states, and scale the gas energy change by the new
-total gas energy, adding on a floor value of $10^{-3}$ in case any
-of the states are too close to zero.  This approach works well when
-the internal solution variables are unit-normalized, or at least close
-to unit-normalized, since the difference between the old and new
-solutions, divided by this weighting factor $\omega$, should give a
-reasonable estimate of the number of significant digits that are
-correct in the solution. 
+i.e.~we scale the radiation by the geometric mean of the old and new
+states, adding on a floor value of $10^{-1}$ in case any of the states
+are too close to zero.  Moreover, we omit from this sum or max all
+coarse-grid cells that are covered by a finer grid patch.  In the
+$p$-norm estimate, $\Delta V_i$ corresponds to the normalized volume
+of the grid cell containing $E_i$. This approach works well when the
+internal solution variables are unit-normalized, or at least close to
+unit-normalized, since the difference between the old and new
+solutions, divided by this weighting factor $\omega_i$, should give a
+reasonable estimate of the number of significant digits that have
+changed between time steps. 
 
-With these error estimates \eqref{eq:time_error} for each variable, we
-set the new time step size for each subsystem based on the previous
-time step size and a user-input tolerance $\tau_{\text{tol}}$ as
+With these error estimates
+\eqref{eq:time_error}-\eqref{eq:time_weighting}, we set the new
+radiation time step size based on a user-input relative tolerance
+$\tau_{\text{tol}}$ in an attempt to minimize the requisite number of
+time steps to achieve the desired temporal accuracy.  Since $err$ is
+an estimate of the relative error, and $\tau_{\text{tol}}$ is the
+target relative error, we compute the ratio of these at each time
+step,
 \begin{align}
-\label{eq:time_estimate}
-  \dt^{n} = \frac{\tau_{\text{tol}} \dt^{n-1}}{err}.
+  \label{eq:time_weighting}
+  acc^{(n)} &= \max\left\{\frac{err^{(n)}}{\tau_{\text{tol}}},\; 10^{-8} \right\}.
 \end{align}
-Since $E$ and $\{e_c,\mn_{HI}\}$ are evolved separately,
+With this estimate of our achieved accuracy in each time step, we
+allow the user to choose between three time adaptivity control
+algorithms \cite{KennedyCarpenter2003}:
+\begin{itemize}
+\item I controller: 
+  \begin{align}
+    \label{eq:time_estimateI}
+    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-1/q}
+  \end{align}
+\item PI controller:
+  \begin{align}
+    \label{eq:time_estimatePI}
+    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-0.7/q}\, (acc^{(n-1)})^{0.4/q}
+  \end{align}
+\item PID controller:
+  \begin{align}
+    \label{eq:time_estimatePID}
+    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-0.49/q}\, (acc^{(n-1)})^{0.34/q}\, (acc^{(n-2)})^{-0.1/q},
+  \end{align}
+\end{itemize}
+where in each of these $q$ equals 2 for $\theta=0.5$ and $q=1$
+otherwise, matching the order of accuracy of each method.  The values
+of $p$, $\tau_{\text{tol}}$ and the time adaptivity control algorithm may
+be specified using the FLD parameter file inputs {\tt RadHydroDtNorm}
+{\tt RadHydroDtRadFac} and {\tt RadHydroDtControl}, respectively.
+
+
+%%% resume here %%%
+
+
+
+
+Since $E$ may evolve and $\{e_c,\mn_{i}\}$ are evolved separately ($E$ using the
+{\tt AMRFLDSplit} solver, and $\{e_c,\mn_{i}\}$ using {\tt Enzo}'s
+built-in chemistry and cooling solvers, 
 we allow the $\{e_c,\mn_{HI}\}$ solver to subcycle at a faster rate
 than the $E$.  We therefore have two time step sizes that we use in
 the module,
