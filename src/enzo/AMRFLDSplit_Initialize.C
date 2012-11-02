@@ -392,7 +392,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   }
 
   //   check linear solver parameters
-  if (sol_maxit < 0) {
+  if (sol_maxit =< 0) {
     fprintf(stderr,"Illegal RadHydroMaxMGIters = %i. Setting to 200\n",
 	    sol_maxit);
     sol_maxit = 200;
