@@ -42,7 +42,7 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
     float Vol = 1.0;
     for (int i=0; i<rank; i++)
       Vol *= (DomainRightEdge[i]-DomainLeftEdge[i]);
-    float VolFac = (dtnorm > 0) ? pow(Vol,1.0/dtnorm) : Vol;
+    float VolFac = (dtnorm > 0.0) ? pow(Vol,1.0/dtnorm) : 1.0;
       
     // update old error estimates
     float Err_old = Err_cur;
