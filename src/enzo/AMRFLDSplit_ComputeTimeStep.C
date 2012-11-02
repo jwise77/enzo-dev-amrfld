@@ -35,7 +35,7 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
     // local variables
     float safety = 1.0;
     float dt_growth = 1.1;
-    float den = ((theta < 0.7) && (theta > 0.45)) ? 2.0 : 1.0;
+    float den = ((theta < 0.52) && (theta > 0.48)) ? 2.0 : 1.0;
 
     // compute volume factor to account for fact that error estimate 
     // integrates over domain volume
