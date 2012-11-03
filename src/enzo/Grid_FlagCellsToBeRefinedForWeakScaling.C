@@ -1,15 +1,13 @@
 /***********************************************************************
 /
-/  GRID CLASS (FLAG CELLS TO BE REFINED BY SLOPE OF RADIATION FIELD)
+/  GRID CLASS (FLAG CELLS TO BE REFINED BY HIERARCHY DEPTH AND LOCATION)
 /
 /  written by: Daniel R. Reynolds
 /  date:       September, 2011
 /
-/  PURPOSE: Cell flagging routine for mesh refinement, that computes 
-/           the magnitude of the gradient of the radiation energy 
-/           density.  This value is compared against a threshold, held 
-/           in the first entry in MinimumSlopeForRefinement array.  A 
-/           typical value for this threshold is 1.3
+/  PURPOSE: Cell flagging routine for mesh refinement, that refines 
+/           based on location (creates a hierarchy in the center of 
+/           each root grid tile).
 /
 /  RETURNS:
 /    number of flagged cells, or -1 on failure
