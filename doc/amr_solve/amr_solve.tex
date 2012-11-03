@@ -22,6 +22,7 @@
 \newcommand{\Omegabar}{\bar{\Omega}}
 \newcommand{\rhob}{\rho_b}
 \newcommand{\dt}{\Delta t}
+\newcommand{\dx}{\Delta x}
 \newcommand{\Eot}{E^{OT}}
 \newcommand{\Ef}{E_f}
 \newcommand{\sighat}{\hat{\sigma}}
@@ -446,6 +447,9 @@ when using {\tt AMRFLDSplit} are specified in \{\}:
   work with the ray-tracing solver);
 \item {\tt ImplicitProblem} \{6\} -- this informs \enzo to use {\tt
   AMRFLDSplit} as opposed to the other (unigrid) FLD solvers;
+\item {\tt RadiativeTransferFLDCallOnLevel} \{$\ge 0$\; [0]\} -- this
+  specifies the level on which to call {\tt AMRFLDSplit} (see section
+  \ref{sec:AMRFLDSplit_hierarchy}); 
 \item {\tt RadiativeTransferOpticallyThinH2} \{0\} -- this enables H2
   cooling for Lyman-Werner radiation (requires {\tt
     RadiativeTransferFLD} set to 1), so should be disabled when
@@ -482,7 +486,7 @@ default value shown in [], but may be overridden by the user:
   \ref{sec:AMRFLDSplit_dt_selection} for further details);
 \item {\tt RadHydroMaxSubcycles} \{$\ge 1.0$\; [1.0]\} -- maximum
   desired ratio between \enzo time step and radiation time step
-  ($\Delta t_{\enzo} / \Delta t_{rad}$);
+  ($\dt / \dt_E$);
 \item {\tt RadHydroDtNorm} \{$\ge 0.0$\; [2.0]\} -- choice of norm in
   estimating temporal error (see section \ref{sec:AMRFLDSplit_dt_selection});
 \item {\tt RadHydroDtRadFac} \{$>0.0$\; [$\infty$]\} -- desired relative
@@ -579,19 +583,19 @@ use
 \begin{align*}
   &\left[\frac{\partial}{\partial x_1}\left(D_1
     \frac{\partial E}{\partial x_1}\right)\right]_{i,j,k} \ \approx \ 
-  \frac{1}{\Delta x_1} \left[
-    D^1_{i+1/2,j,k}\frac{E_{i+1,j,k}-E_{i,j,k}}{\Delta x_1} -
-    D^1_{i-1/2,j,k}\frac{E_{i,j,k}-E_{i-1,j,k}}{\Delta x_1} \right],\\
+  \frac{1}{\dx_1} \left[
+    D^1_{i+1/2,j,k}\frac{E_{i+1,j,k}-E_{i,j,k}}{\dx_1} -
+    D^1_{i-1/2,j,k}\frac{E_{i,j,k}-E_{i-1,j,k}}{\dx_1} \right],\\
   \text{where, e.g.} & \\
   & D^1_{i+1/2,j,k} = D^{i}\left(
      \tfrac{E_{i+1,j,k}+E_{i,j,k}}{2},
-     \tfrac{E_{i+1,j,k}-E_{i,j,k}}{\Delta x_1},
+     \tfrac{E_{i+1,j,k}-E_{i,j,k}}{\dx_1},
      \tfrac{\kappa_{i+1,j,k}+\kappa_{i,j,k}}{2}\right).
 \end{align*}
 At coarse/fine grid boundaries, we use piecewise constant
 interpolation to shift dependence from non-existent same-grid
 neighbors to the coarser/finer neighbor across the level boundary,
-and adjust the relevant differencing parameters $\Delta x_i$
+and adjust the relevant differencing parameters $\dx_i$
 appropriately. 
 
 
@@ -651,7 +655,28 @@ Additional spectra may be easily added by modifying the file
 {\tt RadHydroESpectrum}-dependent function $\chi(\nu)$, along with use
 of the new value for {\tt RadHydroESpectrum} in a user's FLD parameter
 file.  The units of this function do not matter, since we assume
-$\chi(\nu)$ to be dimensionless.
+$\chi(\nu)$ to be dimensionless.  At the beginning of a simulation,
+the specified spectrum in {\tt AMRFLDSplit\_RadiationSpectrum.C} is
+integrated numerically in the routine 
+{\tt AMRFLDSplit\_ComputeRadiationIntegrals.C} to form high-accuracy
+approximations of
+\begin{align*}
+  \int_{\nu_{HI}}^{\infty} \chi(\nu)\, \mathrm{d}\nu, \qquad
+  \int_{\nu_i}^{\infty} \sigma_i(\nu)\, \chi(\nu)\, \mathrm{d}\nu,\qquad
+  \int_{\nu_{i}}^{\infty} \frac{\sigma_{i}(\nu)\,\chi(\nu)}{\nu}\, \mathrm{d}\nu,
+  \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\},
+\end{align*}
+where we denote $\nu_{i}$ as the ionization threshold of the species
+$\mn_i$.  These integrals are then combined at each time step of the
+simulation to form all of the spectrum-related integrals discussed in
+the remainder of this section.
+
+We do note that if a user wishes to modify the {\tt AMRFLDSplit}
+solver to account for other types of radiation with lower frequencies
+than $\nu_{HI}$ (e.g.~Ly-$\alpha$), then in addition to modifying how
+the spectra are defined in {\tt AMRFLDSplit\_RadiationSpectrum.C},
+they will also need to modify the limits of integration used within
+the routine {\tt AMRFLDSplit\_ComputeRadiationIntegrals.C}.
 
 The choice of spectrum affects the interactions between the radiation
 field and the chemistry.  Specifically, since gas photo-heating
@@ -663,8 +688,7 @@ the equation
     \left(1-\frac{\nu_{i}}{\nu}\right)\, \mathrm{d}\nu, 
     \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\},
 \]
-where we denote $\nu_{i}$ as the ionization threshold of the species
-$\mn_i$, then under assumption \eqref{eq:spectrum} this becomes
+then under assumption \eqref{eq:spectrum} this becomes
 \begin{equation}
   \label{eq:G_nLTE}
   G = \sum_{i} \frac{c\,\mn_{i}\,E}{\rhob} 
@@ -691,6 +715,14 @@ Again, under the assumption of a fixed frequency spectrum
     \left[\int_{\nu_{HI}}^{\infty} \chi(\nu)\, \mathrm{d}\nu\right],
     \qquad i = \{\text{HI}, \text{HeI}, \text{HeII}\}.
 \end{equation}
+The photo-heating and photo-ionization rates are set within the file
+{\tt AMRFLDSplit\_FillRates.C}, to eventually be passed on to 
+{\tt Enzo}'s routines for chemistry and cooling.  We note that if a
+user wishes to modify {\tt AMRFLDSplit} to perform alternate types of
+radiation transport, and if their new model interacts with the
+chemistry and cooling differently than the model described here, these
+modeling modifications should be incorporated into the {\tt
+  AMRFLDSplit\_FillRates.C} routine.
 
 Moreover, a frequency-dependent opacity $\kappa_{\nu}$ of a
 Hydrogen+Helium medium to radiation transport may be given by the
@@ -708,7 +740,7 @@ However, for simulation of our integrated radiation equation
 Relating these formulas to the assumption \eqref{eq:spectrum}, we
 may compute the integrated opacity due to Hydrogen+Helium as
 \begin{equation}
-\label{eq:opacityHI}
+\label{eq:opacity}
   \kappa \ = \ \sum_i
   \left[\mn_{i} \int_{\nu_{i}}^{\infty}
     \sigma_{i}(\nu)\,\chi(\nu)\,\mathrm{d}\nu\right] \bigg/
@@ -765,8 +797,8 @@ two-level $\theta$-method,
 where $0\le\theta\le 1$ defines the time-discretization.  As discussed
 in section \ref{sec:AMRFLDSplit_parameters}, the value of $\theta$ may
 be specified by the user in the FLD parameter input file. Recommended
-values of $\theta$ are 1.0 (implicit Euler -- $O(\Delta t)$ accurate,
-$A$ and $L$ stable) and $0.5$ (trapezoidal -- $O(\Delta t^2)$
+values of $\theta$ are 1.0 (implicit Euler -- $O(\dt)$ accurate,
+$A$ and $L$ stable) and $0.5$ (trapezoidal -- $O(\dt^2)$
 accurate, $A$ stable).  However, any nonzero value of $\theta$ will
 result in a linearly-implicit system of equations for the
 time-evolved radiation energy density $E^n$.  We write this in
@@ -794,17 +826,17 @@ its parameters may be controlled through a myriad of input parameters.
 
 Time steps are chosen adaptively in an attempt to control error in the
 calculated solution.  To this end, we first define an heuristic
-measure of the time accuracy error in a specific variable $u$ as
+measure of the time accuracy error in the radiation field $E(t^n)$ as
 either
 \begin{align}
 \label{eq:time_error}
-  err = \left(\frac{1}{V} \sum_{i} \Delta V_i 
+  \epsilon^{(n)} = \left(\frac{1}{V} \sum_{i} \Delta V_i 
     \left(\frac{E_i^{n}-E_i^{n-1}}{\omega_i}\right)^p\right)^{1/p}, 
 \end{align}
 or
 \begin{align}
 \label{eq:time_error_inf}
-  err = \max_i\left|\frac{E_i^{n}-E_i^{n-1}}{\omega_i}\right|,
+  \epsilon^{(n)} = \max_i\left|\frac{E_i^{n}-E_i^{n-1}}{\omega_i}\right|,
   \quad\text{if}\; p=0.0,
 \end{align}
 where the weights $\omega_i$ are given by
@@ -834,55 +866,73 @@ target relative error, we compute the ratio of these at each time
 step,
 \begin{align}
   \label{eq:time_weighting}
-  acc^{(n)} &= \max\left\{\frac{err^{(n)}}{\tau_{\text{tol}}},\; 10^{-8} \right\}.
+  \zeta^{(n)} &= \max\left\{\frac{\epsilon^{(n)}}{\tau_{\text{tol}}},\; 10^{-8} \right\}.
 \end{align}
 With this estimate of our achieved accuracy in each time step, we
 allow the user to choose between three time adaptivity control
 algorithms \cite{KennedyCarpenter2003}:
 \begin{itemize}
-\item I controller: 
+\item[(0)] I controller: 
   \begin{align}
     \label{eq:time_estimateI}
-    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-1/q}
+    \dt_E^{(n+1)} = \dt_E^{(n)}\, \(\zeta^{(n)}\)^{-1/q}
   \end{align}
-\item PI controller:
+\item[(1)] PI controller:
   \begin{align}
     \label{eq:time_estimatePI}
-    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-0.7/q}\, (acc^{(n-1)})^{0.4/q}
+    \dt_E^{(n+1)} = \dt_E^{(n)}\, \(\zeta^{(n)}\)^{-0.7/q}\, \(\zeta^{(n-1)}\)^{0.4/q}
   \end{align}
-\item PID controller:
+\item[(2)] PID controller:
   \begin{align}
     \label{eq:time_estimatePID}
-    \dt^{(n+1)} = \dt^{(n)}\, (acc^{(n)})^{-0.49/q}\, (acc^{(n-1)})^{0.34/q}\, (acc^{(n-2)})^{-0.1/q},
+    \dt_E^{(n+1)} = \dt_E^{(n)}\, \(\zeta^{(n)}\)^{-0.49/q}\, \(\zeta^{(n-1)}\)^{0.34/q}\, \(\zeta^{(n-2)}\)^{-0.1/q},
   \end{align}
 \end{itemize}
 where in each of these $q$ equals 2 for $\theta=0.5$ and $q=1$
-otherwise, matching the order of accuracy of each method.  The values
-of $p$, $\tau_{\text{tol}}$ and the time adaptivity control algorithm may
-be specified using the FLD parameter file inputs {\tt RadHydroDtNorm}
+otherwise, matching the order of accuracy of each method.  In the
+above formulas, $\dt_E$ represents the time step size used in evolving
+the radiation field via {\tt AMRFLDSplit}.  The values of $p$,
+$\tau_{\text{tol}}$ and the time adaptivity control algorithm may be
+specified using the FLD parameter file inputs {\tt RadHydroDtNorm} 
 {\tt RadHydroDtRadFac} and {\tt RadHydroDtControl}, respectively.
 
+Since $E$ may evolve at a faster time scale than the remaining
+components in \enzo, we allow time subcycling of the radiation field.
+Denoting the radiation time step as $\dt_{E}$ and the time step size
+for the remaining \enzo fields as $\dt$, then we use the input
+parameter {\tt RadHydroMaxSubcycles} to enforce the limit
+\[
+  \dt \ \le \ \text{\tt RadHydroMaxSubcycles} * \dt_E,
+\]
+where $\dt_E$ results from our time adaptivity algorithm.  
 
-%%% resume here %%%
+Finally, a user may specify minimum and maximum values for $\dt_E$
+through the input parameters {\tt RadHydroMinDt} and 
+{\tt RadHydroMaxDt}.  These values should be supplied in {\tt Enzo}'s
+scaled time units.
 
 
+{\bf Notes/Warnings:}
+\begin{itemize}
+\item The radiation time adaptivity algorithm may be disabled by
+  leaving the input parameter {\tt RadHydroDtRadFac} unset (i.e.~set
+  to $\infty$).
+\item Since the FLD solve requires coupling throughout the entire
+  computational domain, the {\tt AMRFLDSplit} module may comprise a
+  large fraction of the total run time for a simulation, though this 
+  cost can be reduced by either setting a looser (larger) tolerance
+  {\tt RadHydroDtRadFac} or a larger subcycling factor {\tt
+    RadHydroMaxSubcycles}. 
+\item For problems with significant interaction between radiation and
+  chemistry or cooling, it is {\em strongly} recommended that the
+  tolerance be set to a maximum of $10^{-2}$ and that subcycling be
+  disabled (by leaving {\tt RadHydroMaxSubcycles} at 1.0).  This is
+  because the chemistry and cooling routines are handled by separate
+  \enzo modules, but these physical processes are tightly coupled.
+  Hence, by loosening the coupling in the solvers the physics will not
+  be properly modeled.
+\end{itemize}
 
-
-Since $E$ may evolve and $\{e_c,\mn_{i}\}$ are evolved separately ($E$ using the
-{\tt AMRFLDSplit} solver, and $\{e_c,\mn_{i}\}$ using {\tt Enzo}'s
-built-in chemistry and cooling solvers, 
-we allow the $\{e_c,\mn_{HI}\}$ solver to subcycle at a faster rate
-than the $E$.  We therefore have two time step sizes that we use in
-the module,
-\begin{align}
-\label{eq:FLD_time_estimate}
-  \dt_{E}^{n} &= \min\{\dt_{E}^{n},\dt_{CFL}^{n}\}. \\
-  \dt_{e,HI}^{n} &= \min\{\dt_{e}^{n},\dt_{HI}^{n},\dt_{E}^{n}\},
-\end{align}
-where $\dt_{\text{CFL}}$ is the time step size that Enzo's other
-routines (e.g.~hydrodynamics) would normally take.  A user may
-override these adaptive time step controls with the input parameters 
-$\dt_{\text{max}}$ and $\dt_{\text{min}}$. 
 
 We further note that when run in combination with Enzo's hydrodynamics
 routines, both modules will limit their maximum time step sizes to the
@@ -893,30 +943,25 @@ by the hydrodynamic time scale.
 
 
 
+
 \subsection{Variable rescaling}
 \label{sec:AMRFLDSplit_variable_rescaling}
 
-In case Enzo's standard unit non-dimensionalization using 
-{\tt DensityUnits}, {\tt LengthUnits} and {\tt TimeUnits} is
-insufficient to render the resulting solver values $E$, $e_c$ and
-$n_{HI}$ to have nearly unit magnitude, the user may input additional
-variable scaling factors to be used inside the {\tt AMRFLDSplit}
-module.  Denoting these user-input values as $s_E$, $s_e$ and
-$s_{\mn}$, then we may define the rescaled variables
-\begin{align}
-\label{eq:variable_rescaling}
-  \tilde{E} = E / s_E, \qquad \tilde{e}_c = e_c / s_e, \qquad 
-  \tilde{\mn}_{HI} = \mn_{HI} / s_{\mn},
-\end{align}
-and the {\tt AMRFLDSplit} module will use $\tilde{E}$, $\tilde{e}_c$ and
-$\tilde{\mn}_{HI}$ in its internal routines instead of Enzo's internal
-variables $E$, $e_c$ and $\mn_{HI}$.  If the user does not know
-appropriate values for these scaling factors {\em a-priori}, a
-generally-applicable rule of thumb is to first run their simulation
-for a small number of time steps and investigate Enzo's HDF5 output
-files to see the magnitude of the values stored internally by Enzo; if
-these are far from unit-magnitude, these scaling factors should be
-used. 
+In the case that {\tt Enzo}'s standard unit non-dimensionalization
+using {\tt DensityUnits}, {\tt LengthUnits} and {\tt TimeUnits} is
+insufficient to rescale the resulting internal values for $E$ to have
+nearly unit magnitude, the user may input an additional variable
+scaling factor to be used inside the {\tt AMRFLDSplit} module, through
+the FLD input parameter {\tt RadiationScaling}.  Denoting this
+user-input value as $s_E$, we define the rescaled variable $\tilde{E}
+= E / s_E$, which {\tt AMRFLDSplit} in its internal routines instead
+of Enzo's internal variable $E$.  If the user does not know an
+appropriate value for this scaling factor {\em a-priori}, a
+generally-applicable rule of thumb is to first run the simulation for
+a small number of time steps and investigate {\tt Enzo}'s HDF5 output
+files to see the magnitude of the values stored internally by \enzo;
+if these are far from unit-magnitude, a scaling factor should be used. 
+
 
 
 
@@ -928,27 +973,121 @@ boundary conditions must be supplied on the radiation field $E$.  The
 {\tt AMRFLDSplit} module allows three types of boundary conditions to
 be placed on the radiation field:
 \begin{itemize}
-\item[0.] Periodic,
-\item[1.] Dirichlet, i.e.~$E(x,t) = g(x), \; x\in\partial\Omega$, and
-\item[2.] Neumann, i.e.~$\nabla E(x,t)\cdot n = g(x), \; x\in\partial\Omega$.
+\item[(0)] Periodic,
+\item[(1)] Dirichlet, i.e.~$E(x,t) = g(x), \; x\in\partial\Omega$, and
+\item[(2)] Neumann, i.e.~$\nabla E(x,t)\cdot n = g(x), \; x\in\partial\Omega$.
 \end{itemize}
 In most cases, the boundary condition types (and values of $g$) are
-problem-dependent.  When adding new problem types, these conditions
-should be set near the bottom of the file {\tt AMRFLDSplit\_Initialize.C}, 
-otherwise these will default to either (a) periodic, or (b) will use
-$g=0$, depending on the user input boundary condition type.
+problem-dependent.  When adding new problem types, these 
+{\tt ProblemType}-dependent conditions should be set near the bottom
+of the file {\tt AMRFLDSplit\_Initialize.C}, otherwise these will
+default to either (a) periodic, or (b) will use $g=0$, depending on
+the user input boundary condition type (specified through the FLD
+input parameters \\
+{\tt RadiationBoundaryX0Faces}, {\tt RadiationBoundaryX1Faces}, and
+{\tt RadiationBoundaryX2Faces}. 
+
 
 
 
 \subsection{Refinement Strategies}
 \label{sec:AMRFLDSplit_refinement}
 
+For testing purposes, we have implemented four mesh adaptivity
+refinement criteria for use with the {\tt AMRFLDSplit} solver, all of
+which require the \enzo configuration option {\tt TRANSFER} enabled
+for compilation.  The first three of these may be physically relevant
+within astrophysical simulations, while the fourth exists purely for
+verification and scaling tests.  
 \begin{itemize}
-\item {\tt Grid\_FlagCellsToBeRefinedByIonizedFraction.C}
-\item {\tt Grid\_FlagCellsToBeRefinedByOpacity.C}
-\item {\tt Grid\_FlagCellsToBeRefinedByRadiationGradient.C}
-\item {\tt Grid\_FlagCellsToBeRefinedForWeakScaling.C}
+\item {\tt Grid\_FlagCellsToBeRefinedByRadiationGradient.C} -- this
+  adaptivity strategy is enabed with the input parameter 
+  {\tt CellFlaggingMethod} set to 19.  This routine iterates over all
+  of the cells in each grid, and computes a normalized gradient of the
+  radiation field,
+  \begin{align*}
+     g_{0,i,j,k} &= \frac{E_{i+1,j,k}-E_{i-1,j,k}}{\max\{|E_{i,j,k}|, 0.1\}}\\
+     g_{1,i,j,k} &= \frac{E_{i,j+1,k}-E_{i,j-1,k}}{\max\{|E_{i,j,k}|, 0.1\}}\\
+     g_{2,i,j,k} &= \frac{E_{i,j,k+1}-E_{i,j,k-1}}{\max\{|E_{i,j,k}|, 0.1\}}\\
+     G_{i,j,k} &= \( g_{0,i,j,k}^2 + g_{1,i,j,k}^2 + g_{2,i,j,k}^2 \)^{1/2},
+  \end{align*}
+  and compares this against a user-specified minimum slope for
+  refinement, $r_{min}$, to determine whether the cell should be
+  refined, i.e.
+  \[
+     G_{i,j,k} > r_{min} \;\Rightarrow\;\text{refine}, \qquad
+     G_{i,j,k} \le r_{min} \;\Rightarrow\;\text{do not refine}.
+  \]
+  The value of $r_{min}$ is taken from the first entry in the 
+  {\tt MinimumSlopeForRefinement} input array.  From heuristic tests,
+  we find that a value of 1.3 for this parameter is typically
+  sufficient.
+\item {\tt Grid\_FlagCellsToBeRefinedByOpacity.C} -- this adaptivity
+  strategy is enabed with the input parameter {\tt CellFlaggingMethod}
+  set to 20.  This routine performs the same gradient-based comparisons as 
+  the above routine, except that it examines gradients in the opacity
+  field, $\kappa$, defined in \eqref{eq:opacity}.  The value of
+  $r_{min}$ for this test is taken from the second entry in the 
+  {\tt MinimumSlopeForRefinement} input array.  Heuristic tests have
+  demonstrated that a reliable value for this threshold is 1.0.
+\item {\tt Grid\_FlagCellsToBeRefinedByIonizedFraction.C} -- this
+  adaptivity strategy is enabled with the input parameter 
+  {\tt CellFlaggingMethod} set to 21.  This routine again performs the
+  same gradient-based comparisons as the above routines, except that
+  it examines the gradients of the ionized fraction
+  \[
+     \mathcal I = 1 - \frac{HI + HeI + \frac12 HeII}{\rho}.
+  \]
+  Here, the value of $r_{min}$ is taken from the third entry in the
+  {\tt MinimumSlopeForRefinement} input array, with heuristic tests
+  showing that a value of 1.25 is typically sufficient.
+\item {\tt Grid\_FlagCellsToBeRefinedForWeakScaling.C} -- this
+  adaptivity strategy is enabed with the input parameter 
+  {\tt CellFlaggingMethod} set to 22, and should only be used for
+  weak-scaling performance tests.  The routine flags cells based on
+  their location in relation to the root grid tile below each cell.
+  If the center of this root grid tile is located at $(c_0, c_1, c_2)$
+  and has size $L_0\times L_1\times L_2)$, we set a refinement region
+  on the level $l$ as 
+  \[
+     R_l =  \left[c_0-\frac{L_0}{2^{l+2}}, c_0+\frac{L_0}{2^{l+2}} \right] 
+     \times \left[c_1-\frac{L_1}{2^{l+2}}, c_1+\frac{L_1}{2^{l+2}} \right] 
+     \times \left[c_2-\frac{L_2}{2^{l+2}}, c_2+\frac{L_2}{2^{l+2}} \right].
+  \]
+  If the center of a given grid cell within level $l$ lies in the
+  region $R_l$, it is marked for refinement. 
 \end{itemize}
+
+
+\subsection{FLD Hierarchy}
+\label{sec:AMRFLDSplit_hierarchy}
+
+The {\tt AMRFLDSplit} solver is designed to be called on a given level
+of the hierarchy (typically the root grid level), as specified by the
+main \enzo input parameter {\tt RadiativeTransferFLDCallOnLevel}.
+When {\tt AMRFLDSplit} is called on a specified level, it constructs
+and solves the equation \eqref{eq:radiation_PDE} on a hierarchy
+spanning from the calling level to the highest level in the AMR
+hierarchy.  For example, in an AMR run with 7 levels, if 
+{\tt AMRFLDSplit} is called on level 2, it will form the radiation
+equations on a hierarchical grid comprised of levels 2 through 7.
+
+Since equation \eqref{eq:radiation_PDE} is parabolic, the full
+implicit system is solved simultaneously, using a fixed time step in
+the hierarchical solve, where the time step size is limited only by
+the main \enzo time step size on the call level.  As a result, within
+subcycled time steps of the {\tt EvolveLevel} routine on finer levels
+of the hierarchy, the radiation field will have already been evolved
+further in time, and is therefore held fixed until all of the levels
+have caught back up with the current radiation field.
+
+Furthermore, since all of the levels between the calling level and the
+finest AMR level are solved simultaneously, the solution on all coarse
+grid cells that are covered by a fine grid patch is over-written by
+the average value of the covering cells.  A direct consequence of this
+is that it is only necessary to specify the emissivity $\eta$ in cells
+on the finest grid level in a given location, since coarser cells will
+not contribute to the final solution.
 
 
 
@@ -956,6 +1095,11 @@ $g=0$, depending on the user input boundary condition type.
 \subsection{{\tt AMRFLDSplit} Results}
 \label{sec:AMRFLDSplit_results}
 
+We have set up a number of test problems that utilize the 
+{\tt AMRFLDSplit} solver.  These generally mirror the existing test
+problems used in the {\tt gFLDProblem} and {\tt gFLDSplit} solver
+modules, though here are set to use either statically-nested or
+adaptive mesh refinement.
 \begin{itemize}
 \item AMRFLDSplit\_weak\_scaling
 \item CosmoIonization\_q05z10\_AMRstatic
