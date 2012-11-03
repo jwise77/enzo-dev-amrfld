@@ -1092,28 +1092,52 @@ not contribute to the final solution.
 
 
 
-\subsection{{\tt AMRFLDSplit} Results}
-\label{sec:AMRFLDSplit_results}
+\subsection{{\tt AMRFLDSplit} Test Problems}
+\label{sec:AMRFLDSplit_test_problems}
 
 We have set up a number of test problems that utilize the 
 {\tt AMRFLDSplit} solver.  These generally mirror the existing test
 problems used in the {\tt gFLDProblem} and {\tt gFLDSplit} solver
 modules, though here are set to use either statically-nested or
-adaptive mesh refinement.
+adaptive mesh refinement.  All of these test problems are included in
+the \enzo distribution, in the source directory 
+{\tt run/RadiationTransportFLD/}. 
 \begin{itemize}
-\item AMRFLDSplit\_weak\_scaling
-\item CosmoIonization\_q05z10\_AMRstatic
-\item CosmoIonization\_q05z10\_AMRdynamic
-\item CosmoIonization\_q05z4\_AMRstatic
-\item CosmoIonization\_q05z4\_AMRdynamic
-\item CosmoIonization\_q5z10\_AMRstatic
-\item CosmoIonization\_q5z10\_AMRdynamic
-\item CosmoIonization\_q5z4\_AMRstatic
-\item CosmoIonization\_q5z4\_AMRdynamic
-\item RHIonization1\_AMRdynamic
-\item RHIonization1\_AMRstatic
-\item RHIonization2\_AMRdynamic
-\item RHIonization2\_AMRstatic
+\item {\tt RHIonization1\_AMRstatic} -- This implements ``test 1''
+  from \cite{IlievEtAl2006}; a uniform density, isothermal, Hydrogen
+  I-front propagation test, using a monochromatic radiation energy
+  density at $h\nu$ = 13.6 eV.  This test runs the problem using a
+  coarse $16^3$ root grid with 2 levels of geometric mesh
+  refinement ({\tt CellFlaggingMethod} 22).
+\item {\tt RHIonization1\_AMRdynamic} -- This mimics the previous
+  test, but uses an adaptive mesh based the opacity gradient
+  (i.e.~{\tt CellFlaggingMethod} 20).
+\item {\tt RHIonization2\_AMRstatic} -- This implements ``test 2''
+  from \cite{IlievEtAl2006}; a uniform density, temperature-dependent,
+  Hydrogen I-front propagation test, using $T=10^5$ K blackbody
+  radiation energy spectrum.  This test runs the problem using a 
+  coarse $16^3$ root grid with 2 levels of geometric mesh
+  refinement.
+\item {\tt RHIonization2\_AMRdynamic} -- This mimics the previous
+  test, but uses an adaptive mesh based on the gradient of the ionized
+  fraction ({\tt CellFlaggingMethod} 21).
+\item {\tt CosmoIonization\_qXzY\_AMRstatic} -- These implement ``test 
+  4.6'' from \cite{ReynoldsHayesPaschosNorman2009}; cosmological
+  uniform density, isothermal, Hydrogen I-front propagation tests,
+  using a monochromatic radiation energy density at $h\nu$ = 13.6 eV.
+  Here, the ``X'' in the test name is one of 0.5 or 0.05,
+  corresponding to the cosmological deceleration parameter used in the
+  test.  Similarly, ``Y'' is one of 4 or 10, corresponding to the
+  initial redshift used in the run.  These tests run using a coarse
+  $16^3$ root grid with 2 levels of geometric mesh refinement.
+\item {\tt CosmoIonization\_qXzY\_AMRdynamic} -- These mimic the
+  previous set of tests, but use an adaptive mesh based on the opacity
+  gradient.
+\item {\tt AMRFLDSplit\_weak\_scaling} -- This implement the 
+  {\tt RHIonization2\_AMRdynamic} test, but now mirrored within each
+  root-grid tile.  It is designed to perform timing tests of 
+  {\tt AMRFLDSplit} as the number of MPI tasks and the number of AMR
+  levels are increased.
 \end{itemize}
 
 
@@ -1123,15 +1147,12 @@ adaptive mesh refinement.
 \section{Concluding remarks}
 \label{sec:conclusions}
 
-We wish to remark that the module is not large (one header
-file, 15 C++ files, 6 F90 files), and all files begin with the 
-{\tt AMRFLDSplit} prefix.  While we have strived to ensure that the
-module is bug-free, there is still work to be done in enabling
-additional physics, including fully implicit Helium/molecular
-chemistry and more advanced time-stepping interactions with the rest
-of Enzo (especially when ionization sources ``turn on'' abruptly).  
-
-Feedback/suggestions to are welcome.
+We wish to remark that \amrsolve is designed for flexibility, to be
+easily adapted to new physical models and problems.  While we have
+strived to ensure that \amrsolve, {\tt AMRGravitySolve} and 
+{\tt AMRFLDSplit} are bug-free, we welcome any feedback and/or
+collaboration from the \enzo community, including bugfixes, usability
+suggestions, requests for new physical functionality.
 
 
 \bibliography{sources}
