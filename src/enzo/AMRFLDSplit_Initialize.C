@@ -233,11 +233,11 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 		      &(EtaCenter[0]), &(EtaCenter[1]), &(EtaCenter[2]));
 
 	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
-	ret += sscanf(line, "RadHydroSol_precmaxit = %i", &sol_precmaxit);
-	ret += sscanf(line, "RadHydroSol_precnpre = %i", &sol_precnpre);
-	ret += sscanf(line, "RadHydroSol_precnpost = %i", &sol_precnpost);
-	ret += sscanf(line, "RadHydroSol_precJacit = %i", &sol_precJacit);
-	ret += sscanf(line, "RadHydroSol_precrelax = %i", &sol_precrelax);
+	ret += sscanf(line, "RadHydroSol_precmaxit = %"ISYM, &sol_precmaxit);
+	ret += sscanf(line, "RadHydroSol_precnpre = %"ISYM, &sol_precnpre);
+	ret += sscanf(line, "RadHydroSol_precnpost = %"ISYM, &sol_precnpost);
+	ret += sscanf(line, "RadHydroSol_precJacit = %"ISYM, &sol_precJacit);
+	ret += sscanf(line, "RadHydroSol_precrelax = %"ISYM, &sol_precrelax);
 	ret += sscanf(line, "RadHydroSol_precrestol = %"FSYM"", &sol_precrestol);
 
 	ret += sscanf(line, "WeakScaling = %"ISYM, &WeakScaling);
@@ -392,7 +392,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   }
 
   //   check linear solver parameters
-  if (sol_maxit =< 0) {
+  if (sol_maxit <= 0) {
     fprintf(stderr,"Illegal RadHydroMaxMGIters = %i. Setting to 200\n",
 	    sol_maxit);
     sol_maxit = 200;
@@ -525,17 +525,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // set preconditioning options for BiCGStab and GMRES solvers
   if (sol_type == 1 || sol_type==3) {
-    sprintf(numstr, "%i", sol_precmaxit);
+    sprintf(numstr, "%"ISYM, sol_precmaxit);
     amrsolve_params->set_parameter("prec_itmax", numstr);
     sprintf(numstr, "%e", sol_precrestol);
     amrsolve_params->set_parameter("prec_restol", numstr);
-    sprintf(numstr, "%i", sol_precnpre);
+    sprintf(numstr, "%"ISYM, sol_precnpre);
     amrsolve_params->set_parameter("prec_npre", numstr);
-    sprintf(numstr, "%i", sol_precnpost);
+    sprintf(numstr, "%"ISYM, sol_precnpost);
     amrsolve_params->set_parameter("prec_npost", numstr);
-    sprintf(numstr, "%i", sol_precJacit);
+    sprintf(numstr, "%"ISYM, sol_precJacit);
     amrsolve_params->set_parameter("prec_Jaciters", numstr);
-    sprintf(numstr, "%i", sol_precrelax);
+    sprintf(numstr, "%"ISYM, sol_precrelax);
     amrsolve_params->set_parameter("prec_rlxtype", numstr);
   }
  

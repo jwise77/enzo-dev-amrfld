@@ -322,7 +322,8 @@ int SetDefaultGlobalValues(TopGridData &MetaData)
   AMRGravitySolve_rlxtype     = 2;                 // symmetric red/black Gauss-Seidel
   AMRGravitySolve_npre        = 2;                 // 2 smoothing iterations/level
   AMRGravitySolve_Jaciters    = 3;                 // 3 Jacobi sweeps
-  AMRGravitySolve_restol      = 0.0;               // iteration-based stop criteria
+  AMRGravitySolve_restol      = 1.0e-6;            // relative linear residual tolerance
+  AMRGravitySolve_precrestol  = 0.0;               // iteration-based stop criteria
 
   GreensFunctionMaxNumber     = 1;                 // only one at a time
   GreensFunctionMaxSize       = 1;                 // not used yet

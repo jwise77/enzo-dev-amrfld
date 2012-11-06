@@ -109,10 +109,13 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   amrsolve_params->set_parameter("solver_itmax",numstr);
   amrsolve_params->set_parameter("solver_printl", "0");
 
+  sprintf(numstr, "%e", AMRGravitySolve_restol);
+  amrsolve_params->set_parameter("solver_restol",numstr);
+
   // set preconditioning options for BiCGStab and GMRES solvers
   sprintf(numstr, "%i", AMRGravitySolve_precmaxit);
   amrsolve_params->set_parameter("prec_itmax",numstr);
-  sprintf(numstr, "%e", AMRGravitySolve_restol);
+  sprintf(numstr, "%e", AMRGravitySolve_precrestol);
   amrsolve_params->set_parameter("prec_restol",numstr);
   sprintf(numstr, "%i", AMRGravitySolve_rlxtype);
   amrsolve_params->set_parameter("prec_rlxtype",numstr);

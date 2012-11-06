@@ -427,6 +427,7 @@ int ReadParameterFile(FILE *fptr, TopGridData &MetaData, float *Initialdt)
     ret += sscanf(line, "AMRGravitySolve_npre      = %"ISYM, &AMRGravitySolve_npre);
     ret += sscanf(line, "AMRGravitySolve_Jaciters  = %"ISYM, &AMRGravitySolve_Jaciters);
     ret += sscanf(line, "AMRGravitySolve_restol    = %"FSYM, &AMRGravitySolve_restol);
+    ret += sscanf(line, "AMRGravitySolve_precrestol = %"FSYM, &AMRGravitySolve_precrestol);
  
     ret += sscanf(line, "GreensFunctionMaxNumber   = %"ISYM,
 		  &GreensFunctionMaxNumber);
