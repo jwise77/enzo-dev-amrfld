@@ -423,6 +423,7 @@ int WriteParameterFile(FILE *fptr, TopGridData &MetaData, char *name = NULL)
   fprintf(fptr, "AMRGravitySolve_npre           = %"ISYM"\n", AMRGravitySolve_npre);
   fprintf(fptr, "AMRGravitySolve_Jaciters       = %"ISYM"\n", AMRGravitySolve_Jaciters);
   fprintf(fptr, "AMRGravitySolve_restol         = %"FSYM"\n", AMRGravitySolve_restol);
+  fprintf(fptr, "AMRGravitySolve_precrestol     = %"FSYM"\n", AMRGravitySolve_precrestol);
 
   fprintf(fptr, "InlineHaloFinder               = %"ISYM"\n", InlineHaloFinder);
   fprintf(fptr, "HaloFinderSubfind              = %"ISYM"\n", HaloFinderSubfind);

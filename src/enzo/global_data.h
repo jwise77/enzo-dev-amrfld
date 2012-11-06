@@ -267,6 +267,7 @@ EXTERN int   AMRGravitySolve_rlxtype;    /*  0, 1, 2 or 3 */
 EXTERN int   AMRGravitySolve_npre;       /*      > 0      */
 EXTERN int   AMRGravitySolve_Jaciters;   /*      > 0      */
 EXTERN float AMRGravitySolve_restol;     /*     >= 0.0    */
+EXTERN float AMRGravitySolve_precrestol; /*     >= 0.0    */
 
 /* CopyGravPotential (TRUE or FALSE) */
 
