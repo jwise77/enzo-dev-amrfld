@@ -1115,7 +1115,7 @@ void AMRsolve_Hypre_Grav::init_matrix_stencil_(AMRsolve_Grid& grid)
   if (hierarchy_->is_periodic(0) && 
       hierarchy_->is_periodic(1) && 
       hierarchy_->is_periodic(2) && coarsegrid &&
-      (grid.index_lower(0)*grid.index_lower(1)*grid.index_lower(2) == 0)) {
+      (grid.index_lower(0)+grid.index_lower(1)+grid.index_lower(2) == 0)) {
     for (i0=0; i0<3; i0++)
       for (i1=0; i1<2; i1++)
 	v1[i0][i1][0] = 0.0;
