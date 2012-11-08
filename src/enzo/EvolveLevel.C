@@ -446,7 +446,8 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
 #else   // !FAST_SIB
      PrepareDensityField(LevelArray, level, MetaData, When);
 #endif  // end FAST_SIB
- 
+
+
  
     /* Prepare normalization for random forcing. Involves top grid only. */
  
@@ -468,7 +469,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
 	  /* Compute the potential. */
  
-	  if (level > 0)
+	  if (level > 0 && !SelfGravityConsistent)
 	    Grids[grid1]->GridData->SolveForPotential(level);
 	  Grids[grid1]->GridData->ComputeAccelerations(level);
 	  Grids[grid1]->GridData->CopyPotentialToBaryonField();
