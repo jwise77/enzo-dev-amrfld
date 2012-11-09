@@ -53,10 +53,13 @@ int CalcEmiss(int *nx, int *ny, int *nz,
         minitial, xv1, xv2, dratio;
   float clight = 3e10;
   float msolar_e51 = 1800.0;
+  float pi = 3.14159265359e0;
+  float uv_efficiency = 4 * pi * uv_param;
 
   /* uv_param taken from upper limits of
      Razoumov and Norman 2002 June 20 The Astrophysical Journal */
-  //float uv_param = 1e-5;
+  //float uv_efficiency = 4 * pi * uv_param;
+  //4 pi is for the right units
   //printf("UV_PARAM IS %"FSYM" \n", uv_param);
 
   /* disabling clear of Emissivity field until a way to do it in AMR is found 
@@ -187,7 +190,7 @@ int CalcEmiss(int *nx, int *ny, int *nz,
 	    /* noticed that the v1 cancels out from above, give the following */
             /* Units of uv_energy will be in erg/s/cm^3 */
 
-	    uv_energy = uv_param * mform * (clight) * (clight) *
+	    uv_energy = uv_efficiency * mform * (clight) * (clight) *
 	      *d1 / (dtLevelAbove * *t1);
 
 
@@ -214,17 +217,6 @@ int CalcEmiss(int *nx, int *ny, int *nz,
   }//100 in Fortran
 
   //I want a universal translator... for computer languages...
-
-  /*
-    int emis_x=0, emis_y=0, emis_z=0, emis_index=0;
-    for(int emis_z=0; emis_z< *nz; emis_z++)
-      for(int emis_y=0; emis_y< *ny; emis_y++)
-	for(int emis_x=0; emis_x< *nx; emis_x++){
-	  emis_index = emis_x + *nx*(emis_y + *ny*emis_z);
-	  if(EmissivityArray[emis_index] != 0)
-	    printf("At end of Calc Emiss %0.12"GSYM" at %"ISYM" %"ISYM" %"ISYM"\n", EmissivityArray[emis_index], emis_x, emis_y, emis_z);
-	}
-  */
 
   return SUCCESS;
 }
