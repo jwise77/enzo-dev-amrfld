@@ -946,7 +946,7 @@ void AMRsolve_Hypre_Grav::init_elements_rhs_(Scalar f_scale)
       if (ierr != 0)  ERROR("could not ZeroAMRVectorData in X_\n");
     }
   }
- 
+
 
   // for periodic BCs, need to shift RHS to have zero average
   // value to deflate the null space
@@ -2001,7 +2001,7 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
     } else if (phase == phase_matrix) {
 
       // fine->coarse off-diagonal
-      double val_s = 2.0 / 3.0;  /* DRR: where did this come from?? */
+      double val_s = 2.0 / 3.0;
       int entry;
       double val, value;
 
@@ -2012,36 +2012,23 @@ void AMRsolve_Hypre_Grav::update_fine_coarse_const_(int face,
 
       for (k=1; k<5; k++) {
 
-	// Set matrix entry
-	val = matrix_scale_ * val_h_fine * val_s;
-
-	// Update off-diagonal
-	entry = grid_fine.counter(index_fine)++;
-	value = val;
-	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
-					      0, 1, &entry, &value);
-	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
-
-	// Update diagonal
-	entry = 0;
-	value = -val;
-	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
-					      0, 1, &entry, &value);
-	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
-
-	// Clear coarse-fine stencil values from structured grid part
-	val = matrix_scale_ * val_h_fine;
-
-	//   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
+	// remove old off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
 	entry = 2*axis0 + 1 + (1-face);
-	value = -val;
+	value = 0.0;
+	ierr = HYPRE_SStructMatrixSetValues(A_, level_fine, index_fine, 
+					    0, 1, &entry, &value);
+	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
+
+	// set new off-diagonal (2/3 of the normal weight)
+	entry = grid_fine.counter(index_fine)++;
+	value = matrix_scale_ * val_h_fine * val_s;
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
 	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
 
-	//   Update diagonal
+	// update diagonal (add 1/3 of neighbor weight due to linear interp.)
 	entry = 0;
-	value = val;
+	value = matrix_scale_ * val_h_fine * (1.0 - val_s);
 	ierr = HYPRE_SStructMatrixAddToValues(A_, level_fine, index_fine, 
 					      0, 1, &entry, &value);
 	if (ierr != 0)  ERROR("could not AddToValues in A_\n");
