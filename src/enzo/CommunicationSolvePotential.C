@@ -94,7 +94,7 @@ int CommunicationSolvePotential(LevelHierarchyEntry *LevelArray[],
     TIME_MSG("ComputePotentialFieldLevelZero");
     LCAPERF_START("ComputePotentialFieldLevelZero");
     if (traceMPI) 
-      fprintf(tracePtr, "PrepareDensityField: P(%"ISYM"): CPFLZero "
+      fprintf(tracePtr, "CommunicationSolvePotential: P(%"ISYM"): CPFLZero "
 	      "(send-receive)\n", MyProcessorNumber);
 #ifdef FAST_SIB
     ComputePotentialFieldLevelZero(MetaData, SiblingList,
