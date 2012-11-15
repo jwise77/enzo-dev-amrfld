@@ -278,13 +278,13 @@ int grid::SetFlaggingField(int &NumberOfFlaggedCells, int level,
   case 22:
 
 #ifdef TRANSFER
-    if (RadiativeTransferFLD) {
+//    if (RadiativeTransferFLD) {
       NumberOfFlaggedCells = this->FlagCellsToBeRefinedForWeakScaling(level, 
                                                            MyHierarchyEntry);
       if (NumberOfFlaggedCells < 0) {
 	ENZO_FAIL("Error in grid->FlagCellsToBeRefinedForWeakScaling.");
       }
-    }
+//    }
 #endif /* TRANSFER */
     break;
 
