@@ -77,10 +77,20 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   // Ensure that Grid arrays for the PotentialField on this processor 
   // (and for these levels) have been allocated
   LevelHierarchyEntry *Temp;
-  int RefinementFactor = RefineBy;
-  for (int thislevel=level_coarse; thislevel<=level_fine; thislevel++)
-    for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
-      Temp->GridHierarchyEntry->GridData->ClearPotentialField();
+  for (int thislevel=level_coarse; thislevel<=level_fine; thislevel++) {
+    
+    // If we're on the coarse level, just ensure that things are allocated
+    if (thislevel == 0) {
+      for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
+	Temp->GridHierarchyEntry->GridData->ClearPotentialField();
+
+    // Otherwise, allocate and fill with parent grid's values
+    } else {
+      for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
+	Temp->GridHierarchyEntry->GridData->PreparePotentialField(Temp->GridHierarchyEntry->ParentGrid->GridData);
+    }
+  }
+  
   
 
 
@@ -105,24 +115,24 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
     amrsolve_params->set_parameter("solver","bicgstab");
     break;
   }
-  sprintf(numstr, "%i", AMRGravitySolve_maxit);
+  sprintf(numstr, "%"ISYM, AMRGravitySolve_maxit);
   amrsolve_params->set_parameter("solver_itmax",numstr);
   amrsolve_params->set_parameter("solver_printl", "0");
 
-  sprintf(numstr, "%e", AMRGravitySolve_restol);
+  sprintf(numstr, "%"FSYM, AMRGravitySolve_restol);
   amrsolve_params->set_parameter("solver_restol",numstr);
 
   // set preconditioning options for BiCGStab and GMRES solvers
-  sprintf(numstr, "%i", AMRGravitySolve_precmaxit);
+  sprintf(numstr, "%"ISYM, AMRGravitySolve_precmaxit);
   amrsolve_params->set_parameter("prec_itmax",numstr);
-  sprintf(numstr, "%e", AMRGravitySolve_precrestol);
+  sprintf(numstr, "%"FSYM, AMRGravitySolve_precrestol);
   amrsolve_params->set_parameter("prec_restol",numstr);
-  sprintf(numstr, "%i", AMRGravitySolve_rlxtype);
+  sprintf(numstr, "%"ISYM, AMRGravitySolve_rlxtype);
   amrsolve_params->set_parameter("prec_rlxtype",numstr);
-  sprintf(numstr, "%i", AMRGravitySolve_npre);
+  sprintf(numstr, "%"ISYM, AMRGravitySolve_npre);
   amrsolve_params->set_parameter("prec_npre",numstr);
   amrsolve_params->set_parameter("prec_npost",numstr);
-  sprintf(numstr, "%i", AMRGravitySolve_Jaciters);
+  sprintf(numstr, "%"ISYM, AMRGravitySolve_Jaciters);
   amrsolve_params->set_parameter("prec_Jaciters",numstr);
   amrsolve_params->set_parameter("prec_printl", "0");
   amrsolve_params->set_parameter("prec_log",    "1");
@@ -281,6 +291,16 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
 
 #endif   // BITWISE_IDENTICALITY
   } // ENDFOR grid batches
+
+
+
+  // fill in ghost zones for the potential field that are missing on 
+  // this level, using interpolation from parent grid (only for refined levels)
+  for (int thislevel=level_coarse; thislevel<=level_fine; thislevel++)
+    if (thislevel > 0) 
+      for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
+	Temp->GridHierarchyEntry->GridData->CopyParentToPotentialFieldBoundary(Temp->GridHierarchyEntry->ParentGrid->GridData);
+  
 
 
 //   // write Enzo potential fields (with ghost zones) to disk
