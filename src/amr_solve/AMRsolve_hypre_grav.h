@@ -57,6 +57,7 @@ public:
   void solve();
   int  evaluate();
   void update_enzo();
+  void write_potential();
   void abort_dump();
 
   int    iterations() { return iter_; };

@@ -527,49 +527,49 @@ void AMRsolve_Hypre_Grav::solve()
 /// Evaluate the success of the solve
 int AMRsolve_Hypre_Grav::evaluate()
 {
-  // check whether solution/rhs was requested
-  if (parameters_->value("dump_x") == "true" || 
-      parameters_->value("dump_b") == "true") {
+//   // check whether solution/rhs was requested
+//   if (parameters_->value("dump_x") == "true" || 
+//       parameters_->value("dump_b") == "true") {
 
-    // iterate over processor-local grids
-    ItHierarchyGridsLocal itg(*hierarchy_);
-    while (AMRsolve_Grid * grid = itg++) {
+//     // iterate over processor-local grids
+//     ItHierarchyGridsLocal itg(*hierarchy_);
+//     while (AMRsolve_Grid * grid = itg++) {
       
-      int ierr;
-      char filename[80];
+//       int ierr;
+//       char filename[80];
 
-      // get level & grid information
-      int level = grid->level();
-      int lower[3],upper[3];
-      grid->get_limits(lower,upper);
+//       // get level & grid information
+//       int level = grid->level();
+//       int lower[3],upper[3];
+//       grid->get_limits(lower,upper);
 
-      if (parameters_->value("dump_x") == "true") {
-	// extract Enzo solution
-	int nx[3];
-	ierr = HYPRE_SStructVectorGather(X_);
-	if (ierr != 0)  ERROR("could not gather X_\n");
-	ierr = HYPRE_SStructVectorGetBoxValues(X_, level, lower, upper, 0,
-					       grid->get_u(&nx[0],&nx[1],&nx[2]));  
-	if (ierr != 0)  ERROR("could not GetBoxValues from X_\n");
-	sprintf(filename,"X.%d",grid->id());
-	grid->write("header",filename);
-	grid->write("u",filename);
-      }
+//       if (parameters_->value("dump_x") == "true") {
+// 	// extract Enzo solution
+// 	int nx[3];
+// 	ierr = HYPRE_SStructVectorGather(X_);
+// 	if (ierr != 0)  ERROR("could not gather X_\n");
+// 	ierr = HYPRE_SStructVectorGetBoxValues(X_, level, lower, upper, 0,
+// 					       grid->get_u(&nx[0],&nx[1],&nx[2]));  
+// 	if (ierr != 0)  ERROR("could not GetBoxValues from X_\n");
+// 	sprintf(filename,"X.%d",grid->id());
+// 	grid->write("header",filename);
+// 	grid->write("u",filename);
+//       }
     
-      if (parameters_->value("dump_b") == "true") {
-	// extract Enzo rhs
-	int nb[3];
-	ierr = HYPRE_SStructVectorGather(B_);
-	if (ierr != 0)  ERROR("could not gather B_\n");
-	ierr = HYPRE_SStructVectorGetBoxValues(B_, level, lower, upper, 0,
-					       grid->get_f(&nb[0],&nb[1],&nb[2]));  
-	if (ierr != 0)  ERROR("could not GetBoxValues from B_\n");
-	sprintf(filename,"B.%d",grid->id());
-	grid->write("f",filename);
-      }
+//       if (parameters_->value("dump_b") == "true") {
+// 	// extract Enzo rhs
+// 	int nb[3];
+// 	ierr = HYPRE_SStructVectorGather(B_);
+// 	if (ierr != 0)  ERROR("could not gather B_\n");
+// 	ierr = HYPRE_SStructVectorGetBoxValues(B_, level, lower, upper, 0,
+// 					       grid->get_f(&nb[0],&nb[1],&nb[2]));  
+// 	if (ierr != 0)  ERROR("could not GetBoxValues from B_\n");
+// 	sprintf(filename,"B.%d",grid->id());
+// 	grid->write("f",filename);
+//       }
 
-    } // grid = itg++
-  } // if dump_x or dump_b
+//     } // grid = itg++
+//   } // if dump_x or dump_b
 
   // check for error flags; output info to stdout, if requested
   int err_flag = 0;
@@ -653,6 +653,57 @@ void AMRsolve_Hypre_Grav::update_enzo()
   } // grid = itg++
 
 } // AMRsolve_Hypre_Grav::update_enzo()
+
+
+//----------------------------------------------------------------------
+
+/// Writes Enzo potential field to disk
+void AMRsolve_Hypre_Grav::write_potential()
+{
+  // iterate over grids on this processor
+  ItHierarchyGridsLocal itgl(*hierarchy_);
+  while (AMRsolve_Grid* grid = itgl++) {
+
+    // get level, grid information
+    int level = grid->level();
+    int lower[3],upper[3];
+    grid->get_limits(lower,upper);
+
+    // access AMRsolve_hypre_grav and Enzo solutions
+    int n3[3];
+    Scalar* u = grid->get_u(&n3[0],&n3[1],&n3[2]);
+    Scalar* phi = grid->get_phi();
+
+    // get buffering information on relating amrsolve grid to Enzo data
+    int ghosts[3][2]; 
+    grid->get_GravGhosts(ghosts);
+    int en0 = n3[0] + ghosts[0][0] + ghosts[0][1];
+    int en1 = n3[1] + ghosts[1][0] + ghosts[1][1];
+    int en2 = n3[2] + ghosts[2][0] + ghosts[2][1];
+
+    // open output file
+    FILE *fptr=NULL;
+    char filename[80];
+    sprintf(filename, "phi_g%d.txt", grid->id());
+    fptr = fopen(filename,"w");
+
+    // output Enzo solution
+    int k0, k1, k2, i0, i1, i2;
+    for (k2=0; k2<n3[2]+ghosts[2][0]+ghosts[2][1]; k2++) 
+      for (k1=0; k1<n3[1]+ghosts[1][0]+ghosts[1][1]; k1++) 
+	for (k0=0; k0<n3[0]+ghosts[0][0]+ghosts[0][1]; k0++) 
+	  fprintf(fptr,"%i   %i   %i   %.16g\n",
+		  k0-ghosts[0][0],
+		  k1-ghosts[1][1],
+		  k2-ghosts[2][1],
+		  phi[k0 + en0*(k1 + en1*k2)]);
+
+    // close output file
+    fclose(fptr);
+
+  } // grid = itgl++
+
+} // AMRsolve_Hypre_Grav::write_potential()
 
 
 //----------------------------------------------------------------------
@@ -1725,6 +1776,19 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
     }
   }
 
+
+  // project solutions from finest through coarsest grids in overlapped regions
+  // (currently requires that preconditioner has been set up)
+  if (use_prec_) {
+    ierr = precond->HYPRE_to_AMRsolve_(&X_, 1); // copy X_ to AMRsolve's u_
+    if (ierr != 0)  ERROR("could not copy X_ to u_\n");
+    ierr = precond->restrict(hierarchy_->num_levels()-1, 0);  // restriction
+    if (ierr != 0)  ERROR("could not restrict u_ to coarse levels\n");
+    ierr = precond->AMRsolve_to_HYPRE_(&X_, 1); // copy u_ to X_
+    if (ierr != 0)  ERROR("could not copy u_ to X_\n");
+  }
+
+
   // Delete the solver
   ierr = HYPRE_SStructBiCGSTABDestroy(solver_);
   if (ierr != 0)  ERROR("could not destroy solver_\n");
@@ -1936,6 +2000,17 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
       printf("hypre GMRES num iterations: %d\n",iter_);
       printf("hypre GMRES final relative residual norm: %g\n",resid_);
     }
+  }
+
+  // project solutions from finest through coarsest grids in overlapped regions
+  // (currently requires that preconditioner has been set up)
+  if (use_prec_) {
+    ierr = precond->HYPRE_to_AMRsolve_(&X_, 1); // copy X_ to AMRsolve's u_
+    if (ierr != 0)  ERROR("could not copy X_ to u_\n");
+    ierr = precond->restrict(hierarchy_->num_levels()-1, 0);  // restriction
+    if (ierr != 0)  ERROR("could not restrict u_ to coarse levels\n");
+    ierr = precond->AMRsolve_to_HYPRE_(&X_, 1); // copy u_ to X_
+    if (ierr != 0)  ERROR("could not copy u_ to X_\n");
   }
 
   // Delete the solver
