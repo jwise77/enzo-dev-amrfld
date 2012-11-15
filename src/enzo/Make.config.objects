@@ -392,6 +392,7 @@ OBJS_CONFIG_LIB = \
 	Grid_CopyBaryonFieldToOldBaryonField.o \
 	Grid_CopyOverlappingMassField.o \
 	Grid_CopyParentToGravitatingFieldBoundary.o \
+	Grid_CopyParentToPotentialFieldBoundary.o \
 	Grid_CopyPotentialField.o \
 	Grid_CopyPotentialToBaryonField.o \
 	Grid_CopyZonesFromGridCountOnly.o \

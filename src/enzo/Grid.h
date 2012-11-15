@@ -1087,6 +1087,11 @@ public:
 
    int CopyParentToGravitatingFieldBoundary(grid *ParentGrid);
 
+/* Gravity: Copy the parent potential field to the extra boundary
+      region of PotentialField (if any). */
+
+   int CopyParentToPotentialFieldBoundary(grid *ParentGrid);
+
 /* Gravity & Particles: allocate & clear the GravitatingMassFieldParticles. */
 
    int ClearGravitatingMassFieldParticles();
