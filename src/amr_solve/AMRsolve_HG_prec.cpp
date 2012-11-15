@@ -560,7 +560,7 @@ int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
 	  rbuffs[ibuff] = new Scalar[size];
 
 	  // set unique exchange tag
-	  tags[ibuff] = g->id() + c->id() * 1000000;
+	  tags[ibuff] = g->id() + c->id() * 1000;
 
 	  // open receive channel, and increment buffer index
 	  MPI_Comm com = g->get_mpi()->comm();
@@ -598,7 +598,7 @@ int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
 	  if (g->overlap_indices(c, g1_ilo, g1_ihi, g2_ilo, g2_ihi)) {
 
 	    // determine unique exchange tag
-	    tag = g->id() + c->id() * 1000000;
+	    tag = g->id() + c->id() * 1000;
 	    
 	    // find buffer matching this tag
 	    ibuff = -1;
@@ -657,7 +657,7 @@ int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
 		sbuff[loc++] = mydata[(k*nx[1] + j)*nx[0] + i];
 
 	  // send buffer to parent
-	  tag = parent->id() + g->id() * 1000000;
+	  tag = parent->id() + g->id() * 1000;
 	  MPI_Request req;
 	  MPI_Comm com = g->get_mpi()->comm();
 	  if (MPI_Isend(sbuff, size, Stype, parent->ip(), tag, 
@@ -779,7 +779,7 @@ int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine,
 	rbuffs[ibuff] = new Scalar[size];
 	
 	// set unique exchange tag
-	tags[ibuff] = g->id() + parent->id() * 1000000;
+	tags[ibuff] = g->id() + parent->id() * 1000;
 
 	// open receive channel, and increment buffer index
 	MPI_Comm com = g->get_mpi()->comm();
@@ -822,7 +822,7 @@ int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine,
 	if (g->overlap_indices(parent, g1_ilo, g1_ihi, g2_ilo, g2_ihi)) {
 
 	  // determine unique exchange tag
-	  tag = g->id() + parent->id() * 1000000;
+	  tag = g->id() + parent->id() * 1000;
 	  
 	  // find buffer matching this tag
 	  ibuff = -1;
@@ -877,7 +877,7 @@ int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine,
 		  sbuff[loc++] = mydata[(k*nx[1] + j)*nx[0] + i];
 
 	    // send buffer to child
-	    tag = c->id() + g->id() * 1000000;
+	    tag = c->id() + g->id() * 1000;
 	    MPI_Request req;
 	    MPI_Comm com = g->get_mpi()->comm();
 	    if (MPI_Isend(sbuff, size, Stype, c->ip(), tag, com, &req) != 0) 
