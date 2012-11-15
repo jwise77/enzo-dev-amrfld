@@ -271,7 +271,7 @@ int EvolveLevel(TopGridData *MetaData, LevelHierarchyEntry *LevelArray[],
  
 	  /* Compute the potential. */
  
-	  if (level > 0)
+	  if (level > 0 && !SelfGravityConsistent)
 	    if (Grids[grid]->GridData->SolveForPotential(Dummy, level)
 		== FAIL) {
 	      ENZO_FAIL("Error in grid->SolveForPotential.\n");
@@ -581,7 +581,7 @@ if (SetBoundaryConditions(Grids, NumberOfGrids, level, MetaData,
  
           /* Compute the potential. */
  
-          if (level > 0)
+          if (level > 0 && !SelfGravityConsistent)
             if (Grids[grid]->GridData->SolveForPotential(Dummy, level)
                 == FAIL) {
               ENZO_FAIL("Error in grid->SolveForPotential.\n");

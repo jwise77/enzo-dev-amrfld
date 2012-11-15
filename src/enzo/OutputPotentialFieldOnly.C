@@ -138,7 +138,7 @@ int OutputPotentialFieldOnly(char *ParameterFile,
       PrepareDensityField(LevelArray, level, &MetaData, When);
 #endif
 
-      if (level > 0)
+      if (level > 0 && !SelfGravityConsistent)
 	for (Temp = LevelArray[level]; Temp; Temp = Temp->NextGridThisLevel) {
 	  Temp->GridData->SolveForPotential(level);
 	} // ENDFOR grids
