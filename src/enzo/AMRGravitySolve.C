@@ -126,6 +126,8 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   amrsolve_params->set_parameter("prec_Jaciters",numstr);
   amrsolve_params->set_parameter("prec_printl", "0");
   amrsolve_params->set_parameter("prec_log",    "1");
+
+//   amrsolve_params->set_parameter("dump_x", "true");
  
   // if (debug) {
   //   printf("AMRGravitySolve, customized amrsolve parameters:\n");
@@ -205,22 +207,10 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
   // increment Enzo potential field with amrsolve solution
   amrgravsolve.update_enzo();
 
-  // Clean up
-  hierarchy->enzo_detach();
-
   LCAPERF_STOP("amr_solve");
 
-  delete hierarchy;
-  hierarchy = NULL;
-
-
-  // copy potential values to BaryonField if requested
-  int grid1, grid2, StartGrid, EndGrid;
-  if (CopyGravPotential)
-    for (grid1=0; grid1<NumberOfGrids; grid1++) 
-      Grids[grid1]->GridData->CopyPotentialToBaryonField();
- 
   // share boundary values
+  int grid1, grid2, StartGrid, EndGrid;
 #ifdef FORCE_MSG_PROGRESS 
   CommunicationBarrier();
 #endif
@@ -292,6 +282,23 @@ int AMRGravitySolve(LevelHierarchyEntry * LevelArray[],
 #endif   // BITWISE_IDENTICALITY
   } // ENDFOR grid batches
 
+
+//   // write Enzo potential fields (with ghost zones) to disk
+//   amrgravsolve.write_potential();
+
+  // copy potential values to BaryonField if requested
+  if (CopyGravPotential)
+  for (int thislevel=level_coarse; thislevel<=level_fine; thislevel++)
+    for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel) 
+      Temp->GridHierarchyEntry->GridData->CopyPotentialToBaryonField();
+ 
+  // Clean up
+  hierarchy->enzo_detach();
+  delete hierarchy;
+  delete pmpi;
+  delete amrsolve_params;
+  hierarchy = NULL;
+  amrsolve_params = NULL;
 
   // stop MPI timer for overall solver itself, increment total
 #ifdef USE_MPI
