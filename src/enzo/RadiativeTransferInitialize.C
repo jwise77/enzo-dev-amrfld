@@ -232,6 +232,7 @@ int RadiativeTransferInitialize(char *ParameterFile,
 
   }  // ENDIF RadiativeTransfer
   else if (RadiativeTransferFLD > 1) {  // do the same for the FLD solver
+    TypesToAdd[FieldsToAdd++] = RadiationFreq0;
     if (RadiativeCooling) {
       TypesToAdd[FieldsToAdd++] = kphHI;
       TypesToAdd[FieldsToAdd++] = PhotoGamma;
@@ -241,23 +242,23 @@ int RadiativeTransferInitialize(char *ParameterFile,
       }
       if (MultiSpecies > 1)
 	TypesToAdd[FieldsToAdd++] = kdissH2I;
-      for (i = FieldsToAdd; i < MAX_NUMBER_OF_BARYON_FIELDS; i++)
-	TypesToAdd[i] = FieldUndefined;
-      OldNumberOfBaryonFields = LevelArray[0]->GridData->
-	ReturnNumberOfBaryonFields();
-      LevelArray[0]->GridData->ReturnFieldType(ExistingTypes);
-      for (i = 0; i < FieldsToAdd; i++)
-	for (j = 0; j < OldNumberOfBaryonFields; j++)
-	  if (TypesToAdd[i] == ExistingTypes[j]) {
-	    for (k = i; k < FieldsToAdd; k++)
-	      TypesToAdd[k] = TypesToAdd[k+1];
-	    i--;
-	    break;
-	  }
-      FieldsToAdd = 0;
-      while (TypesToAdd[FieldsToAdd] != FieldUndefined)
-	FieldsToAdd++;
     }
+    for (i = FieldsToAdd; i < MAX_NUMBER_OF_BARYON_FIELDS; i++)
+      TypesToAdd[i] = FieldUndefined;
+    OldNumberOfBaryonFields = LevelArray[0]->GridData->
+      ReturnNumberOfBaryonFields();
+    LevelArray[0]->GridData->ReturnFieldType(ExistingTypes);
+    for (i = 0; i < FieldsToAdd; i++)
+      for (j = 0; j < OldNumberOfBaryonFields; j++)
+	if (TypesToAdd[i] == ExistingTypes[j]) {
+	  for (k = i; k < FieldsToAdd; k++)
+	    TypesToAdd[k] = TypesToAdd[k+1];
+	  i--;
+	  break;
+	}
+    FieldsToAdd = 0;
+    while (TypesToAdd[FieldsToAdd] != FieldUndefined)
+      FieldsToAdd++;
   } // ENDIF RadiativeTransferFLD
 
 
