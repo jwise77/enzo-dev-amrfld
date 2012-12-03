@@ -20,7 +20,7 @@
 #
 ###############################################################
 
-source /usr/local/yt/bin/activate
+source /usr/local/yt/bin_dev/activate
 
 # set plotting field if undefined
 if [ $FIELD ]
