@@ -999,10 +999,12 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     break;
     
     
-  // Ionization tests 0 and 1: set zero-gradient (homogeneous Neumann)
+  // Ionization tests 0,1,7,8: set zero-gradient (homogeneous Neumann)
   // boundary conditions on all faces.
   case 410:
   case 411:
+  case 417:
+  case 418:
     // first call local problem initializer (to allocate/setup local data)
     if (RHIonizationTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationTestInitialize.");
@@ -1029,7 +1031,7 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     
     
   // Ionization test 2: set zero-gradient (homogeneous Neumann)
-  // boundary conditions on all faces.
+  // boundary conditions on x0 faces (others are periodic).
   case 412:
     // first call local problem initializer (to allocate/setup local data)
     if (RHIonizationClumpInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
@@ -1041,18 +1043,6 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     //   x0, right
     if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
       ENZO_FAIL("Error setting x0 right radiation BCs.");
-    //   x1, left
-    if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 left radiation BCs.");
-    //   x1, right
-    if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 right radiation BCs.");
-    //   x2, left
-    if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 left radiation BCs.");
-    //   x2, right
-    if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 right radiation BCs.");
     break;
     
     
