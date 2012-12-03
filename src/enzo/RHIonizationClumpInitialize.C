@@ -150,10 +150,6 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
     Mu = DEFAULT_MU;
   }
 
-  // ensure that we're performing only Hydrogen chemistry
-  if (RadHydroChemistry != 1) 
-    ENZO_FAIL("RHIonizationClumpInitialize error: RadHydroChemistry must equal 1!");
-
   // set up CoolData object if not already set up
   if (CoolData.ceHI == NULL) 
     if (InitializeRateData(MetaData.Time) == FAIL) {
