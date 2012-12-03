@@ -658,8 +658,10 @@ int InitializeNew(char *filename, HierarchyEntry &TopGrid,
   if ( (ProblemType == 404) || (ProblemType == 405) )
     ret = RadHydroRadShockInitialize(fptr, Outfptr, TopGrid, MetaData, 0);
 
-  // 410/411) Radiation-Hydrodynamics tests 10 & 11 -- HI ionization (static)
-  if ((ProblemType == 410) || (ProblemType == 411))
+  // 410/411) Radiation-Hydrodynamics tests 10,11,17,18
+  //          -- HI ionization (static)
+  if ((ProblemType == 410) || (ProblemType == 411) || 
+      (ProblemType == 417) || (ProblemType == 418))
     ret = RHIonizationTestInitialize(fptr, Outfptr, TopGrid, MetaData, 0);
 
   // 412) Radiation-Hydrodynamics test 12 -- HI ionization of a clump
