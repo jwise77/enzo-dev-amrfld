@@ -43,9 +43,9 @@ PPMDiffusionParameter  = 0       // diffusion off
 #  set grid refinement parameters
 #
 StaticHierarchy           = 0    // dynamic hierarchy
-MaximumRefinementLevel    = 1    // use up to 2 levels
+MaximumRefinementLevel    = 2    // use up to 3 levels
 RefineBy                  = 2    // refinement factor
-CellFlaggingMethod        = 0
+CellFlaggingMethod        = 22   // refine based on location in grid
 #
 #  set some global parameters
 #
