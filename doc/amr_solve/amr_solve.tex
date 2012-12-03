@@ -188,7 +188,9 @@ interface most closely with \enzo.
   such as BiCGStab or GMRES, and aids in constructing a scalable
   solver for elliptic (gravity) or parabolic (FLD) linear systems.
 \end{itemize}
-
+In order to use the \amrsolve infrastructure (and it's associated
+solvers), both of the compile-time options {\tt AMR\_SOLVE} and 
+{\tt USE\_HYPRE} must be enabled.
 
 
 \section{The {\tt AMRGravitySolve} Routine}
@@ -198,9 +200,7 @@ The {\tt AMRGravitySolve} routine provides an \enzo interface to the
 {\tt AMRsolve\_Hypre\_Grav} class within {\tt AMRSolve}.  As with the
 existing split gravity solver ({\tt CommunicationSolvePotential})
 within \enzo, {\tt AMRGravitySolve} is called within 
-{\tt PrepareDensityField}.  In order to use this solver, both of the
-compile-time options {\tt AMR\_SOLVE} and {\tt USE\_HYPRE} must be
-enabled.
+{\tt PrepareDensityField}.
 
 When using {\tt AMRGravitySolve}, the self-gravity equation
 \begin{equation}
@@ -389,9 +389,7 @@ class implements an \enzo interface to the \\
 {\tt AMRsolve\_Hypre\_FLD} class.  As with the variety of other
 radiation transport solvers within \enzo, {\tt AMRFLDSplit} is called
 near the beginning of {\tt EvolveLevel}, and is enabled through the
-{\tt TRANSFER} compile-time option.  Also, as with 
-{\tt AMRGravitySolve}, the compile-time options {\tt AMR\_SOLVE} and
-{\tt USE\_HYPRE} are required.
+{\tt TRANSFER} compile-time option.
 
 We note that in order to use the {\tt AMRFLDSplit} class, the
 following {\tt BaryonField}s must exist within the \enzo grids:
