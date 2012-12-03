@@ -134,7 +134,7 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
   }
 
   // compute size of fields
-  int dim;
+  int dim, i;
   int size = 1;
   for (dim=0; dim<GridRank; dim++)  size *= GridDimension[dim];
  
@@ -143,10 +143,11 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
     for (int field=0; field<NumberOfBaryonFields; field++)
       if (BaryonField[field] == NULL)
 	BaryonField[field] = new float[size];
+      for (i=0; i<size; i++)
+	BaryonField[RhoNum][i] = DensityConstant/DensityUnits;
     
     // set fluid density, total energy, [internal energy,] velocities, 
     // radiation energy, electron density, chemical species
-    int i;
     float TEConstant = (IEConstant + 0.5*(VxConstant*VxConstant + 
 					  VyConstant*VyConstant + 
 					  VzConstant*VzConstant));
@@ -161,7 +162,6 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
     float EUnits = DensityUnits*eUnits;
 
     for (i=0; i<size; i++) {
-      BaryonField[RhoNum][i]   = DensityConstant/DensityUnits;
       BaryonField[TENum][i]    = TEConstant/eUnits;
       BaryonField[V0Num][i]    = VxConstant/VelocityUnits;
       BaryonField[V1Num][i]    = VyConstant/VelocityUnits;
