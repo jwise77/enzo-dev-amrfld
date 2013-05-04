@@ -421,27 +421,28 @@ int WriteAllData(char *basename, int filenumber,
 #ifdef TRANSFER
   if (ImplicitProblem) {
     // Output ImplicitSolver module parameter file
-
-    //    Reset MetaData.RadHydroParameterFname
-    if (MetaData.RadHydroParameterFname != NULL)
-      delete MetaData.RadHydroParameterFname;
-    MetaData.RadHydroParameterFname = new char[MAX_LINE_LENGTH];
-    strcpy(MetaData.RadHydroParameterFname, name);
-    strcat(MetaData.RadHydroParameterFname, RTSuffix);
+    if (MyProcessorNumber == ROOT_PROCESSOR) {
+      //    Reset MetaData.RadHydroParameterFname
+      if (MetaData.RadHydroParameterFname != NULL)
+	delete MetaData.RadHydroParameterFname;
+      MetaData.RadHydroParameterFname = new char[MAX_LINE_LENGTH];
+      strcpy(MetaData.RadHydroParameterFname, name);
+      strcat(MetaData.RadHydroParameterFname, RTSuffix);
     
-    // Open RT module parameter file
-    if ((fptr = fopen(MetaData.RadHydroParameterFname, "w")) == NULL) {
-      fprintf(stderr, "Error opening RT module parameter file: %s\n",
-	      MetaData.RadHydroParameterFname);
-      return FAIL;
-    }
+      // Open RT module parameter file
+      if ((fptr = fopen(MetaData.RadHydroParameterFname, "w")) == NULL) {
+	fprintf(stderr, "Error opening RT module parameter file: %s\n",
+		MetaData.RadHydroParameterFname);
+	return FAIL;
+      }
     
-    // Write RT module parameters to file
-    if (ImplicitSolver->WriteParameters(fptr) == FAIL) {
-      fprintf(stderr, "Error in ImplicitSolver::WriteParameters\n");
-      return FAIL;
+      // Write RT module parameters to file
+      if (ImplicitSolver->WriteParameters(fptr) == FAIL) {
+	fprintf(stderr, "Error in ImplicitSolver::WriteParameters\n");
+	return FAIL;
+      }
+      fclose(fptr);
     }
-    fclose(fptr);
   }
 #endif		 
 
