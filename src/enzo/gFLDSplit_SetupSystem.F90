@@ -8,9 +8,40 @@
 ! in the accompanying LICENSE file.
 !
 !=======================================================================
+
+
+function limiter(E1, E2, k1, k2, nUn, lUn, tUn, dxi)
+!=======================================================================
+!  written by: Daniel R. Reynolds
+!  date:       February 2013
+!  modified:   
+!
+!  PURPOSE: Computes the flux limiter at a given face
+!=======================================================================
+  implicit none
+  real*8, intent(in) :: E1, E2, k1, k2, nUn, lUn, tUn, dxi
+  real*8 :: limiter, Eavg, kap, R, Emin, Rmin, Dmax
+  
+  ! set limiter bounds
+  Rmin = 1.d0/lUn
+  Emin = 1.d-30
+  Dmax = 0.0021565d0 * c_light * lUn  +  0.0167231d0 * lUn * lUn / tUn
+!  Dmax = 2.0539e-3 * c_light * lUn
+
+  ! compute limiter
+  Eavg = max((E1 + E2)*0.5d0, Emin)
+  kap = 2.d0*k1*k2/(k1+k2)*nUn        ! harmonic mean
+  R = max(dxi*abs(E1 - E2)/Eavg, Rmin)
+  limiter = min(c_light/sqrt(9.d0*kap*kap + R*R), Dmax)
+
+end function limiter
+!=======================================================================
+
+
+
 subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, rank, dx, dy, dz,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, rank, dx, dy, dz,     &
      BCXl, BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e,  &
      Nx, Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, xlface, xrface,    &
      ylface, yrface, zlface, zrface, ier)
@@ -112,7 +143,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
   integer, intent(in)  :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
   REALSUB, intent(in)  :: a, a0, adot, adot0
   real,    intent(in)  :: dt, theta, dx, dy, dz
-  real,    intent(in)  :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
+  real,    intent(in)  :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
   real,    intent(in)  :: E0(*), E(*), Temp(*), Temp0(*), kappa(*), src(*)
   real*8,  intent(out) :: matentries(*)
   real*8,  intent(out) :: rhsentries(*)
@@ -127,7 +158,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, dz, BCXl,  &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, dz, BCXl,  &
           BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx, &
           Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, xlface, xrface,     &
           ylface, yrface, zlface, zrface, ier)
@@ -136,7 +167,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, BCXl,      &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, BCXl,      &
           BCXr, BCYl, BCYr, x0s, x0e, x1s, x1e, Nx, Ny, NGxl, NGxr, NGyl, &
           NGyr, xlface, xrface, ylface, yrface, ier)
 
@@ -144,7 +175,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, BCXl, BCXr,    &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, BCXl, BCXr,    &
           x0s, x0e, Nx, NGxl, NGxr, xlface, xrface, ier)
 
   else
@@ -161,7 +192,7 @@ end subroutine gFLDSplit_SetupSystem
 
 subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, dz, BCXl,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, dz, BCXl,     &
      BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx,    &
      Ny, Nz, NGxl, NGxr, NGyl, NGyr,  NGzl, NGzr, xlface, xrface,       &
      ylface, yrface, zlface, zrface, ier)
@@ -182,7 +213,7 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
   integer,  intent(in) :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx, dy, dz
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
   real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr), intent(in) &
        :: E0, E, kappa, src, Temp, Temp0
   real*8,  intent(out) :: matentries(7,x0s:x0e,x1s:x1e,x2s:x2e)
@@ -193,17 +224,16 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
   !--------------
   ! locals
   integer :: i, j, k
-  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, c, pi, StBz
-  real*8  :: dxi, dxi0, dyi, dyi0, dzi, dzi0
+  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, StBz
+  real*8  :: dxi, dxi0, dyi, dyi0, dzi, dzi0, afac, afac0
   real*8  :: dxfac, dyfac, dzfac, dxfac0, dyfac0, dzfac0
-  real*8  :: afac, afac0, R, R0, E0avg
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8  :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
   real*8  :: D_zl, D0_zl, D_zr, D0_zr, E0d_zl, E0d_zr, Ed_zl, Ed_zr
-  real*8  :: Rmin
+  real*8, external :: limiter
 
 !=======================================================================
-  
+
   ! initialize outputs to zero, flag to success
   matentries = 0.d0
   rhsentries = 0.d0
@@ -232,10 +262,6 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
   dxfac0 = dtfac0*dxi0*dxi0
   dyfac0 = dtfac0*dyi0*dyi0
   dzfac0 = dtfac0*dzi0*dzi0
-  c     = c_light           ! speed of light [cm/s]
-  pi    = pi_val
-!  Rmin  = dxi+dyi+dzi
-  Rmin  = 1.0d-20 / lUn
   StBz  = 5.6704d-5         ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
 
 
@@ -245,161 +271,65 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
         do i=1,Nx,1
 
            !--------------
-           ! z-directional limiter, lower face
-           !    compute gradients of E0, Ediff
+           ! z-direction, lower face
            E0d_zl = E0(i,j,k) - E0(i,j,k-1)
            Ed_zl  = E(i,j,k) - E(i,j,k-1)
-           E0avg  = (E0(i,j,k) + E0(i,j,k-1))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dzi *abs(E0d_zl)/E0avg, Rmin)
-              R0 = max(dzi0*abs(E0d_zl)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*kappa(i,j,k)*kappa(i,j,k-1) &
-                / (kappa(i,j,k)+kappa(i,j,k-1))
-           kap0 = kap/nUn*nUn0
-
-           !    compute limiter
-           D_zl = c/sqrt(9.d0*kap*kap + R*R)
-           D0_zl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_zl  = limiter(E0(i,j,k), E0(i,j,k-1), kappa(i,j,k), &
+                            kappa(i,j,k-1), nUn0, lUn0, tUn, dzi)
+           D_zl   = limiter(E(i,j,k), E(i,j,k-1), kappa(i,j,k), &
+                            kappa(i,j,k-1), nUn, lUn, tUn, dzi)
 
            !--------------
-           ! y-directional limiter, lower face
-           !    compute gradients of E0, Ediff
+           ! y-direction, lower face
            E0d_yl = E0(i,j,k) - E0(i,j-1,k)
            Ed_yl  = E(i,j,k) - E(i,j-1,k)
-           E0avg  = (E0(i,j,k) + E0(i,j-1,k))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dyi *abs(E0d_yl)/E0avg, Rmin)
-              R0 = max(dyi0*abs(E0d_yl)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*(kappa(i,j,k)*kappa(i,j-1,k)) &
-                / (kappa(i,j,k)+kappa(i,j-1,k))
-           kap0 = kap/nUn*nUn0
-           
-           !    compute limiter
-           D_yl = c/sqrt(9.d0*kap*kap + R*R)
-           D0_yl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_yl  = limiter(E0(i,j,k), E0(i,j-1,k), kappa(i,j,k), &
+                            kappa(i,j-1,k), nUn0, lUn0, tUn, dyi)
+           D_yl   = limiter(E(i,j,k), E(i,j-1,k), kappa(i,j,k), &
+                            kappa(i,j-1,k), nUn, lUn, tUn, dyi)
 
            !--------------
-           ! x-directional limiter, lower face
-           !    compute gradients of E0, Ediff
+           ! x-direction, lower face
            E0d_xl = E0(i,j,k) - E0(i-1,j,k)
            Ed_xl  = E(i,j,k) - E(i-1,j,k)
-           E0avg  = (E0(i,j,k) + E0(i-1,j,k))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dxi *abs(E0d_xl)/E0avg, Rmin)
-              R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*(kappa(i,j,k)*kappa(i-1,j,k)) &
-                / (kappa(i,j,k)+kappa(i-1,j,k))
-           kap0 = kap/nUn*nUn0
-           
-           !    compute limiter
-           D_xl = c/sqrt(9.d0*kap*kap + R*R)
-           D0_xl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_xl  = limiter(E0(i,j,k), E0(i-1,j,k), kappa(i,j,k), &
+                            kappa(i-1,j,k), nUn0, lUn0, tUn, dxi)
+           D_xl   = limiter(E(i,j,k), E(i-1,j,k), kappa(i,j,k), &
+                            kappa(i-1,j,k), nUn, lUn, tUn, dxi)
 
            !--------------
-           ! x-directional limiter, upper face
-           !    compute gradients of E0, Ediff
+           ! x-direction, upper face
            E0d_xr = E0(i+1,j,k) - E0(i,j,k)
            Ed_xr  = E(i+1,j,k) - E(i,j,k)
-           E0avg  = (E0(i+1,j,k) + E0(i,j,k))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dxi *abs(E0d_xr)/E0avg, Rmin)
-              R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*(kappa(i,j,k)*kappa(i+1,j,k)) &
-                / (kappa(i,j,k)+kappa(i+1,j,k))
-           kap0 = kap/nUn*nUn0
-           
-           !    compute limiter
-           D_xr = c/sqrt(9.d0*kap*kap + R*R)
-           D0_xr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_xr  = limiter(E0(i,j,k), E0(i+1,j,k), kappa(i,j,k), &
+                            kappa(i+1,j,k), nUn0, lUn0, tUn, dxi)
+           D_xr   = limiter(E(i,j,k), E(i+1,j,k), kappa(i,j,k), &
+                            kappa(i+1,j,k), nUn, lUn, tUn, dxi)
 
            !--------------
-           ! y-directional limiter, upper face
-           !    compute gradients of E0, Ediff
+           ! y-direction, upper face
            E0d_yr = E0(i,j+1,k) - E0(i,j,k)
            Ed_yr  = E(i,j+1,k) - E(i,j,k)
-           E0avg  = (E0(i,j+1,k) + E0(i,j,k))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dyi *abs(E0d_yr)/E0avg, Rmin)
-              R0 = max(dyi0*abs(E0d_yr)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*(kappa(i,j,k)*kappa(i,j+1,k)) &
-                / (kappa(i,j,k)+kappa(i,j+1,k))
-           kap0 = kap/nUn*nUn0
-           
-           !    compute limiter
-           D_yr = c/sqrt(9.d0*kap*kap + R*R)
-           D0_yr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_yr  = limiter(E0(i,j,k), E0(i,j+1,k), kappa(i,j,k), &
+                            kappa(i,j+1,k), nUn0, lUn0, tUn, dyi)
+           D_yr   = limiter(E(i,j,k), E(i,j+1,k), kappa(i,j,k), &
+                            kappa(i,j+1,k), nUn, lUn, tUn, dyi)
 
            !--------------
-           ! z-directional limiter, upper face
-           !    compute gradients of E0, Ediff
+           ! z-direction, upper face
            E0d_zr = E0(i,j,k+1) - E0(i,j,k)
            Ed_zr  = E(i,j,k+1) - E(i,j,k)
-           E0avg  = (E0(i,j,k+1) + E0(i,j,k))*0.5d0
-
-           !    compute R for limiters
-           if (E0avg /= 0.d0) then
-              R  = max(dzi *abs(E0d_zr)/E0avg, Rmin)
-              R0 = max(dzi0*abs(E0d_zr)/E0avg, Rmin)
-           else
-              R  = Rmin
-              R0 = Rmin
-           endif
-
-           !    compute average opacity over face
-           kap = 2.d0*nUn*(kappa(i,j,k)*kappa(i,j,k+1)) &
-                / (kappa(i,j,k)+kappa(i,j,k+1))
-           kap0 = kap/nUn*nUn0
-           
-           !    compute limiter
-           D_zr = c/sqrt(9.d0*kap*kap + R*R)
-           D0_zr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+           D0_zr  = limiter(E0(i,j,k), E0(i,j,k+1), kappa(i,j,k), &
+                            kappa(i,j,k+1), nUn0, lUn0, tUn, dzi)
+           D_zr   = limiter(E(i,j,k), E(i,j,k+1), kappa(i,j,k), &
+                            kappa(i,j,k+1), nUn, lUn, tUn, dzi)
 
            ! opacity values in this cell
-           kap = kappa(i,j,k)*nUn
-           kap0 = kap/nUn*nUn0
+           kap  = kappa(i,j,k)*nUn
+           kap0 = kappa(i,j,k)*nUn0
 
            ! black-body radiation in this cell (if applicable; otherwise Temp=0)
-           eta = 4.d0*kap*StBz/rUn*Temp(i,j,k)**4
+           eta  = 4.d0*kap*StBz/rUn*Temp(i,j,k)**4
            eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i,j,k)**4
 
            ! set the matrix entries.  Note: the diffusive component 
@@ -575,7 +505,7 @@ end subroutine gFLDSplit_SetupSystem3D
 
 subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,       &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, BCXl, BCXr,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, BCXl, BCXr,     &
      BCYl, BCYr, x0s, x0e, x1s, x1e, Nx, Ny, NGxl, NGxr, NGyl, NGyr,      &
      xlface, xrface, ylface, yrface, ier)
 !=======================================================================
@@ -594,7 +524,7 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
   integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx, dy
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
   real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr), intent(in) &
        :: E0, E, src, kappa, Temp, Temp0
   real*8,   intent(out) :: matentries(5,x0s:x0e,x1s:x1e)
@@ -606,12 +536,11 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
   ! locals
   integer :: i, j
   real*8  :: dtfac, dtfac0, kap, kap0, StBz, eta, eta0
-  real*8  :: c, pi, dxi, dxi0, dyi, dyi0
-  real*8  :: afac, afac0, R, R0, E0avg
+  real*8  :: dxi, dxi0, dyi, dyi0, afac, afac0
   real*8  :: dxfac, dyfac, dxfac0, dyfac0
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8  :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
-  real*8  :: Rmin
+  real*8, external :: limiter
 
 !=======================================================================
   
@@ -639,9 +568,6 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
   dyfac = dtfac*dyi*dyi
   dxfac0 = dtfac0*dxi0*dxi0
   dyfac0 = dtfac0*dyi0*dyi0
-  c     = c_light           ! speed of light [cm/s]
-  pi    = pi_val
-  Rmin  = 1.0d-20 / lUn
   StBz  = 5.6704d-5         ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
 
   ! iterate over the active domain
@@ -649,111 +575,47 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
      do i=1,Nx,1
 
         !--------------
-        ! y-directional limiter, lower face
-        !    compute gradients of E0, Ediff
+        ! y-direction, lower face
         E0d_yl = E0(i,j) - E0(i,j-1)
         Ed_yl  = E(i,j) - E(i,j-1)
-        E0avg  = (E0(i,j) + E0(i,j-1))*0.5d0
-
-        !    compute R for limiters
-        if (E0avg /= 0.d0) then
-           R  = max(dyi *abs(E0d_yl)/E0avg, Rmin)
-           R0 = max(dyi0*abs(E0d_yl)/E0avg, Rmin)
-        else
-           R  = Rmin
-           R0 = Rmin
-        endif
-
-        !    compute average opacity over face
-        kap = 2.d0*nUn*(kappa(i,j)*kappa(i,j-1)) &
-             / (kappa(i,j)+kappa(i,j-1))
-        kap0 = kap/nUn*nUn0
-           
-        !    compute limiter
-        D_yl = c/sqrt(9.d0*kap*kap + R*R)
-        D0_yl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+        D0_yl  = limiter(E0(i,j), E0(i,j-1), kappa(i,j), &
+                         kappa(i,j-1), nUn0, lUn0, tUn, dyi)
+        D_yl   = limiter(E(i,j), E(i,j-1), kappa(i,j), &
+                         kappa(i,j-1), nUn, lUn, tUn, dyi)
 
         !--------------
-        ! x-directional limiter, lower face
-        !    compute gradients of E0, Ediff
+        ! x-direction, lower face
         E0d_xl = E0(i,j) - E0(i-1,j)
         Ed_xl  = E(i,j) - E(i-1,j)
-        E0avg  = (E0(i,j) + E0(i-1,j))*0.5d0
-
-        !    compute R for limiters
-        if (E0avg /= 0.d0) then
-           R  = max(dxi *abs(E0d_xl)/E0avg, Rmin)
-           R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
-        else
-           R  = Rmin
-           R0 = Rmin
-        endif
-
-        !    compute average opacity over face
-        kap = 2.d0*nUn*(kappa(i,j)*kappa(i-1,j)) &
-             / (kappa(i,j)+kappa(i-1,j))
-        kap0 = kap/nUn*nUn0
-           
-        !    compute limiter
-        D_xl = c/sqrt(9.d0*kap*kap + R*R)
-        D0_xl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+        D0_xl  = limiter(E0(i,j), E0(i-1,j), kappa(i,j), &
+                         kappa(i-1,j), nUn0, lUn0, tUn, dxi)
+        D_xl   = limiter(E(i,j), E(i-1,j), kappa(i,j), &
+                         kappa(i-1,j), nUn, lUn, tUn, dxi)
 
         !--------------
-        ! x-directional limiter, upper face
-        !    compute gradients of E0, Ediff
+        ! x-direction, upper face
         E0d_xr = E0(i+1,j) - E0(i,j)
         Ed_xr  = E(i+1,j) - E(i,j)
-        E0avg  = (E0(i+1,j) + E0(i,j))*0.5d0
-
-        !    compute R for limiters
-        if (E0avg /= 0.d0) then
-           R  = max(dxi *abs(E0d_xr)/E0avg, Rmin)
-           R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
-        else
-           R  = Rmin
-           R0 = Rmin
-        endif
-
-        !    compute average opacity over face
-        kap = 2.d0*nUn*(kappa(i,j)*kappa(i+1,j)) &
-             / (kappa(i,j)+kappa(i+1,j))
-        kap0 = kap/nUn*nUn0
-           
-        !    compute limiter
-        D_xr = c/sqrt(9.d0*kap*kap + R*R)
-        D0_xr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+        D0_xr  = limiter(E0(i,j), E0(i+1,j), kappa(i,j), &
+                         kappa(i+1,j), nUn0, lUn0, tUn, dxi)
+        D_xr   = limiter(E(i,j), E(i+1,j), kappa(i,j), &
+                         kappa(i+1,j), nUn, lUn, tUn, dxi)
 
         !--------------
-        ! y-directional limiter, upper face
-        !    compute gradients of E0, Ediff
+        ! y-direction, upper face
         E0d_yr = E0(i,j+1) - E0(i,j)
         Ed_yr  = E(i,j+1) - E(i,j)
-        E0avg  = (E0(i,j+1) + E0(i,j))*0.5d0
-
-        !    compute R for limiters 
-        if (E0avg /= 0.d0) then
-           R  = max(dyi *abs(E0d_yr)/E0avg, Rmin)
-           R0 = max(dyi0*abs(E0d_yr)/E0avg, Rmin)
-        else
-           R  = Rmin
-           R0 = Rmin
-        endif
-
-        !    compute average opacity over face
-        kap = 2.d0*nUn*(kappa(i,j)*kappa(i,j+1)) &
-             / (kappa(i,j)+kappa(i,j+1))
-        kap0 = kap/nUn*nUn0
-           
-        !    compute limiter
-        D_yr = c/sqrt(9.d0*kap*kap + R*R)
-        D0_yr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+        D0_yr  = limiter(E0(i,j), E0(i,j+1), kappa(i,j), &
+                         kappa(i,j+1), nUn0, lUn0, tUn, dyi)
+        D_yr   = limiter(E(i,j), E(i,j+1), kappa(i,j), &
+                         kappa(i,j+1), nUn, lUn, tUn, dyi)
 
         ! opacity values in this cell
-        kap = kappa(i,j)*nUn
-        kap0 = kap/nUn*nUn0
+        kap  = kappa(i,j)*nUn
+        kap0 = kappa(i,j)*nUn0
 
         ! black-body radiation in this cell (if applicable)
-        eta = 4.d0*kap*StBz/rUn*Temp(i,j)**4
+        eta  = 4.d0*kap*StBz/rUn*Temp(i,j)**4
         eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i,j)**4
 
         ! set the matrix entries.  Note: the diffusive component 
@@ -863,7 +725,7 @@ end subroutine gFLDSplit_SetupSystem2D
 
 subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, BCXl, BCXr, x0s,  &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, BCXl, BCXr, x0s,  &
      x0e, Nx, NGxl, NGxr, xlface, xrface, ier)
 !=======================================================================
 !  written by: Daniel R. Reynolds
@@ -880,7 +742,7 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
   real, dimension(1-NGxl:Nx+NGxr), intent(in) :: E0, E, src, kappa, Temp, Temp0
   real*8,   intent(out) :: matentries(3,x0s:x0e)
   real*8,   intent(out) :: rhsentries(x0s:x0e)
@@ -891,11 +753,10 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   ! locals
   integer :: i
   real*8  :: dtfac, dtfac0, kap, kap0, StBz, eta, eta0
-  real*8  :: c, pi, dxi, dxi0
-  real*8  :: afac, afac0, R, R0, E0avg
+  real*8  :: dxi, dxi0, afac, afac0
   real*8  :: dxfac, dxfac0
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
-  real*8  :: Rmin
+  real*8, external :: limiter
 
 !=======================================================================
   
@@ -919,68 +780,31 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   dxi0  = 1.d0/dx/lUn0
   dxfac = dtfac*dxi*dxi
   dxfac0 = dtfac0*dxi0*dxi0
-  c     = c_light           ! speed of light [cm/s]
-  pi    = pi_val
-  Rmin  = 1.0d-20 / lUn
   StBz  = 5.6704d-5         ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
 
   ! iterate over the active domain
   do i=1,Nx,1
 
      !--------------
-     ! x-directional limiter, lower face
-     !    compute gradients of E0, Ediff
+     ! x-direction, lower face
      E0d_xl = E0(i) - E0(i-1)
      Ed_xl  = E(i) - E(i-1)
-     E0avg  = (E0(i) + E0(i-1))*0.5d0
-
-     !    compute R for limiters
-     if (E0avg /= 0.d0) then
-        R  = max(dxi *abs(E0d_xl)/E0avg, Rmin)
-        R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
-     else
-        R  = Rmin
-        R0 = Rmin
-     endif
-
-     !    compute average opacity over face
-     kap = 2.d0*nUn*(kappa(i)*kappa(i-1))/(kappa(i)+kappa(i-1))
-     kap0 = kap/nUn*nUn0
-           
-     !    compute limiter
-     D_xl = c/sqrt(9.d0*kap*kap + R*R)
-     D0_xl = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+     D0_xl  = limiter(E0(i), E0(i-1), kappa(i), kappa(i-1), nUn0, lUn0, tUn, dxi)
+     D_xl   = limiter(E(i), E(i-1), kappa(i), kappa(i-1), nUn, lUn, tUn, dxi)
 
      !--------------
-     ! x-directional limiter, upper face
-     !    compute gradients of E0, Ediff
+     ! x-direction, upper face
      E0d_xr = E0(i+1) - E0(i)
      Ed_xr  = E(i+1) - E(i)
-     E0avg  = (E0(i+1) + E0(i))*0.5d0
-
-     !    compute R for limiters
-     if (E0avg /= 0.d0) then
-        R  = max(dxi *abs(E0d_xr)/E0avg, Rmin)
-        R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
-     else
-        R  = Rmin
-        R0 = Rmin
-     endif
-
-     !    compute average opacity over face
-     kap = 2.d0*nUn*(kappa(i)*kappa(i+1))/(kappa(i)+kappa(i+1))
-     kap0 = kap/nUn*nUn0
-           
-     !    compute limiter
-     D_xr = c/sqrt(9.d0*kap*kap + R*R)
-     D0_xr = c/sqrt(9.d0*kap0*kap0 + R0*R0)
+     D0_xr  = limiter(E0(i), E0(i+1), kappa(i), kappa(i+1), nUn0, lUn0, tUn, dxi)
+     D_xr   = limiter(E(i), E(i+1), kappa(i), kappa(i+1), nUn, lUn, tUn, dxi)
 
      ! opacity values in this cell
-     kap = kappa(i)*nUn
-     kap0 = kap/nUn*nUn0
+     kap  = kappa(i)*nUn
+     kap0 = kappa(i)*nUn0
 
      ! black-body radiation in this cell (if applicable)
-     eta = 4.d0*kap*StBz/rUn*Temp(i)**4
+     eta  = 4.d0*kap*StBz/rUn*Temp(i)**4
      eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i)**4
 
      ! set the matrix entries.  Note: the diffusive component 
