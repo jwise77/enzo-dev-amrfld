@@ -23,19 +23,14 @@ function limiter(E1, E2, k1, k2, nUn, lUn, tUn, dxi)
   real*8 :: limiter, Eavg, kap, R, Emin, Rmin, Dmax
   
   ! set limiter bounds
-!  Rmin = 1.d-20/lUn
   Rmin = 1.d0/lUn
-!  Rmin = 1.d-20
   Emin = 1.d-30
   Dmax = 0.0021565d0 * c_light * lUn  +  0.0167231d0 * lUn * lUn / tUn
 !  Dmax = 2.0539e-3 * c_light * lUn
-!  Dmax = 1.d300
 
   ! compute limiter
   Eavg = max((E1 + E2)*0.5d0, Emin)
-  kap = 2.d0*k1*k2/(k1+k2)*nUn        ! harmonic average
-!!$  kap = (k1 + k2)*0.5d0*nUn           ! arithmetic average
-!!$  kap = sqrt(k1)*sqrt(k2)*nUn         ! geometric average
+  kap = 2.d0*k1*k2/(k1+k2)*nUn        ! harmonic mean
   R = max(dxi*abs(E1 - E2)/Eavg, Rmin)
   limiter = min(c_light/sqrt(9.d0*kap*kap + R*R), Dmax)
 
