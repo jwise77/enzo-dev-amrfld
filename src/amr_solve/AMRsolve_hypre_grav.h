@@ -40,6 +40,8 @@ private:
   Scalar               matrix_scale_;  // 1.0:  1 1 1 -6 1 1 1
   bool                 zero_guess_;    // use a zero-valued guess vs the previous solution
 
+  int                  BdryType_[3][2];   // Enzo gravity boundary condition type
+
 public:
 
   AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy, 
@@ -53,7 +55,7 @@ public:
   void init_graph();
   /*   void init_elements(std::vector<AMRsolve_Point *> points,
                           Scalar f_scale=1.0); */
-  void init_elements(Scalar f_scale=1.0);  // can't we just get our RHS from Enzo directly?
+  void init_elements(int BdryType, Scalar f_scale=1.0);
   void solve();
   int  evaluate();
   void update_enzo();

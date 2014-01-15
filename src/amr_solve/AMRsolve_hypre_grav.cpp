@@ -80,6 +80,11 @@ AMRsolve_Hypre_Grav::AMRsolve_Hypre_Grav(AMRsolve_Hierarchy& hierarchy,
   // set preconditioner and initial guess flags
   use_prec_   = (precflag != 0);
   zero_guess_ = (zeroguess != 0);
+
+  // set array-valued items
+  for (int i=0; i<3; i++)
+    for (int j=0; j<2; j++)
+      BdryType_[i][j] = -1;
 }
 
 //----------------------------------------------------------------------
@@ -349,8 +354,13 @@ void AMRsolve_Hypre_Grav::init_graph()
    values. */
 /* void AMRsolve_Hypre_Grav::init_elements(std::vector<AMRsolve_Point *> points, 
                                            Scalar f_scale) */
-void AMRsolve_Hypre_Grav::init_elements(Scalar f_scale)
+void AMRsolve_Hypre_Grav::init_elements(int BdryType, Scalar f_scale)
 {
+  // set input arguments into AMRsolve_Hypre_Grav object
+  for (int i=0; i<3; i++)
+    for (int j=0; j<2; j++)
+      BdryType_[i][j] = BdryType;
+ 
   // Create the hypre matrix A_, solution X_, and right-hand side B_ objects
   int ierr;
   ierr = HYPRE_SStructMatrixCreate(MPI_COMM_WORLD, graph_, &A_);
@@ -1157,20 +1167,95 @@ void AMRsolve_Hypre_Grav::init_matrix_stencil_(AMRsolve_Grid& grid)
 
   //-----------------------------------------------------------
   // Adjust stencil at grid boundaries:
-  //  -> for periodic problems we must deflate the null space 
-  //     by setting a single Dirichlet condition in a corner 
-  //     of the root grid.
-  //  -> if we want to allow Neumann/Dirichlet conditions, 
-  //     that code should be inserted here as well
   //-----------------------------------------------------------
+
+  // If purely periodic, we must deflate the null space by setting
+  // a single Dirichlet condition in a corner of the root grid.
   if (hierarchy_->is_periodic(0) && 
       hierarchy_->is_periodic(1) && 
       hierarchy_->is_periodic(2) && coarsegrid &&
       (grid.index_lower(0)+grid.index_lower(1)+grid.index_lower(2) == 0)) {
+
     for (i0=0; i0<3; i0++)
       for (i1=0; i1<2; i1++)
 	v1[i0][i1][0] = 0.0;
-  }
+
+  // Otherwise, Enzo is using isolated boundary conditions
+  } else {
+
+    //    z-left face
+    if (grid.faces().label(2,0,0,0) == AMRsolve_Faces::_boundary_) {
+      i2 = 0;
+      for (i1=0; i1<n3[1]; i1++) {
+	for (i0=0; i0<n3[0]; i0++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[2][0][i];
+	  v1[2][0][i] = 0.0;
+	} 
+      }
+    }  // label == boundary
+
+    //    y-left face
+    if (grid.faces().label(1,0,0,0) == AMRsolve_Faces::_boundary_) {
+      i1 = 0;
+      for (i2=0; i2<n3[2]; i2++) {
+	for (i0=0; i0<n3[0]; i0++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[1][0][i];
+	  v1[1][0][i] = 0.0;
+	}
+      }
+    }  // label == boundary
+
+    //    x-left face
+    if (grid.faces().label(0,0,0,0) == AMRsolve_Faces::_boundary_) {
+      i0 = 0;
+      for (i2=0; i2<n3[2]; i2++) {
+	for (i1=0; i1<n3[1]; i1++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[0][0][i];
+	  v1[0][0][i] = 0.0;
+	}
+      }
+    }  // label == boundary
+
+    //    x-right face
+    if (grid.faces().label(0,1,0,0) == AMRsolve_Faces::_boundary_) {
+      i0 = n3[0]-1;
+      for (i2=0; i2<n3[2]; i2++) {
+	for (i1=0; i1<n3[1]; i1++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[0][1][i];
+	  v1[0][1][i] = 0.0;
+	}
+      }
+    }  // label == boundary
+
+    //    y-right face
+    if (grid.faces().label(1,1,0,0) == AMRsolve_Faces::_boundary_) {
+      i1 = n3[1]-1;
+      for (i2=0; i2<n3[2]; i2++) {
+	for (i0=0; i0<n3[0]; i0++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[1][1][i];
+	  v1[1][1][i] = 0.0;
+	}
+      }
+    }  // label == boundary
+
+    //    z-right face
+    if (grid.faces().label(2,1,0,0) == AMRsolve_Faces::_boundary_) {
+      i2 = n3[2]-1;
+      for (i1=0; i1<n3[1]; i1++) {
+	for (i0=0; i0<n3[0]; i0++) {
+	  i = AMRsolve_Grid::index(i0,i1,i2,n3[0],n3[1],n3[2]);
+	  v0[i] += v1[2][1][i];
+	  v1[2][1][i] = 0.0;
+	}
+      }
+    }  // label == boundary
+  }  // isolated boundary conditions
+
 
   //-----------------------------------------------------------
   // insert matrix entries into Hypre matrices A_ and Ac_
@@ -1714,10 +1799,6 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
     if (parameters_->value("prec_Jaciters") == "")  
       parameters_->add_parameter("prec_Jaciters","3");
 
-    int BdryType_[3][2];
-    for (int i=0; i<3; i++)
-      for (int j=0; j<2; j++)
-	BdryType_[i][j] = 0;
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
     if (ierr != 0)  ERROR("could not initialize HG preconditioner\n");
@@ -1940,10 +2021,6 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
     if (parameters_->value("prec_Jaciters") == "")  
       parameters_->add_parameter("prec_Jaciters","3");
 
-    int BdryType_[3][2];
-    for (int i=0; i<3; i++)
-      for (int j=0; j<2; j++)
-	BdryType_[i][j] = 0;
     precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
     ierr = precond->Initialize_(parameters_, &Ac_, &Xc_, &Bc_, &Y_);
     if (ierr != 0)  ERROR("could not initialize HG preconditioner\n");
