@@ -69,6 +69,10 @@ int gFLDSplit::FillRates(EnzoVector *u, EnzoVector *u0, float *phHI,
   float coolunit = aUnits*aUnits*aUnits*aUnits*aUnits * xbase1*xbase1
     * mp*mp / tbase1/tbase1/tbase1 / dbase1;
   float rtunits = ev2erg/TimeUnits/coolunit/dom;
+  // float ErUn = ErUnits;  // original
+  float ErUn = (ErUnits+ErUnits0)*0.5;   // arithmetic mean
+  // float ErUn = sqrt(ErUnits*ErUnits0);   // geometric mean
+  // float ErUn = 2.0*ErUnits*ErUnits0/(ErUnits+ErUnits0);  // harmonic mean
   
   // access radiation energy density array
   float *Er = u->GetData(0);
@@ -79,14 +83,14 @@ int gFLDSplit::FillRates(EnzoVector *u, EnzoVector *u0, float *phHI,
 
   // fill HI photo-ionization rate
   float pHIconst = c*TimeUnits*intSigESigHInu/hp/intSigE;
-  for (i=0; i<size; i++)  phHI[i] = Er[i]*ErUnits*pHIconst;
+  for (i=0; i<size; i++)  phHI[i] = Er[i]*ErUn*pHIconst;
 
   // fill HeI and HeII photo-ionization rates
   float pHeIconst  = c*TimeUnits*intSigESigHeInu/hp/intSigE;
   float pHeIIconst = c*TimeUnits*intSigESigHeIInu/hp/intSigE;
   if (RadiativeTransferHydrogenOnly == FALSE) {
-    for (i=0; i<size; i++)  phHeI[i]  = Er[i]*ErUnits*pHeIconst;
-    for (i=0; i<size; i++)  phHeII[i] = Er[i]*ErUnits*pHeIIconst;
+    for (i=0; i<size; i++)  phHeI[i]  = Er[i]*ErUn*pHeIconst;
+    for (i=0; i<size; i++)  phHeII[i] = Er[i]*ErUn*pHeIIconst;
   }
    
   // fill photo-heating rate
@@ -95,12 +99,12 @@ int gFLDSplit::FillRates(EnzoVector *u, EnzoVector *u0, float *phHI,
   float GHeIconst  = phScale*(intSigESigHeI  - 24.6*ev2erg/hp*intSigESigHeInu);
   float GHeIIconst = phScale*(intSigESigHeII - 54.4*ev2erg/hp*intSigESigHeIInu);
   if (Nchem == 1)
-    for (i=0; i<size; i++)  photogamma[i] = Er[i]*ErUnits*GHIconst;
+    for (i=0; i<size; i++)  photogamma[i] = Er[i]*ErUn*GHIconst;
   if (Nchem == 3) {
     float *HI = U0->GetData(2);
     float *HeI = U0->GetData(3);
     float *HeII = U0->GetData(4);
-    for (i=0; i<size; i++)  photogamma[i] = Er[i]*ErUnits *
+    for (i=0; i<size; i++)  photogamma[i] = Er[i]*ErUn *
 	      (GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
   }
 

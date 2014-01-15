@@ -50,6 +50,10 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
   float coolunit = POW(aUnits,5.0) * POW(xbase1,2.0) * POW(mp,2.0) 
     / POW(tbase1,3.0) / dbase1;
   float rtunits = ev2erg/TimeUnits/coolunit/dom;
+  // float ErUn = ErUnits;  // original
+  float ErUn = (ErUnits+ErUnits0)*0.5;   // arithmetic mean
+  // float ErUn = sqrt(ErUnits*ErUnits0);   // geometric mean
+  // float ErUn = 2.0*ErUnits*ErUnits0/(ErUnits+ErUnits0);  // harmonic mean
   
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -105,14 +109,14 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 
 	// fill HI photo-ionization rate
 	float pHIconst = c*TimeUnits*intSigESigHInu/hp/intSigE;
-	for (i=0; i<size; i++)  phHI[i] = Enew[i]*ErUnits*pHIconst;
+	for (i=0; i<size; i++)  phHI[i] = Enew[i]*ErUn*pHIconst;
 
 	// fill HeI and HeII photo-ionization rates
 	float pHeIconst  = c*TimeUnits*intSigESigHeInu/hp/intSigE;
 	float pHeIIconst = c*TimeUnits*intSigESigHeIInu/hp/intSigE;
 	if (RadiativeTransferHydrogenOnly == FALSE) {
-	  for (i=0; i<size; i++)  phHeI[i]  = Enew[i]*ErUnits*pHeIconst;
-	  for (i=0; i<size; i++)  phHeII[i] = Enew[i]*ErUnits*pHeIIconst;
+	  for (i=0; i<size; i++)  phHeI[i]  = Enew[i]*ErUn*pHeIconst;
+	  for (i=0; i<size; i++)  phHeII[i] = Enew[i]*ErUn*pHeIIconst;
 	}
    
 	// fill photo-heating rate
@@ -121,10 +125,10 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	float GHeIconst  = phScale*(intSigESigHeI  - 24.6*ev2erg/hp*intSigESigHeInu);
 	float GHeIIconst = phScale*(intSigESigHeII - 54.4*ev2erg/hp*intSigESigHeIInu);
 	if (Nchem == 1)
-	  for (i=0; i<size; i++)  photogamma[i] = Enew[i]*ErUnits*GHIconst;
+	  for (i=0; i<size; i++)  photogamma[i] = Enew[i]*ErUn*GHIconst;
 	if (Nchem == 3)
 	  for (i=0; i<size; i++)  
-	    photogamma[i] = Enew[i]*ErUnits *
+	    photogamma[i] = Enew[i]*ErUn *
 	      (GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
 
 	// fill H2 dissociation rate (none for grey FLD problems)
