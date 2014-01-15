@@ -2,7 +2,7 @@
 #ifdef CONFIG_BFLOAT_4
 
 #define kboltz       1.3806504e-16
-#define mass_h       1.67262171e-24   
+#define mass_h       1.67262171e-24
 #define mass_e       9.10938215e-28
 #define pi_val       3.14159265
 #define hplanck      6.6260693e-27
@@ -18,7 +18,7 @@
 #else
 
 #define kboltz       1.3806504d-16
-#define mass_h       1.67262171d-24   
+#define mass_h       1.67262171d-24
 #define mass_e       9.10938215d-28
 #define pi_val       3.141592653589793d0
 #define hplanck      6.6260693d-27
