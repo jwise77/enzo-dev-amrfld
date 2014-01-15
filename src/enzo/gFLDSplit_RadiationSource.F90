@@ -68,7 +68,7 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
   !--------------
   ! locals
   integer :: i, j, k
-  real :: pi, h_nu0, etaconst, specconst, etaloc(3)
+  real :: pi, h_nu0, etaconst, specconst, factor, etaloc(3)
   real :: dx, dy, dz, dV, cellXl, cellXr, cellYl, cellYr, cellZl, cellZr
   real :: cellXc, cellYc, cellZc
 
@@ -181,7 +181,8 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
      if (x0L == 0.d0) then
 
         ! compute eta factor for given ionization source, and put on wall
-        etaconst = 1.0d6*h_nu0*specconst/dx/LenUnits
+!        etaconst = 1.0d6*h_nu0*specconst/dx/LenUnits
+        etaconst = 5.0d5*h_nu0*specconst/dx/LenUnits
         do k=1,Nz,1
            do j=1,Ny,1
               Ersrc(1,j,k) = etaconst
@@ -208,22 +209,23 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
   elseif (ProbType == 417) then
 
      ! place sources based on grid indices 
-     Ersrc(69,87,88)   = 0.646477039572334d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(68,120,103) = 0.687331910809231d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(61,79,65)   = 0.720977691827869d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(78,98,119)  = 0.745010302555466d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(74,97,123)  = 0.783462353719616d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(100,45,60)  = 0.869979626338959d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(86,10,27)   = 0.915642027721405d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(31,77,48)   = 0.939674638449001d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(104,55,62)  = 1.21845279688911d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(41,73,47)   = 1.63902316962204d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(73,89,96)   = 1.99710825046320d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(65,110,91)  = 2.27348358883057d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(77,91,106)  = 2.38643629225025d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(113,61,64)  = 3.25881936866198d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(124,62,61)  = 5.81348456600542d52*h_nu0*specconst/dV*4.d0*pi
-     Ersrc(81,97,114)  = 7.96921044127083d52*h_nu0*specconst/dV*4.d0*pi
+     factor = 1.d52*h_nu0*specconst*4.d0*pi/dV
+     Ersrc(69,87,88)   = 0.646477039572334*factor
+     Ersrc(68,120,103) = 0.687331910809231*factor
+     Ersrc(61,79,65)   = 0.720977691827869*factor
+     Ersrc(78,98,119)  = 0.745010302555466*factor
+     Ersrc(74,97,123)  = 0.783462353719616*factor
+     Ersrc(100,45,60)  = 0.869979626338959*factor
+     Ersrc(86,10,27)   = 0.915642027721405*factor
+     Ersrc(31,77,48)   = 0.939674638449001*factor
+     Ersrc(104,55,62)  = 1.21845279688911*factor
+     Ersrc(41,73,47)   = 1.63902316962204*factor
+     Ersrc(73,89,96)   = 1.99710825046320*factor
+     Ersrc(65,110,91)  = 2.27348358883057*factor
+     Ersrc(77,91,106)  = 2.38643629225025*factor
+     Ersrc(113,61,64)  = 3.25881936866198*factor
+     Ersrc(124,62,61)  = 5.81348456600542*factor
+     Ersrc(81,97,114)  = 7.96921044127083*factor
 
   !   Consolidated HII region with two sources
   elseif (ProbType == 418) then
