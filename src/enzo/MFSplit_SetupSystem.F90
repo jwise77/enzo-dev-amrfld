@@ -1,3 +1,5 @@
+#include "fortran.def"
+#include "phys_const.def"
 !=======================================================================
 !
 ! Copyright 2009 Daniel R. Reynolds
@@ -99,7 +101,6 @@ subroutine MFSplit_SetupSystem(mat, rhs, rhsnorm, freq, E, E0, HI, HI0, &
   !  LOCALS:
   !
   !=======================================================================
-#include "fortran.def"
   implicit none
 
   !--------------
@@ -312,7 +313,8 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   integer :: i, j, k
   real*8 :: dtfac, dtfac0, c, pi
   real*8 :: dxi, dxi0, dyi, dyi0, dzi, dzi0
-  real*8 :: kap, kap0, E0avg, R, R0, Rmin
+  real*8 :: dxfac, dyfac, dzfac, dxfac0, dyfac0, dzfac0
+  real*8 :: kapL, kapR, kap, kap0, E0avg, R, R0, Rmin
   real*8 :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8 :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
   real*8 :: D_zl, D0_zl, D_zr, D0_zr, E0d_zl, E0d_zr, Ed_zl, Ed_zr
@@ -329,12 +331,18 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   ! set shortcut values
   dtfac  = dt*theta
   dtfac0 = dt*(1.d0-theta)
-  dxi    = a/dx/lUn
-  dyi    = a/dy/lUn
-  dzi    = a/dz/lUn
-  dxi0   = a0/dx/lUn0
-  dyi0   = a0/dy/lUn0
-  dzi0   = a0/dz/lUn0
+  dxi    = 1.d0/dx/lUn
+  dyi    = 1.d0/dy/lUn
+  dzi    = 1.d0/dz/lUn
+  dxi0   = 1.d0/dx/lUn0
+  dyi0   = 1.d0/dy/lUn0
+  dzi0   = 1.d0/dz/lUn0
+  dxfac  = dtfac*dxi*dxi
+  dyfac  = dtfac*dyi*dyi
+  dzfac  = dtfac*dzi*dzi
+  dxfac0 = dtfac0*dxi0*dxi0
+  dyfac0 = dtfac0*dyi0*dyi0
+  dzfac0 = dtfac0*dzi0*dzi0
   c      = 2.99792458d10     ! speed of light [cm/s]
   pi     = 4.d0*datan(1.d0)
   Rmin   = 1.0d-20
@@ -388,12 +396,13 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dzi0*abs(E0d_zl)/E0avg, Rmin)
 
            !    compute average opacity over face
-           kap = (sHI*(  HI(i,j,k)   + HI(i,j,k-1))  &
-                + sHeI*( HeI(i,j,k)  + HeI(i,j,k-1)) &
-                + sHeII*(HeII(i,j,k) + HeII(i,j,k-1)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i,j,k)    + HI0(i,j,k-1))  &
-                 + sHeI*( HeI0(i,j,k)  + HeI0(i,j,k-1)) &
-                 + sHeII*(HeII0(i,j,k) + HeII0(i,j,k-1)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k)
+           kapR = sHI*HI(i,j,k-1) + sHeI*HeI(i,j,k-1) + sHeII*HeII(i,j,k-1)
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i,j,k-1) + sHeI*HeI0(i,j,k-1) + sHeII*HeII0(i,j,k-1)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -426,12 +435,14 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dyi0*abs(E0d_yl)/E0avg, Rmin)
 
            !    compute average opacity over face
-           kap = (sHI*(  HI(i,j,k)   + HI(i,j-1,k))  &
-                + sHeI*( HeI(i,j,k)  + HeI(i,j-1,k)) &
-                + sHeII*(HeII(i,j,k) + HeII(i,j-1,k)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i,j,k)    + HI0(i,j-1,k))  &
-                 + sHeI*( HeI0(i,j,k)  + HeI0(i,j-1,k)) &
-                 + sHeII*(HeII0(i,j,k) + HeII0(i,j-1,k)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k) 
+           kapR = sHI*HI(i,j-1,k) + sHeI*HeI(i,j-1,k) + sHeII*HeII(i,j-1,k)
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i,j-1,k) + sHeI*HeI0(i,j-1,k) + sHeII*HeII0(i,j-1,k)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
+
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -463,12 +474,13 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
 
            !    compute opacity
-           kap = (sHI*(  HI(i,j,k)   + HI(i-1,j,k))  &
-                + sHeI*( HeI(i,j,k)  + HeI(i-1,j,k)) &
-                + sHeII*(HeII(i,j,k) + HeII(i-1,j,k)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i,j,k)    + HI0(i-1,j,k))  &
-                 + sHeI*( HeI0(i,j,k)  + HeI0(i-1,j,k)) &
-                 + sHeII*(HeII0(i,j,k) + HeII0(i-1,j,k)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k) 
+           kapR = sHI*HI(i-1,j,k) + sHeI*HeI(i-1,j,k)) + sHeII*HeII(i-1,j,k)
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i-1,j,k) + sHeI*HeI0(i-1,j,k) + sHeII*HeII0(i-1,j,k)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -500,12 +512,13 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
 
            !    compute opacity
-           kap = (sHI*(  HI(i+1,j,k)   + HI(i,j,k))  &
-                + sHeI*( HeI(i+1,j,k)  + HeI(i,j,k)) &
-                + sHeII*(HeII(i+1,j,k) + HeII(i,j,k)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i+1,j,k)    + HI0(i,j,k))  &
-                 + sHeI*( HeI0(i+1,j,k)  + HeI0(i,j,k)) &
-                 + sHeII*(HeII0(i+1,j,k) + HeII0(i,j,k)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k) 
+           kapR = sHI*HI(i+1,j,k) + sHeI*HeI(i+1,j,k) + sHeII*HeII(i+1,j,k)
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i+1,j,k) + sHeI*HeI0(i+1,j,k) + sHeII*HeII0(i+1,j,k)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -537,12 +550,13 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dyi0*abs(E0d_yr)/E0avg, Rmin)
 
            !    compute opacity
-           kap = (sHI*(  HI(i,j+1,k)   + HI(i,j,k))  &
-                + sHeI*( HeI(i,j+1,k)  + HeI(i,j,k)) &
-                + sHeII*(HeII(i,j+1,k) + HeII(i,j,k)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i,j+1,k)    + HI0(i,j,k))  &
-                 + sHeI*( HeI0(i,j+1,k)  + HeI0(i,j,k)) &
-                 + sHeII*(HeII0(i,j+1,k) + HeII0(i,j,k)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k) 
+           kapR = sHI*HI(i,j+1,k) + sHeI*HeI(i,j+1,k) + sHeII*HeII(i,j+1,k) 
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i,j+1,k) + sHeI*HeI0(i,j+1,k) + sHeII*HeII0(i,j+1,k)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -574,12 +588,13 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            R0 = max(dzi0*abs(E0d_zr)/E0avg, Rmin)
 
            !    compute opacity
-           kap = (sHI*(  HI(i,j,k+1)   + HI(i,j,k))  &
-                + sHeI*( HeI(i,j,k+1)  + HeI(i,j,k)) &
-                + sHeII*(HeII(i,j,k+1) + HeII(i,j,k)))*0.5d0*nUn
-           kap0 = (sHI*( HI0(i,j,k+1)    + HI0(i,j,k))  &
-                 + sHeI*( HeI0(i,j,k+1)  + HeI0(i,j,k)) &
-                 + sHeII*(HeII0(i,j,k+1) + HeII0(i,j,k)))*0.5d0*nUn0
+           kapL = sHI*HI(i,j,k) + sHeI*HeI(i,j,k) + sHeII*HeII(i,j,k) 
+           kapR = sHI*HI(i,j,k+1) + sHeI*HeI(i,j,k+1) + sHeII*HeII(i,j,k+1) 
+           kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+
+           kapL = sHI*HI0(i,j,k) + sHeI*HeI0(i,j,k) + sHeII*HeII0(i,j,k)
+           kapR = sHI*HI0(i,j,k+1) + sHeI*HeI0(i,j,k+1) + sHeII*HeII0(i,j,k+1)
+           kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
            !    compute limiter
            if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -609,25 +624,25 @@ subroutine MFSplit_SetupSystem_3D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
            nHI_avg = nHI_avg + HI(i,j,k)
 
            ! set the matrix entries
-           mat(1,i,j,k) = -dtfac*dzi*dzi*D_zl     ! z-left
-           mat(2,i,j,k) = -dtfac*dyi*dyi*D_yl     ! y-left
-           mat(3,i,j,k) = -dtfac*dxi*dxi*D_xl     ! x-left
-           mat(4,i,j,k) = 1.d0 + dtfac*(c*kap + dxi*dxi*(D_xl+D_xr) &
-                     + dyi*dyi*(D_yl+D_yr) + dzi*dzi*(D_zl+D_zr))     ! self
-           mat(5,i,j,k) = -dtfac*dxi*dxi*D_xr     ! x-right
-           mat(6,i,j,k) = -dtfac*dyi*dyi*D_yr     ! y-right
-           mat(7,i,j,k) = -dtfac*dzi*dzi*D_zr     ! z-right
+           mat(1,i,j,k) = -dzfac*D_zl     ! z-left
+           mat(2,i,j,k) = -dyfac*D_yl     ! y-left
+           mat(3,i,j,k) = -dxfac*D_xl     ! x-left
+           mat(4,i,j,k) = 1.d0 + dtfac*c*kap + dxfac*(D_xl+D_xr) &
+                     + dyfac*(D_yl+D_yr) + dzfac*(D_zl+D_zr)     ! self
+           mat(5,i,j,k) = -dxfac*D_xr     ! x-right
+           mat(6,i,j,k) = -dyfac*D_yr     ! y-right
+           mat(7,i,j,k) = -dzfac*D_zr     ! z-right
                 
            ! set the rhs entries
-           rhs(i,j,k) = ( (dtfac + dtfac0)*src(i,j,k)                   &
-                        + (1.d0 - dtfac0*c*kap0)*E0(i,j,k)              &
-                        + dtfac0*dzi0*dzi0*(D0_zr*E0d_zr-D0_zl*E0d_zl)  &
-                        + dtfac0*dyi0*dyi0*(D0_yr*E0d_yr-D0_yl*E0d_yl)  &
-                        + dtfac0*dxi0*dxi0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
-                        - (1.d0 + dtfac*c*kap)*E(i,j,k)                 &
-                        + dtfac*dzi*dzi*(D_zr*Ed_zr-D_zl*Ed_zl)         &
-                        + dtfac*dyi*dyi*(D_yr*Ed_yr-D_yl*Ed_yl)         &
-                        + dtfac*dxi*dxi*(D_xr*Ed_xr-D_xl*Ed_xl) )
+           rhs(i,j,k) = ( (dtfac + dtfac0)*src(i,j,k)         &
+                        + (1.d0 - dtfac0*c*kap0)*E0(i,j,k)    &
+                        + dzfac0*(D0_zr*E0d_zr-D0_zl*E0d_zl)  &
+                        + dyfac0*(D0_yr*E0d_yr-D0_yl*E0d_yl)  &
+                        + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
+                        - (1.d0 + dtfac*c*kap)*E(i,j,k)       &
+                        + dzfac*(D_zr*Ed_zr-D_zl*Ed_zl)       &
+                        + dyfac*(D_yr*Ed_yr-D_yl*Ed_yl)       &
+                        + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl) )
            
         enddo
      enddo
@@ -823,7 +838,8 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   integer :: i, j
   real*8 :: dtfac, dtfac0, c, pi
   real*8 :: dxi, dxi0, dyi, dyi0
-  real*8 :: kap, kap0, E0avg, R, R0, Rmin
+  real*8 :: dxfac, dyfac, dxfac0, dyfac0
+  real*8 :: kap, kap0, kapL, kapR, E0avg, R, R0, Rmin
   real*8 :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8 :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
 
@@ -838,10 +854,14 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   ! set shortcut values
   dtfac  = dt*theta
   dtfac0 = dt*(1.d0-theta)
-  dxi    = a/dx/lUn
-  dyi    = a/dy/lUn
-  dxi0   = a0/dx/lUn0
-  dyi0   = a0/dy/lUn0
+  dxi    = 1.d0/dx/lUn
+  dyi    = 1.d0/dy/lUn
+  dxi0   = 1.d0/dx/lUn0
+  dyi0   = 1.d0/dy/lUn0
+  dxfac  = dtfac*dxi*dxi
+  dyfac  = dtfac*dyi*dyi
+  dxfac0 = dtfac0*dxi0*dxi0
+  dyfac0 = dtfac0*dyi0*dyi0
   c      = 2.99792458d10     ! speed of light [cm/s]
   pi     = 4.d0*datan(1.d0)
   Rmin   = 1.0d-20
@@ -885,12 +905,13 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
         R0 = max(dyi0*abs(E0d_yl)/E0avg, Rmin)
         
         !    compute average opacity over face
-        kap = (sHI*(  HI(i,j)   + HI(i,j-1))  &
-             + sHeI*( HeI(i,j)  + HeI(i,j-1)) &
-             + sHeII*(HeII(i,j) + HeII(i,j-1)))*0.5d0*nUn
-        kap0 = (sHI*( HI0(i,j)    + HI0(i,j-1))  &
-              + sHeI*( HeI0(i,j)  + HeI0(i,j-1)) &
-              + sHeII*(HeII0(i,j) + HeII0(i,j-1)))*0.5d0*nUn0
+        kapL = sHI*HI(i,j) + sHeI*HeI(i,j) + sHeII*HeII(i,j) 
+        kapR = sHI*HI(i,j-1) + sHeI*HeI(i,j-1) + sHeII*HeII(i,j-1) 
+        kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+        
+        kapL = sHI*HI0(i,j) + sHeI*HeI0(i,j) + sHeII*HeII0(i,j)
+        kapR = sHI*HI0(i,j-1) + sHeI*HeI0(i,j-1) + sHeII*HeII0(i,j-1)
+        kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
         !    compute limiter
         if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -922,12 +943,13 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
         R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
         
         !    compute opacity
-        kap = (sHI*(  HI(i,j)   + HI(i-1,j))  &
-             + sHeI*( HeI(i,j)  + HeI(i-1,j)) &
-             + sHeII*(HeII(i,j) + HeII(i-1,j)))*0.5d0*nUn
-        kap0 = (sHI*( HI0(i,j)    + HI0(i-1,j))  &
-              + sHeI*( HeI0(i,j)  + HeI0(i-1,j)) &
-              + sHeII*(HeII0(i,j) + HeII0(i-1,j)))*0.5d0*nUn0
+        kapL = sHI*HI(i,j) + sHeI*HeI(i,j) + sHeII*HeII(i,j) 
+        kapR = sHI*HI(i-1,j) + sHeI*HeI(i-1,j) + sHeII*HeII(i-1,j) 
+        kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+        
+        kapL = sHI*HI0(i,j) + sHeI*HeI0(i,j) + sHeII*HeII0(i,j)
+        kapR = sHI*HI0(i-1,j) + sHeI*HeI0(i-1,j) + sHeII*HeII0(i-1,j)
+        kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
         
         !    compute limiter
         if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -959,12 +981,13 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
         R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
         
         !    compute opacity
-        kap = (sHI*(  HI(i+1,j)   + HI(i,j))  &
-             + sHeI*( HeI(i+1,j)  + HeI(i,j)) &
-             + sHeII*(HeII(i+1,j) + HeII(i,j)))*0.5d0*nUn
-        kap0 = (sHI*( HI0(i+1,j)    + HI0(i,j))  &
-              + sHeI*( HeI0(i+1,j)  + HeI0(i,j)) &
-              + sHeII*(HeII0(i+1,j) + HeII0(i,j)))*0.5d0*nUn0
+        kapL = sHI*HI(i,j) + sHeI*HeI(i,j) + sHeII*HeII(i,j) 
+        kapR = sHI*HI(i+1,j) + sHeI*HeI(i+1,j) + sHeII*HeII(i+1,j) 
+        kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+        
+        kapL = sHI*HI0(i,j) + sHeI*HeI0(i,j) + sHeII*HeII0(i,j)
+        kapR = sHI*HI0(i+1,j) + sHeI*HeI0(i+1,j) + sHeII*HeII0(i+1,j)
+        kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
         !    compute limiter
         if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -996,12 +1019,13 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
         R0 = max(dyi0*abs(E0d_yr)/E0avg, Rmin)
         
         !    compute opacity
-        kap = (sHI*(  HI(i,j+1)   + HI(i,j))  &
-             + sHeI*( HeI(i,j+1)  + HeI(i,j)) &
-             + sHeII*(HeII(i,j+1) + HeII(i,j)))*0.5d0*nUn
-        kap0 = (sHI*( HI0(i,j+1)    + HI0(i,j))  &
-              + sHeI*( HeI0(i,j+1)  + HeI0(i,j)) &
-              + sHeII*(HeII0(i,j+1) + HeII0(i,j)))*0.5d0*nUn0
+        kapL = sHI*HI(i,j) + sHeI*HeI(i,j) + sHeII*HeII(i,j) 
+        kapR = sHI*HI(i,j+1) + sHeI*HeI(i,j+1) + sHeII*HeII(i,j+1) 
+        kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+        
+        kapL = sHI*HI0(i,j) + sHeI*HeI0(i,j) + sHeII*HeII0(i,j)
+        kapR = sHI*HI0(i,j+1) + sHeI*HeI0(i,j+1) + sHeII*HeII0(i,j+1)
+        kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
 
         !    compute limiter
         if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -1026,21 +1050,21 @@ subroutine MFSplit_SetupSystem_2D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
         kap0 = (sHI*HI0(i,j) + sHeI*HeI0(i,j) + sHeII*HeII0(i,j))*nUn0
         
         ! set the matrix entries
-        mat(1,i,j) = -dtfac*dyi*dyi*D_yl     ! y-left
-        mat(2,i,j) = -dtfac*dxi*dxi*D_xl     ! x-left
-        mat(3,i,j) = 1.d0 + dtfac*(c*kap + dxi*dxi*(D_xl+D_xr)  & 
-                   + dyi*dyi*(D_yl+D_yr))    ! self
-        mat(4,i,j) = -dtfac*dxi*dxi*D_xr     ! x-right
-        mat(5,i,j) = -dtfac*dyi*dyi*D_yr     ! y-right
+        mat(1,i,j) = -dyfac*D_yl     ! y-left
+        mat(2,i,j) = -dxfac*D_xl     ! x-left
+        mat(3,i,j) = 1.d0 + dtfac*c*kap + dxfac*(D_xl+D_xr)  & 
+                   + dyfac*(D_yl+D_yr)    ! self
+        mat(4,i,j) = -dxfac*D_xr     ! x-right
+        mat(5,i,j) = -dyfac*D_yr     ! y-right
                 
         ! set the rhs entries
-        rhs(i,j) = ( (dtfac + dtfac0)*src(i,j)                       &
-                     + (1.d0 - dtfac0*c*kap0)*E0(i,j)                &
-                     + dtfac0*dyi0*dyi0*(D0_yr*E0d_yr-D0_yl*E0d_yl)  &
-                     + dtfac0*dxi0*dxi0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
-                     - (1.d0 + dtfac*c*kap)*E(i,j)                   &
-                     + dtfac*dyi*dyi*(D_yr*Ed_yr-D_yl*Ed_yl)         &
-                     + dtfac*dxi*dxi*(D_xr*Ed_xr-D_xl*Ed_xl) )
+        rhs(i,j) = ( (dtfac + dtfac0)*src(i,j)           &
+                   + (1.d0 - dtfac0*c*kap0)*E0(i,j)      &
+                   + dyfac0*(D0_yr*E0d_yr-D0_yl*E0d_yl)  &
+                   + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
+                   - (1.d0 + dtfac*c*kap)*E(i,j)         &
+                   + dyfac*(D_yr*Ed_yr-D_yl*Ed_yl)       &
+                   + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl) )
            
      enddo
   enddo
@@ -1165,8 +1189,8 @@ subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   ! locals
   integer :: i
   real*8 :: dtfac, dtfac0, c, pi
-  real*8 :: dxi, dxi0
-  real*8 :: kap, kap0, E0avg, R, R0, Rmin
+  real*8 :: dxi, dxi0, dxfac, dxfac0
+  real*8 :: kap, kap0, kapL, kapR, E0avg, R, R0, Rmin
   real*8 :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
 
 
@@ -1180,8 +1204,10 @@ subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
   ! set shortcut values
   dtfac  = dt*theta
   dtfac0 = dt*(1.d0-theta)
-  dxi    = a/dx/lUn
-  dxi0   = a0/dx/lUn0
+  dxi    = 1.d0/dx/lUn
+  dxi0   = 1.d0/dx/lUn0
+  dxfac  = dtfac*dxi*dxi
+  dxfac0 = dtfac0*dxi0*dxi0
   c      = 2.99792458d10     ! speed of light [cm/s]
   pi     = 4.d0*datan(1.d0)
   Rmin   = 1.0d-20
@@ -1221,12 +1247,13 @@ subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
      R0 = max(dxi0*abs(E0d_xl)/E0avg, Rmin)
      
      !    compute opacity
-     kap = (sHI*(  HI(i)   + HI(i-1))  &
-          + sHeI*( HeI(i)  + HeI(i-1)) &
-          + sHeII*(HeII(i) + HeII(i-1)))*0.5d0*nUn
-     kap0 = (sHI*( HI0(i)    + HI0(i-1))  &
-           + sHeI*( HeI0(i)  + HeI0(i-1)) &
-           + sHeII*(HeII0(i) + HeII0(i-1)))*0.5d0*nUn0
+     kapL = sHI*HI(i) + sHeI*HeI(i) + sHeII*HeII(i) 
+     kapR = sHI*HI(i-1) + sHeI*HeI(i-1) + sHeII*HeII(i-1) 
+     kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+     
+     kapL = sHI*HI0(i) + sHeI*HeI0(i) + sHeII*HeII0(i)
+     kapR = sHI*HI0(i-1) + sHeI*HeI0(i-1) + sHeII*HeII0(i-1)
+     kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
         
      !    compute limiter
      if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -1258,12 +1285,13 @@ subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
      R0 = max(dxi0*abs(E0d_xr)/E0avg, Rmin)
      
      !    compute opacity
-     kap = (sHI*(  HI(i+1)   + HI(i))  &
-          + sHeI*( HeI(i+1)  + HeI(i)) &
-          + sHeII*(HeII(i+1) + HeII(i)))*0.5d0*nUn
-     kap0 = (sHI*( HI0(i+1)    + HI0(i))  &
-           + sHeI*( HeI0(i+1)  + HeI0(i)) &
-           + sHeII*(HeII0(i+1) + HeII0(i)))*0.5d0*nUn0
+     kapL = sHI*HI(i) + sHeI*HeI(i) + sHeII*HeII(i) 
+     kapR = sHI*HI(i+1) + sHeI*HeI(i+1) + sHeII*HeII(i+1) 
+     kap = 2.d0*nUn*kapL*kapR/(kapL+kapR)
+     
+     kapL = sHI*HI0(i) + sHeI*HeI0(i) + sHeII*HeII0(i)
+     kapR = sHI*HI0(i+1) + sHeI*HeI0(i+1) + sHeII*HeII0(i+1)
+     kap0 = 2.d0*nUn0*kapL*kapR/(kapL+kapR)
      
      !    compute limiter
      if (LType == 1) then       ! rational approx. to LP lim. (LP, 1981)
@@ -1288,16 +1316,16 @@ subroutine MFSplit_SetupSystem_1D(mat, rhs, rhsnorm, E, E0, HI, HI0, HeI, &
      kap0 = (sHI*HI0(i) + sHeI*HeI0(i) + sHeII*HeII0(i))*nUn0
      
      ! set the matrix entries
-     mat(1,i) = -dtfac*dxi*dxi*D_xl     ! x-left
-     mat(2,i) = 1.d0 + dtfac*(c*kap + dxi*dxi*(D_xl+D_xr))    ! self
-     mat(3,i) = -dtfac*dxi*dxi*D_xr     ! x-right
+     mat(1,i) = -dxfac*D_xl     ! x-left
+     mat(2,i) = 1.d0 + dtfac*c*kap + dxfac*(D_xl+D_xr)    ! self
+     mat(3,i) = -dxfac*D_xr     ! x-right
                 
      ! set the rhs entries
-     rhs(i) = ( (dtfac + dtfac0)*src(i)                         &
-                + (1.d0 - dtfac0*c*kap0)*E0(i)                  &
-                + dtfac0*dxi0*dxi0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
-                - (1.d0 + dtfac*c*kap)*E(i)                     &
-                + dtfac*dxi*dxi*(D_xr*Ed_xr-D_xl*Ed_xl) )
+     rhs(i) = ( (dtfac + dtfac0)*src(i)               &
+                + (1.d0 - dtfac0*c*kap0)*E0(i)        &
+                + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)  &
+                - (1.d0 + dtfac*c*kap)*E(i)           &
+                + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl) )
 
   enddo
 

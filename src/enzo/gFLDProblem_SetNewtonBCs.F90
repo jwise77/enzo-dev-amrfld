@@ -76,16 +76,11 @@ subroutine gFLDProblem_SetNewtonBCs_3D(matentries, rhsentries, a,      &
   real :: dxa, dya, dza
 !=======================================================================
 
-!!$  write(*,*) 'Entering gFLDProblem::SetNewtonBCs routine'
-
   ! initialize output flag, shortcuts
   ier = 1
-!!$  dxa = dx*ErUnits*a*aUnits
-!!$  dya = dy*ErUnits*a*aUnits
-!!$  dza = dz*ErUnits*a*aUnits
-  dxa = dx*LenUnits*ErUnits/a
-  dya = dy*LenUnits*ErUnits/a
-  dza = dz*LenUnits*ErUnits/a
+  dxa = dx*LenUnits*ErUnits
+  dya = dy*LenUnits*ErUnits
+  dza = dz*LenUnits*ErUnits
 
   ! adjust left x-face for boundary conditions
   if (xlface==1) then
@@ -231,10 +226,6 @@ subroutine gFLDProblem_SetNewtonBCs_3D(matentries, rhsentries, a,      &
      endif
   endif
 
-
-!!$  write(*,*) 'Exiting gFLDProblem::SetNewtonBCs routine'
-
-
   return
 end subroutine gFLDProblem_SetNewtonBCs_3D
 !=======================================================================
@@ -311,14 +302,10 @@ subroutine gFLDProblem_SetNewtonBCs_2D(matentries, rhsentries, a,     &
 
 !=======================================================================
 
-!!$  write(*,*) 'Entering gFLDProblem::SetNewtonBCs routine'
-
   ! initialize output flag, shortcuts
   ier = 1
-!!$  dxa = dx*ErUnits*a*aUnits
-!!$  dya = dy*ErUnits*a*aUnits
-  dxa = dx*LenUnits*ErUnits/a
-  dya = dy*LenUnits*ErUnits/a
+  dxa = dx*LenUnits*ErUnits
+  dya = dy*LenUnits*ErUnits
 
   ! adjust left x-face for boundary conditions
   if (xlface==1) then
@@ -400,11 +387,6 @@ subroutine gFLDProblem_SetNewtonBCs_2D(matentries, rhsentries, a,     &
      endif
   endif
 
-
-
-!!$  write(*,*) 'Exiting gFLDProblem::SetNewtonBCs routine'
-
-
   return
 end subroutine gFLDProblem_SetNewtonBCs_2D
 !=======================================================================
@@ -478,12 +460,9 @@ subroutine gFLDProblem_SetNewtonBCs_1D(matentries, rhsentries, a,   &
 
 !=======================================================================
 
-!!$  write(*,*) 'Entering gFLDProblem::SetNewtonBCs routine'
-
   ! initialize output flag, shortcuts
   ier = 1
-!!$  dxa = dx*ErUnits*a*aUnits
-  dxa = dx*LenUnits*ErUnits/a
+  dxa = dx*LenUnits*ErUnits
 
   ! adjust left x-face for boundary conditions
   if (xlface==1) then
@@ -516,12 +495,6 @@ subroutine gFLDProblem_SetNewtonBCs_1D(matentries, rhsentries, a,   &
         matentries(3,i) = 0.d0
      endif
   endif
-
-
-
-
-!!$  write(*,*) 'Exiting gFLDProblem::SetNewtonBCs routine'
-
 
   return
 end subroutine gFLDProblem_SetNewtonBCs_1D

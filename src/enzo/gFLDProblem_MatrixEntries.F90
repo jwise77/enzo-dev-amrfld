@@ -114,7 +114,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
 !--------------
 ! locals
   integer :: i, j, k
-  real :: c, pi, StBz, dxi, dyi, dzi, dtfac
+  real :: c, pi, StBz, dxi, dyi, dzi, dtfac, dxfac, dyfac, dzfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
   real :: Rmin, acoef
@@ -129,13 +129,16 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
 
   ! set shortcut values
   dtfac = dt*theta    ! time step conversion factor
-  dxi   = a/dx/LenUnits
-  dyi   = a/dy/LenUnits
-  dzi   = a/dz/LenUnits
+  dxi   = 1.d0/dx/LenUnits
+  dyi   = 1.d0/dy/LenUnits
+  dzi   = 1.d0/dz/LenUnits
+  dxfac = dtfac*dxi*dxi
+  dyfac = dtfac*dyi*dyi
+  dzfac = dtfac*dzi*dzi
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
-  Rmin = 1.0e-20
+  Rmin = 1.d-20 / LenUnits
 
   ! iterate over the active domain
   do k=1,Nz,1
@@ -152,30 +155,29 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i-1,j,k))*dxi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i-1,j,k))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i-1,j,k))*0.5d0
 
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i-1,j,k))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i-1,j,k) &
+                / (kappaE(i,j,k)+kappaE(i-1,j,k))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i-1,j,k))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
            if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
               Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
            else if (LimType == 2) then  ! Larsen n=2 lim.
-              Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+              Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
            else if (LimType == 3) then  ! no limiter
               Dlim = c/sigT/3.d0
            else if (LimType == 4) then  ! Zeus limiter
@@ -187,9 +189,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on x-left Eg
-           matentries(3,i,j,k) = matentries(3,i,j,k) - dtfac*Dlim*dxi*dxi
+           matentries(3,i,j,k) = matentries(3,i,j,k) - Dlim*dxfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dxi*dxi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dxfac
 
 
            !--------------
@@ -198,30 +200,29 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i+1,j,k) - EgOld(i,j,k))*dxi
            
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i+1,j,k))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i+1,j,k))*0.5d0
            
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i+1,j,k))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i+1,j,k) &
+                / (kappaE(i,j,k)+kappaE(i+1,j,k))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i+1,j,k))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
            if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
               Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
            else if (LimType == 2) then  ! Larsen n=2 lim.
-              Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+              Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
            else if (LimType == 3) then  ! no limiter
               Dlim = c/sigT/3.d0
            else if (LimType == 4) then  ! Zeus limiter
@@ -239,9 +240,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on x-right Eg
-           matentries(5,i,j,k) = matentries(5,i,j,k) - dtfac*Dlim*dxi*dxi
+           matentries(5,i,j,k) = matentries(5,i,j,k) - Dlim*dxfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dxi*dxi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dxfac
 
 
            !--------------
@@ -250,30 +251,29 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j-1,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j-1,k))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i,j-1,k))*0.5d0
 
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i,j-1,k))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j-1,k) &
+                / (kappaE(i,j,k)+kappaE(i,j-1,k))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i,j-1,k))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
            if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
               Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
            else if (LimType == 2) then  ! Larsen n=2 lim.
-              Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+              Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
            else if (LimType == 3) then  ! no limiter
               Dlim = c/sigT/3.d0
            else if (LimType == 4) then  ! Zeus limiter
@@ -285,9 +285,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on y-left Eg
-           matentries(2,i,j,k) = matentries(2,i,j,k) - dtfac*Dlim*dyi*dyi
+           matentries(2,i,j,k) = matentries(2,i,j,k) - Dlim*dyfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dyi*dyi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dyfac
 
 
            !--------------
@@ -296,30 +296,29 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j+1,k) - EgOld(i,j,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j+1,k))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i,j+1,k))*0.5d0
 
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i,j+1,k))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j+1,k) &
+                / (kappaE(i,j,k)+kappaE(i,j+1,k))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i,j+1,k))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
            if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
               Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
            else if (LimType == 2) then  ! Larsen n=2 lim.
-              Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+              Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
            else if (LimType == 3) then  ! no limiter
               Dlim = c/sigT/3.d0
            else if (LimType == 4) then  ! Zeus limiter
@@ -337,9 +336,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on y-right Eg
-           matentries(6,i,j,k) = matentries(6,i,j,k) - dtfac*Dlim*dyi*dyi
+           matentries(6,i,j,k) = matentries(6,i,j,k) - Dlim*dyfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dyi*dyi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dyfac
 
 
            !--------------
@@ -348,23 +347,22 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j,k-1))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k-1))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i,j,k-1))*0.5d0
 
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i,j,k-1))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j,k-1) &
+                / (kappaE(i,j,k)+kappaE(i,j,k-1))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i,j,k-1))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
@@ -383,9 +381,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on z-left Eg
-           matentries(1,i,j,k) = matentries(1,i,j,k) - dtfac*Dlim*dzi*dzi
+           matentries(1,i,j,k) = matentries(1,i,j,k) - Dlim*dzfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dzi*dzi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dzfac
 
 
            !--------------
@@ -394,30 +392,29 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k+1) - EgOld(i,j,k))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k+1))/2.d0
+           Egf = (EgOld(i,j,k) + EgOld(i,j,k+1))*0.5d0
 
            !    total extinction coeff on face
-           sigT = (kappaE(i,j,k)+kappaE(i,j,k+1))/2.d0
+           sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j,k+1) &
+                / (kappaE(i,j,k)+kappaE(i,j,k+1))
 
            !    compute R for limiter based on LimType
            if ((LimType == 4) .or. (LimType == 2)) then
-              R = AGradEg/Egf
-              R = max(R,Rmin)
+              R = max(AGradEg/Egf, Rmin)
            else                             ! all others
               !    scaling coefficient ('effective albedo' -- LP)
               Tf = (Temp(i,j,k)+Temp(i,j,k+1))/2.d0
               omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
               
               !    face-centered R value
-              R = AGradEg/Egf/omega
-              R = max(R,Rmin)  ! force away from 0 to avoid NaN
+              R = max(AGradEg/Egf/omega, Rmin)
            endif
 
            !    compute limiter
            if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
               Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R) 
            else if (LimType == 2) then  ! Larsen n=2 lim.
-              Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+              Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
            else if (LimType == 3) then  ! no limiter
               Dlim = c/sigT/3.d0
            else if (LimType == 4) then  ! Zeus limiter
@@ -435,9 +432,9 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
            !       dep. on z-right Eg
-           matentries(7,i,j,k) = matentries(7,i,j,k) - dtfac*Dlim*dzi*dzi
+           matentries(7,i,j,k) = matentries(7,i,j,k) - Dlim*dzfac
            !       dep. on self Eg
-           matentries(4,i,j,k) = matentries(4,i,j,k) + dtfac*Dlim*dzi*dzi
+           matentries(4,i,j,k) = matentries(4,i,j,k) + Dlim*dzfac
 
         enddo
      enddo
@@ -554,7 +551,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
 !--------------
 ! locals
   integer :: i, j
-  real :: c, pi, StBz, dxi, dyi, dtfac
+  real :: c, pi, StBz, dxi, dyi, dtfac, dxfac, dyfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
   real :: Rmin, acoef
@@ -569,8 +566,10 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
 
   ! set shortcut values
   dtfac = dt*theta       ! time step conversion factor
-  dxi   = a/dx/LenUnits
-  dyi   = a/dy/LenUnits
+  dxi   = 1.d0/dx/LenUnits
+  dyi   = 1.d0/dy/LenUnits
+  dxfac = dtfac*dxi*dxi
+  dyfac = dtfac*dyi*dyi
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
@@ -590,30 +589,29 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j) - EgOld(i-1,j))*dxi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i-1,j))/2.d0
+        Egf = (EgOld(i,j) + EgOld(i-1,j))*0.5d0
 
         !    total extinction coeff on face
-        sigT = (kappaE(i,j)+kappaE(i-1,j))/2.d0
+        sigT = 2.d0*kappaE(i,j)*kappaE(i-1,j) &
+             / (kappaE(i,j)+kappaE(i-1,j))
 
         !    compute R for limiter based on LimType
         if ((LimType == 4) .or. (LimType == 2)) then
-           R = AGradEg/Egf
-           R = max(R,Rmin)
+           R = max(AGradEg/Egf, Rmin)
         else                             ! all others
            !    scaling coefficient ('effective albedo' -- LP)
            Tf = (Temp(i,j)+Temp(i-1,j))/2.d0
            omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
            
            !    face-centered R value
-           R = AGradEg/Egf/omega
-           R = max(R,Rmin)  ! force away from 0 to avoid NaN
+           R = max(AGradEg/Egf/omega, Rmin)
         endif
         
         !    compute limiter
         if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
            Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
         else if (LimType == 2) then  ! Larsen n=2 lim.
-           Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+           Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
         else if (LimType == 3) then  ! no limiter
            Dlim = c/sigT/3.d0
         else if (LimType == 4) then  ! Zeus limiter
@@ -625,9 +623,9 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
         !       dep. on x-left Eg
-        matentries(2,i,j) = matentries(2,i,j) - dtfac*Dlim*dxi*dxi
+        matentries(2,i,j) = matentries(2,i,j) - Dlim*dxfac
         !       dep. on self Eg
-        matentries(3,i,j) = matentries(3,i,j) + dtfac*Dlim*dxi*dxi
+        matentries(3,i,j) = matentries(3,i,j) + Dlim*dxfac
 
 
         !--------------
@@ -636,30 +634,29 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i+1,j) - EgOld(i,j))*dxi
         
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i+1,j))/2.d0
+        Egf = (EgOld(i,j) + EgOld(i+1,j))*0.5d0
         
         !    total extinction coeff on face
-        sigT = (kappaE(i,j)+kappaE(i+1,j))/2.d0
+        sigT = 2.d0*kappaE(i,j)*kappaE(i+1,j) &
+             / (kappaE(i,j)+kappaE(i+1,j))
 
         !    compute R for limiter based on LimType
         if ((LimType == 4) .or. (LimType == 2)) then
-           R = AGradEg/Egf
-           R = max(R,Rmin)
+           R = max(AGradEg/Egf, Rmin)
         else                             ! all others
            !    scaling coefficient ('effective albedo' -- LP)
            Tf = (Temp(i,j)+Temp(i+1,j))/2.d0
            omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
            
            !    face-centered R value
-           R = AGradEg/Egf/omega
-           R = max(R,Rmin)  ! force away from 0 to avoid NaN
+           R = max(AGradEg/Egf/omega, Rmin)
         endif
         
         !    compute limiter
         if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
            Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
         else if (LimType == 2) then  ! Larsen n=2 lim.
-           Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+           Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
         else if (LimType == 3) then  ! no limiter
            Dlim = c/sigT/3.d0
         else if (LimType == 4) then  ! Zeus limiter
@@ -677,9 +674,9 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
         !       dep. on x-right Eg
-        matentries(4,i,j) = matentries(4,i,j) - dtfac*Dlim*dxi*dxi
+        matentries(4,i,j) = matentries(4,i,j) - Dlim*dxfac
         !       dep. on self Eg
-        matentries(3,i,j) = matentries(3,i,j) + dtfac*Dlim*dxi*dxi
+        matentries(3,i,j) = matentries(3,i,j) + Dlim*dxfac
 
 
         !--------------
@@ -688,30 +685,29 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j) - EgOld(i,j-1))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j-1))/2.d0
+        Egf = (EgOld(i,j) + EgOld(i,j-1))*0.5d0
 
         !    total extinction coeff on face
-        sigT = (kappaE(i,j)+kappaE(i,j-1))/2.d0
+        sigT = 2.d0*kappaE(i,j)*kappaE(i,j-1) &
+             / (kappaE(i,j)+kappaE(i,j-1))
 
         !    compute R for limiter based on LimType
         if ((LimType == 4) .or. (LimType == 2)) then
-           R = AGradEg/Egf
-           R = max(R,Rmin)
+           R = max(AGradEg/Egf, Rmin)
         else                             ! all others
            !    scaling coefficient ('effective albedo' -- LP)
            Tf = (Temp(i,j)+Temp(i,j-1))/2.d0
            omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
            
            !    face-centered R value
-           R = AGradEg/Egf/omega
-           R = max(R,Rmin)  ! force away from 0 to avoid NaN
+           R = max(AGradEg/Egf/omega, Rmin)
         endif
         
         !    compute limiter
         if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
            Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
         else if (LimType == 2) then  ! Larsen n=2 lim.
-           Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+           Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
         else if (LimType == 3) then  ! no limiter
            Dlim = c/sigT/3.d0
         else if (LimType == 4) then  ! Zeus limiter
@@ -723,9 +719,9 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
         !       dep. on y-left Eg
-        matentries(1,i,j) = matentries(1,i,j) - dtfac*Dlim*dyi*dyi
+        matentries(1,i,j) = matentries(1,i,j) - Dlim*dyfac
         !       dep. on self Eg
-        matentries(3,i,j) = matentries(3,i,j) + dtfac*Dlim*dyi*dyi
+        matentries(3,i,j) = matentries(3,i,j) + Dlim*dyfac
 
 
         !--------------
@@ -734,29 +730,28 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j+1) - EgOld(i,j))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j+1))/2.d0
+        Egf = (EgOld(i,j) + EgOld(i,j+1))*0.5d0
 
         !    total extinction coeff on face
-        sigT = (kappaE(i,j)+kappaE(i,j+1))/2.d0
+        sigT = 2.d0*kappaE(i,j)*kappaE(i,j+1) &
+             / (kappaE(i,j)+kappaE(i,j+1))
 
         !    compute R for limiter based on LimType
         if ((LimType == 4) .or. (LimType == 2)) then
-           R = AGradEg/Egf
-           R = max(R,Rmin)
+           R = max(AGradEg/Egf, Rmin)
         else                             ! all others
            !    scaling coefficient ('effective albedo' -- LP)
            omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
            
            !    face-centered R value
-           R = AGradEg/Egf/omega
-           R = max(R,Rmin)  ! force away from 0 to avoid NaN
+           R = max(AGradEg/Egf/omega, Rmin)
         endif
         
         !    compute limiter
         if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
            Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
         else if (LimType == 2) then  ! Larsen n=2 lim.
-           Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+           Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
         else if (LimType == 3) then  ! no limiter
            Dlim = c/sigT/3.d0
         else if (LimType == 4) then  ! Zeus limiter
@@ -774,9 +769,9 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
         !       dep. on y-right Eg
-        matentries(5,i,j) = matentries(5,i,j) - dtfac*Dlim*dyi*dyi
+        matentries(5,i,j) = matentries(5,i,j) - Dlim*dyfac
         !       dep. on self Eg
-        matentries(3,i,j) = matentries(3,i,j) + dtfac*Dlim*dyi*dyi
+        matentries(3,i,j) = matentries(3,i,j) + Dlim*dyfac
 
       enddo
    enddo
@@ -887,7 +882,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
 !--------------
 ! locals
   integer :: i
-  real :: c, pi, StBz, dxi, dtfac
+  real :: c, pi, StBz, dxi, dtfac, dxfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
   real :: Rmin, acoef
@@ -902,7 +897,8 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
 
   ! set shortcut values
   dtfac = dt*theta       ! time step conversion factor
-  dxi   = a/dx/LenUnits
+  dxi   = 1.d0/dx/LenUnits
+  dxfac = dtfac*dxi*dxi
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
@@ -921,30 +917,29 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      AGradEg = abs(EgOld(i) - EgOld(i-1))*dxi
 
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i-1))/2.d0
+     Egf = (EgOld(i) + EgOld(i-1))*0.5d0
 
      !    total extinction coeff on face
-     sigT = (kappaE(i)+kappaE(i-1))/2.d0
+     sigT = 2.d0*kappaE(i)*kappaE(i-1) &
+          / (kappaE(i)+kappaE(i-1))
 
      !    compute R for limiter based on LimType
      if ((LimType == 4) .or. (LimType == 2)) then
-        R = AGradEg/Egf
-        R = max(R,Rmin)
+        R = max(AGradEg/Egf, Rmin)
      else                             ! all others
         !    scaling coefficient ('effective albedo' -- LP)
         Tf = (Temp(i)+Temp(i-1))/2.d0
         omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
         
         !    face-centered R value
-        R = AGradEg/Egf/omega
-        R = max(R,Rmin)  ! force away from 0 to avoid NaN
+        R = max(AGradEg/Egf/omega, Rmin)
      endif
         
      !    compute limiter
      if (LimType == 1) then        ! rational approx. to LP lim. (LP, 1981)
         Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
      else if (LimType == 2) then  ! Larsen n=2 lim.
-        Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+        Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
      else if (LimType == 3) then  ! no limiter
         Dlim = c/sigT/3.d0
      else if (LimType == 4) then  ! Zeus limiter
@@ -956,9 +951,9 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      !    set the relevant matrix entries. Note: the diffusive component 
      !    need not be rescaled, since scaling and chain rule cancel 
      !       dep. on x-left Eg
-     matentries(1,i) = matentries(1,i) - dtfac*Dlim*dxi*dxi
+     matentries(1,i) = matentries(1,i) - Dlim*dxfac
      !       dep. on self Eg
-     matentries(2,i) = matentries(2,i) + dtfac*Dlim*dxi*dxi
+     matentries(2,i) = matentries(2,i) + Dlim*dxfac
 
 
      !--------------
@@ -967,30 +962,29 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      AGradEg = abs(EgOld(i+1) - EgOld(i))*dxi
      
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i+1))/2.d0
+     Egf = (EgOld(i) + EgOld(i+1))*0.5d0
      
      !    total extinction coeff on face
-     sigT = (kappaE(i)+kappaE(i+1))/2.d0
+     sigT = 2.d0*kappaE(i)*kappaE(i+1) &
+          / (kappaE(i)+kappaE(i+1))
 
      !    compute R for limiter based on LimType
      if ((LimType == 4) .or. (LimType == 2)) then
-        R = AGradEg/Egf
-        R = max(R,Rmin)
+        R = max(AGradEg/Egf, Rmin)
      else                             ! all others
         !    scaling coefficient ('effective albedo' -- LP)
         Tf = (Temp(i)+Temp(i+1))/2.d0
         omega = (4.d0*StBz/c*Tf**4)/Egf/EgUnits
         
         !    face-centered R value
-        R = AGradEg/Egf/omega
-        R = max(R,Rmin)  ! force away from 0 to avoid NaN
+        R = max(AGradEg/Egf/omega, Rmin)
      endif
         
      !    compute limiter
      if (LimType == 1) then       ! rational approx. to LP lim. (LP, 1981)
         Dlim = c/omega*(2.d0*sigT+R)/(6.d0*sigT*sigT+3.d0*sigT*R+R*R)
      else if (LimType == 2) then  ! Larsen n=2 lim.
-        Dlim = c/sqrt((3.d0*sigT)**2 + R**2)
+        Dlim = c/sqrt(9.d0*sigT*sigT + R*R)
      else if (LimType == 3) then  ! no limiter
         Dlim = c/sigT/3.d0
      else if (LimType == 4) then  ! Zeus limiter
@@ -1008,9 +1002,9 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      !    set the relevant matrix entries. Note: the diffusive component 
      !    need not be rescaled, since scaling and chain rule cancel 
      !       dep. on x-right Eg
-     matentries(3,i) = matentries(3,i) - dtfac*Dlim*dxi*dxi
+     matentries(3,i) = matentries(3,i) - Dlim*dxfac
      !       dep. on self Eg
-     matentries(2,i) = matentries(2,i) + dtfac*Dlim*dxi*dxi
+     matentries(2,i) = matentries(2,i) + Dlim*dxfac
 
    enddo
 
