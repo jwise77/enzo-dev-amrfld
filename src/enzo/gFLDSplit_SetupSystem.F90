@@ -337,7 +337,7 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
            matentries(1,i,j,k) = -dzfac*D_zl         ! z-left
            matentries(2,i,j,k) = -dyfac*D_yl         ! y-left
            matentries(3,i,j,k) = -dxfac*D_xl         ! x-left
-           matentries(4,i,j,k) = 1.d0 + dtfac*(afac + c*kap)  &   ! self
+           matentries(4,i,j,k) = 1.d0 + dtfac*(afac + c_light*kap)  &   ! self
                 + dxfac*(D_xl+D_xr) + dyfac*(D_yl+D_yr) + dzfac*(D_zl+D_zr)
            matentries(5,i,j,k) = -dxfac*D_xr         ! x-right
            matentries(6,i,j,k) = -dyfac*D_yr         ! y-right
@@ -346,11 +346,11 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
            ! set the rhs entries
            rhsentries(i,j,k) =   dtfac/rUn*(eta + src(i,j,k))                     &
                                + dtfac0/rUn0*(eta0 + src(i,j,k))                  &
-                               - (1.d0 + dtfac*(afac+c*kap))*E(i,j,k)             &
+                               - (1.d0 + dtfac*(afac+c_light*kap))*E(i,j,k)       &
                                + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl)                    &
                                + dyfac*(D_yr*Ed_yr-D_yl*Ed_yl)                    &
                                + dzfac*(D_zr*Ed_zr-D_zl*Ed_zl)                    &
-                               + (1.d0 - dtfac0*(afac0+c*kap0))*E0(i,j,k)         &
+                               + (1.d0 - dtfac0*(afac0+c_light*kap0))*E0(i,j,k)   &
                                + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)               &
                                + dyfac0*(D0_yr*E0d_yr-D0_yl*E0d_yl)               &
                                + dzfac0*(D0_zr*E0d_zr-D0_zl*E0d_zl)
@@ -622,19 +622,19 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
         ! need not be rescaled, since scaling and chain rule cancel 
         matentries(1,i,j) = -dyfac*D_yl         ! y-left
         matentries(2,i,j) = -dxfac*D_xl         ! x-left
-        matentries(3,i,j) = 1.d0 + dtfac*(afac + c*kap)   &   
+        matentries(3,i,j) = 1.d0 + dtfac*(afac + c_light*kap)   &   
              + dxfac*(D_xl+D_xr) + dyfac*(D_yl+D_yr)      ! self
         matentries(4,i,j) = -dxfac*D_xr         ! x-right
         matentries(5,i,j) = -dyfac*D_yr         ! y-right
 
         ! set the rhs entries
-        rhsentries(i,j) =   dtfac/rUn*(eta + src(i,j))               &
-                          + dtfac0/rUn0*(eta0 + src(i,j))            &
-                          - (1.d0 + dtfac*(afac+c*kap))*E(i,j)       &
-                          + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl)            &
-                          + dyfac*(D_yr*Ed_yr-D_yl*Ed_yl)            &
-                          + (1.d0 - dtfac0*(afac0+c*kap0))*E0(i,j)   &
-                          + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)       &
+        rhsentries(i,j) =   dtfac/rUn*(eta + src(i,j))                   &
+                          + dtfac0/rUn0*(eta0 + src(i,j))                &
+                          - (1.d0 + dtfac*(afac+c_light*kap))*E(i,j)     &
+                          + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl)                &
+                          + dyfac*(D_yr*Ed_yr-D_yl*Ed_yl)                &
+                          + (1.d0 - dtfac0*(afac0+c_light*kap0))*E0(i,j) &
+                          + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)           &
                           + dyfac0*(D0_yr*E0d_yr-D0_yl*E0d_yl)  
         rhsnorm = rhsnorm + rhsentries(i,j)**2
 
@@ -810,16 +810,16 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
      ! set the matrix entries.  Note: the diffusive component 
      ! need not be rescaled, since scaling and chain rule cancel 
      matentries(1,i) = -dxfac*D_xl            ! x-left
-     matentries(2,i) = 1.d0 + dtfac*(afac + c*kap)  &  ! self
+     matentries(2,i) = 1.d0 + dtfac*(afac + c_light*kap)  &  ! self
                             + dxfac*(D_xl+D_xr)
      matentries(3,i) = -dxfac*D_xr            ! x-right
 
      ! set the rhs entries
-     rhsentries(i) =   dtfac/rUn*(eta + src(i))               &
-                     + dtfac0/rUn0*(eta0 + src(i))            &
-                     - (1.d0 + dtfac*(afac+c*kap))*E(i)       &
-                     + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl)          &
-                     + (1.d0 - dtfac0*(afac0+c*kap0))*E0(i)   &
+     rhsentries(i) =   dtfac/rUn*(eta + src(i))                   &
+                     + dtfac0/rUn0*(eta0 + src(i))                &
+                     - (1.d0 + dtfac*(afac+c_light*kap))*E(i)     &
+                     + dxfac*(D_xr*Ed_xr-D_xl*Ed_xl)              &
+                     + (1.d0 - dtfac0*(afac0+c_light*kap0))*E0(i) &
                      + dxfac0*(D0_xr*E0d_xr-D0_xl*E0d_xl)
      rhsnorm = rhsnorm + rhsentries(i)**2
 
