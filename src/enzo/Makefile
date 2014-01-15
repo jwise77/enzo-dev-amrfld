@@ -231,9 +231,9 @@ verbose: $(EXE).exe
 	  $(F90) -c -o $@ $(F90FLAGS) $(DEFINES) $*.F90 >& $(OUTPUT) ; \
 	  if [ ! -e $@ ]; then \
              echo; \
-             echo "$(F90) -c -o $@ $(DEFINES) $(F90FLAGS) $*.F90"; \
+             echo "$(F90) -c -o $@ $(F90FLAGS) $(DEFINES) $*.F90"; \
              echo; \
-             $(F90) -c -o $@ $(F90FLAGS) $*.F90; \
+             $(F90) -c -o $@ $(F90FLAGS) $(DEFINES) $*.F90; \
              echo; \
              exit 1; \
 	  fi ; \
