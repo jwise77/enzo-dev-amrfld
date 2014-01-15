@@ -26,9 +26,14 @@ EnergyOpacityC4 = 0.0
 # 
 RadHydroChemistry   = 0               // no chemistry
 RadHydroModel       = 10              // LTE coupling
-RadHydroMaxDt       = 1.0e-13
-RadHydroMinDt       = 1.0e-18
-RadHydroInitDt      = 1.0e-18
+RadiationScaling        = 1e-20
+EnergyCorrectionScaling = 1e-21
+#RadHydroMaxDt        = 1.0e-13
+#RadHydroMinDt        = 1.0e-18
+#RadHydroInitDt       = 1.0e-18
+RadHydroMaxDt        = 3.3333e-3
+RadHydroMinDt        = 3.3333e-8
+RadHydroInitDt       = 3.3333e-8
 RadHydroDtRadFac    = 0.00225          // 0.5% desired change/step
 RadHydroTheta       = 0.5             // trapezoidal time integration
 RadHydroMGPreRelax  = 5               // MG pre-relaxation sweeps
