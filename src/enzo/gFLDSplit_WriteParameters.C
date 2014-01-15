@@ -63,7 +63,7 @@ int gFLDSplit::WriteParameters(FILE *fptr)
   }
 
   fprintf(fptr, "RadHydroInitialGuess = %"ISYM"\n", initial_guess);    
-  fprintf(fptr, "RadHydroNewtTolerance = %22.16e\n", sol_tolerance);
+  fprintf(fptr, "RadHydroSolTolerance = %22.16e\n", sol_tolerance);
   fprintf(fptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
   fprintf(fptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
   fprintf(fptr, "RadHydroMGPreRelax = %i\n", sol_npre);    

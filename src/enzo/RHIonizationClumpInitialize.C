@@ -88,18 +88,18 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroX2Velocity           = 0.0;
   float RadHydroNumDensityIn         = 0.04;
   float RadHydroNumDensityOut        = 0.0002;
-  float RadHydroTemperatureIn        = 40.0;
-  float RadHydroTemperatureOut       = 8000.0;
-  float RadHydroRadiationEnergy      = 1.0e-20;
+  float RadHydroTemperatureIn        = 40.0;     // K
+  float RadHydroTemperatureOut       = 8000.0;   // K
+  float RadHydroRadiationEnergy      = 1.0e-20;  // erg/cm^3
   float RadHydroHydrogenMassFraction = 1.0;
   float RadHydroInitialFractionHII   = 0.0;
   float RadHydroInitialFractionHeII  = 0.0;
   float RadHydroInitialFractionHeIII = 0.0;
   int   RadHydroChemistry            = 1;
-  float ClumpCenterX                 = 1.54285e22;  // cm (5 kpc)
-  float ClumpCenterY                 = 1.018281e22; // cm (3.3 kpc)
-  float ClumpCenterZ                 = 1.018281e22; // cm (3.3 kpc)
-  float ClumpRadius                  = 2.46856e21;  // cm (0.8 kpc)
+  float ClumpCenterX                 = 5.0;  // normalized units
+  float ClumpCenterY                 = 3.3;
+  float ClumpCenterZ                 = 3.3;
+  float ClumpRadius                  = 0.8;
 
   // overwrite input from RadHydroParamFile file, if it exists
   if (MetaData.RadHydroParameterFname != NULL) {
