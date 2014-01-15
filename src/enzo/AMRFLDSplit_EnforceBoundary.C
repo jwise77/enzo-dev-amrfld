@@ -72,7 +72,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
   float *fields[2];
   fields[0] = Eold;
   fields[1] = Enew;
-  float dxscale[] = {LenUnits0/a0, LenUnits/a};
+  float dxscale[] = {LenUnits0, LenUnits};
   float units[] = {ErUnits0, ErUnits};
   float dxa, dya, dza, unit, *udata;
   int i, i2, j, j2, k, k2, idx, idx2, idxbc;

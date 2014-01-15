@@ -61,9 +61,9 @@ int MFSplit::EnforceBoundary(EnzoVector *u)
   int x0len = udims[0] + ugh[0][0] + ugh[0][1];
   int x1len = udims[1] + ugh[1][0] + ugh[1][1];
 
-  float dxa = dx[0]*LenUnits/a;
-  float dya = dx[1]*LenUnits/a;
-  float dza = dx[2]*LenUnits/a;
+  float dxa = dx[0]*LenUnits;
+  float dya = dx[1]*LenUnits;
+  float dza = dx[2]*LenUnits;
 
   float *udata;
 
