@@ -180,7 +180,7 @@ for tstep in range(0,te+1):
             HIprof  = log10(r["xHI"])
             HIIprof = log10(r["xHII"])
             Tprof   = log10(r["logT"])
-            Hradii  = r["radius"]/rs0
+            Hradii  = r["radius"]
         
             # sort results by radius (since that isn't quite working correctly from yt)
             ptype = [('r', float), ('xHI', float), ('xHII', float), ('T', float)]
@@ -205,7 +205,7 @@ for tstep in range(0,te+1):
         figure()
         plot(rvals,HIprofile,'b-',rvals,HIIprofile,'r--')
         grid()
-        xlabel('$r/r_S$')
+        xlabel('$r/L_{box}$')
         ylabel('log(xHI), log(xHII)')
         title('HI, HII Profiles, t =' + Myr + ' Myr')
         legend( ('xHI','xHII'), 'lower right' )

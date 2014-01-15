@@ -25,9 +25,11 @@ DomainRightEdge            = 1.0
 #
 # runtime and I/O
 #
-StopTime                   = 3.3333e-11    // (scaled units)
 StopCycle                  = 99999
-dtDataDump                 = 3.3333e-12
+#StopTime                   = 3.3333e-11    // (scaled units)
+#dtDataDump                 = 3.3333e-12
+StopTime                   = 1.0    // (scaled units)
+dtDataDump                 = 0.1
 ParallelRootGridIO         = 1
 # 
 # units
