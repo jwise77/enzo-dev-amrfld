@@ -212,6 +212,8 @@ int grid::RHIonizationClumpInitializeGrid(int NumChemicals,
 	  d[5] = sqrt(x0r*x0r + x1l*x1l + x2r*x2r);
 	  d[6] = sqrt(x0l*x0l + x1r*x1r + x2r*x2r);
 	  d[7] = sqrt(x0r*x0r + x1r*x1r + x2r*x2r);
+
+	  // approximate volume of cell inside/outside clump
 	  Vin = 0.0;
 	  for (l=0; l<8; l++) {
 	    Vin += (d[l] <= ClumpRadius) ? 0.125 : 0.0;
