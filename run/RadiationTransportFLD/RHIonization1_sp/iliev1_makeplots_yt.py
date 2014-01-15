@@ -51,11 +51,8 @@ add_field("logE", take_log=True, function=_logE,
 def _radius(field, data):
     return (np.sqrt(data["x"]*data["x"] + data["y"]*data["y"] +
                     data["z"]*data["z"]))
-def _convertradius(data):
-    return (data.convert("cm"))
 add_field("radius", take_log=False, function=_radius, 
-          convert_function=_convertradius, 
-          display_name="radius", units=r"\rm{cm}")
+          display_name="radius", units=r"{r/L_{box}}")
 
 
 
@@ -170,7 +167,7 @@ for tstep in range(0,te+1):
             r = pf.h.ray([0.0, 0.0, 0.0], rvec)
             HIprof  = log10(r["xHI"])
             HIIprof = log10(r["xHII"])
-            Hradii  = r["radius"]/rs0
+            Hradii  = r["radius"]
         
             # sort results by radius (since that isn't quite working correctly from yt)
             ptype = [('r', float), ('xHI', float), ('xHII', float)]
@@ -192,7 +189,7 @@ for tstep in range(0,te+1):
         figure()
         plot(rvals,HIprofile,'b-',rvals,HIIprofile,'r--')
         grid()
-        xlabel('$r/r_S$')
+        xlabel('$r/L_{box}$')
         ylabel('log(xHI), log(xHII)')
         title('HI, HII Profiles, t =' + Myr + ' Myr')
         legend( ('xHI','xHII'), 'lower right' )
@@ -210,7 +207,7 @@ title('Propagation of HII Region')
 legend( ('computed', 'analytical'), loc=4 )
 grid()
 axis([ 0.0, 4.5, 0.0, 1.1 ])
-savefig('rad_vs_time' + pictype)
+savefig('rad_vs_time.' + pictype)
 
 figure()
 times = (rdata[0][1:te] + rdata[0][2:te+1])/2.0
@@ -223,4 +220,4 @@ title('Velocity of HII Region')
 legend( ('computed', 'analytical') )
 grid()
 axis([ 0.0, 4.5, -0.2, 1.2 ])
-savefig('vel_vs_time' + pictype)
+savefig('vel_vs_time.' + pictype)
