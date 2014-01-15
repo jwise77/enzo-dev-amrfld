@@ -800,7 +800,7 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   
   // set linear solver tolerance (rescale to relative residual and not actual)
   delta = sol_tolerance / rhsnorm;
-  delta = min(delta, 1.0e-6);
+  delta = max(delta, 1.0e-6);
   
   // insert sol initial guess into HYPRE vector x 
   int xBuff, yBuff, zBuff, Zbl, Ybl, ix, iy, iz;  // mesh indexing shortcuts
@@ -857,6 +857,17 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   if (debug)
     printf(" ----------------------------------------------------------------------\n");
   HYPRE_StructPCGSolve(solver, P, rhsvec, solvec);
+
+
+  
+  // if (debug)  printf("Writing out matrix to file P.mat\n");
+  // HYPRE_StructMatrixPrint("P.mat",P,0);
+  // if (debug)  printf("Writing out rhs to file b.vec\n");
+  // HYPRE_StructVectorPrint("b.vec",rhsvec,0);
+  // if (debug)  printf("Writing out current solution to file x.vec\n");
+  // HYPRE_StructVectorPrint("x.vec",solvec,0);
+
+
   
   // extract solver & preconditioner statistics
   Eflt64 finalresid=1.0;  // HYPRE solver statistics
@@ -866,12 +877,12 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   HYPRE_StructPFMGGetNumIterations(preconditioner, &Pits);
   totIters += Sits;
   if (debug) printf("   lin resid = %.1e (tol = %.1e, |rhs| = %.1e), its = (%i,%i)\n",
-		    finalresid*rhsnorm, sol_tolerance, rhsnorm, Sits, Pits);
+		    finalresid*rhsnorm, delta, rhsnorm, Sits, Pits);
   int recompute_step = 0;
-  if ((sol_tolerance != 0.0) || (finalresid != finalresid)) {
+  if ((delta != 0.0) || (finalresid != finalresid)) {
     // if the final residual is too large, or is nan, set return value to reduce 
     // dt and recompute step, unless we're at the minimum step size already
-    if ((finalresid*rhsnorm > sol_tolerance) || (finalresid != finalresid)) {
+    if ((finalresid*rhsnorm > delta) || (finalresid != finalresid)) {
 
       if (dt > mindt*TimeUnits) {
 	// allow remainder of function to complete (to reset units, etc.), 

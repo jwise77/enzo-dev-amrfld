@@ -1037,12 +1037,25 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationClumpInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    //   x0, left
-    if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 left radiation BCs.");
-    //   x0, right
-    if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 right radiation BCs.");
+    // set homogeneous BCs on all non-periodic faces
+    if (BdryType[0][0] != 0)
+      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 left radiation BCs.");
+    if (BdryType[0][1] != 0)
+      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 right radiation BCs.");
+    if (BdryType[1][0] != 0)
+      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 left radiation BCs.");
+    if (BdryType[1][1] != 0)
+      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 right radiation BCs.");
+    if (BdryType[2][0] != 0)
+      if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 left radiation BCs.");
+    if (BdryType[2][1] != 0)
+      if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 right radiation BCs.");
     break;
     
     

@@ -8,9 +8,12 @@ import numpy as np
 # set the solution tolerance
 tol = 0.1
 
+# set the unit scaling factor
+EgScale = 3.3333e-11**2
+
 # load first dataset, and put 1D radiation field into 'Eg'
 f = h5py.File('DD0001/data0001.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 
 # set domain
 N = Eg.shape
@@ -35,7 +38,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0002/data0002.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.2):
@@ -51,7 +54,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0003/data0003.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.3):
@@ -67,7 +70,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0004/data0004.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.4):
@@ -83,7 +86,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0005/data0005.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.5):
@@ -99,7 +102,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0006/data0006.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.6):
@@ -115,7 +118,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0007/data0007.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.7):
@@ -131,7 +134,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0008/data0008.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.8):
@@ -147,7 +150,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0009/data0009.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 0.9):
@@ -163,7 +166,7 @@ f.close()
 
 # repeat process for next dataset
 f = h5py.File('DD0010/data0010.cpu0000','r')
-Eg = f.get('/Grid00000001/Grey_Radiation_Energy')
+Eg = f.get('/Grid00000001/Grey_Radiation_Energy')/EgScale
 Eg_anal = linspace(0.0, 1.0, N[0])
 for i in range(0,N[0]):
     if (x[i] < 1.0):
