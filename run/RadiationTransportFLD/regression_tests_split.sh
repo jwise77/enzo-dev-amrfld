@@ -92,7 +92,7 @@ echo "    "
 
 
 # now set up yt for remaining tests
-source /usr/local/yt/bin/activate
+source /usr/local/yt_dev/bin/activate
 
 
 echo "    "

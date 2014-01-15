@@ -1,5 +1,5 @@
 #!/bin/bash
-source /usr/local/yt/bin/activate
+source /usr/local/yt_dev/bin/activate
 
 echo "    "
 echo "Date:"
