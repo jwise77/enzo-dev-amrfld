@@ -342,8 +342,8 @@ OBJS_CONFIG_LIB = \
 	Grid_ClearMassFlaggingField.o \
 	Grid_ClearParticleAccelerations.o \
 	Grid_ClearParticleMassFlaggingField.o \
-	Grid_ClusterInitializeGrid.o \
         Grid_ClearPotentialField.o \
+	Grid_ClusterInitializeGrid.o \
         Grid_CollapseTestInitializeGrid.o \
         Grid_CollectGridInformation.o \
         Grid_CollectParticles.o \
@@ -664,48 +664,6 @@ OBJS_CONFIG_LIB = \
 	MemoryPoolRoutines.o \
 	MersenneTwister.o \
 	MFIonizationTestInitialize.o \
-	MFProb_AnalyticalEqns.o \
-	MFProb_ComputeRadiationIntegrals.o \
-	MFProb_ComputeTimeStep.o \
-	MFProb_constructor.o \
-	MFProb_destructor.o \
-	MFProb_Dump.o \
-	MFProb_EnforceBoundary.o \
-	MFProb_Evolve.o \
-	MFProb_FInterface.o \
-	MFProb_InitialGuess.o \
-	MFProb_Initialize.o \
-	MFProb_LocResid.o \
-	MFProb_lsetup.o \
-	MFProb_lsolve.o \
-	MFProb_nlresid.o \
-	MFProb_RadInit.o \
-	MFProb_RadJac.o \
-	MFProb_RadResid.o \
-	MFProb_SetupBoundary.o \
-	MFProb_SetupSystem.o \
-	MFProb_Sources.o \
-	MFProb_WriteParameters.o \
-	MFSplit_AnalyticChemistry.o \
-	MFSplit_ComputeRadiationIntegrals.o \
-	MFSplit_ComputeTimeStep.o \
-	MFSplit_constructor.o \
-	MFSplit_destructor.o \
-	MFSplit_Dump.o \
-	MFSplit_EnforceBoundary.o \
-	MFSplit_EnforceRadiationBounds.o \
-	MFSplit_Evolve.o \
-	MFSplit_FInterface.o \
-	MFSplit_FSRadiationMask.o \
-	MFSplit_InitialGuess.o \
-	MFSplit_Initialize.o \
-	MFSplit_LinearSolve.o \
-	MFSplit_RadInit.o \
-	MFSplit_SetupBoundary.o \
-	MFSplit_SetupSystem.o \
-	MFSplit_Sources.o \
-	MFSplit_Spectra.o \
-	MFSplit_WriteParameters.o \
         mg_calc_defect.o \
         mg_prolong2.o \
         mg_prolong.o \
