@@ -25,15 +25,21 @@ DomainRightEdge            = 1.0 1.0 1.0
 #
 # runtime and I/O
 #
+StopTime                   = 3.3333e-11    // (scaled units)
 StopCycle                  = 99999
-StopTime                   = 1.0    // (scaled units)
-dtDataDump                 = 0.1
+dtDataDump                 = 3.3333e-12
 ParallelRootGridIO         = 1
 # 
 # units
 #
-DensityUnits               = 1.0e-27
-LengthUnits                = 2.036562e22   // 6.6 kpc
-TimeUnits                  = 6.78854e11    // light-crossing time
+DensityUnits               = 1.0e0
+LengthUnits                = 1.0e0
+TimeUnits                  = 1.0e0
+#
+# hydro
+#
+CourantSafetyNumber        = 0.5
+PPMDiffusionParameter      = 1
+PPMFlatteningParameter     = 3
 
 #############################
