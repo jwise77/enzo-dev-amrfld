@@ -117,7 +117,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
   real :: c, pi, StBz, dxi, dyi, dzi, dtfac, dxfac, dyfac, dzfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
-  real :: Rmin, acoef
+  real :: Emin, Rmin, Dmax, acoef
 
 !=======================================================================
   
@@ -138,7 +138,11 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
-  Rmin = 1.d-20 / LenUnits
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain
   do k=1,Nz,1
@@ -155,7 +159,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i-1,j,k))*dxi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i-1,j,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i-1,j,k))*0.5d0, Emin)
 
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i-1,j,k) &
@@ -185,6 +189,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -200,7 +205,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i+1,j,k) - EgOld(i,j,k))*dxi
            
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i+1,j,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i+1,j,k))*0.5d0, Emin)
            
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i+1,j,k) &
@@ -236,6 +241,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
               acoef = 4.d0/3.d0*dxi/kappaE(i,j,k)
               Dlim = 2.0*Dlim / (1.0 + acoef)
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -251,7 +257,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j-1,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j-1,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j-1,k))*0.5d0, Emin)
 
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j-1,k) &
@@ -281,6 +287,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -296,7 +303,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j+1,k) - EgOld(i,j,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j+1,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j+1,k))*0.5d0, Emin)
 
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j+1,k) &
@@ -332,6 +339,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
               acoef = 4.d0/3.d0*dyi/kappaE(i,j,k)
               Dlim = 2.0*Dlim / (1.0 + acoef)
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -347,7 +355,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j,k-1))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k-1))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j,k-1))*0.5d0, Emin)
 
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j,k-1) &
@@ -377,6 +385,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -392,7 +401,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
            AGradEg = abs(EgOld(i,j,k+1) - EgOld(i,j,k))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k+1))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j,k+1))*0.5d0, Emin)
 
            !    total extinction coeff on face
            sigT = 2.d0*kappaE(i,j,k)*kappaE(i,j,k+1) &
@@ -428,6 +437,7 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
               acoef = 4.d0/3.d0*dzi/kappaE(i,j,k)
               Dlim = 2.0*Dlim / (1.0 + acoef)
            endif
+           Dlim = min(Dlim, Dmax)
 
            !    set the relevant matrix entries. Note: the diffusive component 
            !    need not be rescaled, since scaling and chain rule cancel 
@@ -554,7 +564,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
   real :: c, pi, StBz, dxi, dyi, dtfac, dxfac, dyfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
-  real :: Rmin, acoef
+  real :: Rmin, Emin, Dmax, acoef
 
 !=======================================================================
   
@@ -573,7 +583,11 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
-  Rmin = 1.0e-20
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain
   do j=1,Ny,1
@@ -589,7 +603,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j) - EgOld(i-1,j))*dxi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i-1,j))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i-1,j))*0.5d0, Emin)
 
         !    total extinction coeff on face
         sigT = 2.d0*kappaE(i,j)*kappaE(i-1,j) &
@@ -619,6 +633,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         else                         ! standard Levermore-Pomraning (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
 
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
@@ -634,7 +649,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i+1,j) - EgOld(i,j))*dxi
         
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i+1,j))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i+1,j))*0.5d0, Emin)
         
         !    total extinction coeff on face
         sigT = 2.d0*kappaE(i,j)*kappaE(i+1,j) &
@@ -670,6 +685,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
            acoef = 4.d0/3.d0*dxi/kappaE(i,j)
            Dlim = 2.0*Dlim / (1.0 + acoef)
         endif
+        Dlim = min(Dlim, Dmax)
 
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
@@ -685,7 +701,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j) - EgOld(i,j-1))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j-1))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i,j-1))*0.5d0, Emin)
 
         !    total extinction coeff on face
         sigT = 2.d0*kappaE(i,j)*kappaE(i,j-1) &
@@ -715,6 +731,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         else                         ! standard Levermore-Pomraning lim. (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
 
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
@@ -730,7 +747,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
         AGradEg = abs(EgOld(i,j+1) - EgOld(i,j))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j+1))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i,j+1))*0.5d0, Emin)
 
         !    total extinction coeff on face
         sigT = 2.d0*kappaE(i,j)*kappaE(i,j+1) &
@@ -765,6 +782,7 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
            acoef = 4.d0/3.d0*dyi/kappaE(i,j)
            Dlim = 2.0*Dlim / (1.0 + acoef)
         endif
+        Dlim = min(Dlim, Dmax)
 
         !    set the relevant matrix entries. Note: the diffusive component 
         !    need not be rescaled, since scaling and chain rule cancel 
@@ -885,7 +903,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
   real :: c, pi, StBz, dxi, dtfac, dxfac
   real :: Egf, omega, R, sigT, AGradEg, Tf
   real :: Dlim
-  real :: Rmin, acoef
+  real :: Rmin, Emin, Dmax, acoef
 
 !=======================================================================
   
@@ -902,7 +920,11 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
   c  = c_light           ! speed of light [cm/s]
   StBz = 5.6704d-5       ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
   pi = pi_val
-  Rmin = 1.0e-20
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain
   do i=1,Nx,1
@@ -917,7 +939,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      AGradEg = abs(EgOld(i) - EgOld(i-1))*dxi
 
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i-1))*0.5d0
+     Egf = max((EgOld(i) + EgOld(i-1))*0.5d0, Emin)
 
      !    total extinction coeff on face
      sigT = 2.d0*kappaE(i)*kappaE(i-1) &
@@ -947,6 +969,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      else                         ! standard Levermore-Pomraning (LP, 1981)
         Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
      endif
+     Dlim = min(Dlim, Dmax)
 
      !    set the relevant matrix entries. Note: the diffusive component 
      !    need not be rescaled, since scaling and chain rule cancel 
@@ -962,7 +985,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
      AGradEg = abs(EgOld(i+1) - EgOld(i))*dxi
      
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i+1))*0.5d0
+     Egf = max((EgOld(i) + EgOld(i+1))*0.5d0, Emin)
      
      !    total extinction coeff on face
      sigT = 2.d0*kappaE(i)*kappaE(i+1) &
@@ -998,6 +1021,7 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
         acoef = 4.d0/3.d0*dxi/kappaE(i)
         Dlim = 2.0*Dlim / (1.0 + acoef)
      endif
+     Dlim = min(Dlim, Dmax)
 
      !    set the relevant matrix entries. Note: the diffusive component 
      !    need not be rescaled, since scaling and chain rule cancel 
