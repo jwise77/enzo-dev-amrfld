@@ -95,6 +95,9 @@ private:
   { init_nonstencil_(grid, phase_matrix); };
 
   void init_nonstencil_(AMRsolve_Grid& grid, phase_enum phase);
+
+  Scalar limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2, 
+		  Scalar nUn, Scalar lUn, Scalar dxi);
   
   // solve() functions
   void solve_fac_(int itmax, double restol);
