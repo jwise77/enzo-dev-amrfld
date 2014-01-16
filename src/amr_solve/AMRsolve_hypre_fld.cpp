@@ -878,19 +878,37 @@ void AMRsolve_Hypre_FLD::init_elements_matrix_()
 
 //------------------------------------------------------------------------
 
+/// Utility function to handle FLD limiter
+Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2, 
+				    Scalar nUn, Scalar lUn, Scalar dxi) 
+{
+  Scalar c = 2.99792458e10;
+  Scalar Rmin = 1.0e-2 / lUn_;
+  //  Rmin = MIN(Rmin, 1.e-20);   // 1st is astro/cosmo, 2nd is lab frame
+  Scalar Emin = 1.0e-30;
+  Scalar Dmax = 2.0539e-3 * c * lUn_;
+  // Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
+
+  Scalar Eavg = MAX((E1 + E2)*0.5, Emin);
+  Scalar kap = 2.0*k1*k2/(k1+k2)*nUn_;
+  Scalar R = MAX(dxi*ABS(E1 - E2)/Eavg, Rmin);
+  return MIN(c/sqrt(9.0*kap*kap + R*R), Dmax);
+
+} // limiter_()
+
+//------------------------------------------------------------------------
+
 /// Set right-hand-side elements based on values in grids
 void AMRsolve_Hypre_FLD::init_elements_rhs_()
 {
   // declare shortcut variables
-  Scalar Eavg, Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, R, R0, kap, kap0;
+  Scalar Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, R, R0, kap, kap0;
   Scalar D_zl, D_yl, D_xl, D_xr, D_yr, D_zr;
   Scalar D0_zl, D0_yl, D0_xl, D0_xr, D0_yr, D0_zr;
   Scalar afac  = adot_  / aval_;
   Scalar afac0 = adot0_ / aval0_;
   Scalar dtfac  = dt_ * theta_;
   Scalar dtfac0 = dt_ * (1.0 - theta_);
-  // Scalar Rmin = 1.0e-20 / lUn_;
-  Scalar Rmin = 1.0e-20;
   Scalar c = 2.99792458e10;
   int i0, i1, i2, i, ierr;
 
@@ -956,98 +974,50 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  //--------------
 	  // z-directional limiter, lower face
 	  Ed_zl = E[k_000] - E[k_00l];
-	  Eavg = (E[k_000] + E[k_00l])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dzi *fabs(Ed_zl)/Eavg, Rmin);
-	    R0 = MAX(dzi0*fabs(Ed_zl)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_00l] / (kappa[k_000] + kappa[k_00l]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_00l]);
-	  D_zl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_zl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_zl  = limiter_(E[k_000], E[k_00l], kappa[k_000], 
+			   kappa[k_00l], nUn_, lUn_, dzi);
+	  D0_zl = limiter_(E[k_000], E[k_00l], kappa[k_000], 
+			   kappa[k_00l], nUn0_, lUn0_, dzi0);
 
 	  //--------------
 	  // y-directional limiter, lower face
 	  Ed_yl = E[k_000] - E[k_0l0];
-	  Eavg = (E[k_000] + E[k_0l0])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dyi *fabs(Ed_yl)/Eavg, Rmin);
-	    R0 = MAX(dyi0*fabs(Ed_yl)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_0l0] / (kappa[k_000] + kappa[k_0l0]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_0l0]);
-	  D_yl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_yl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_yl  = limiter_(E[k_000], E[k_0l0], kappa[k_000], 
+			   kappa[k_0l0], nUn_, lUn_, dyi);
+	  D0_yl = limiter_(E[k_000], E[k_0l0], kappa[k_000], 
+			   kappa[k_0l0], nUn0_, lUn0_, dyi0);
 
 	  //--------------
 	  // x-directional limiter, lower face
 	  Ed_xl = E[k_000] - E[k_l00];
-	  Eavg = (E[k_000] + E[k_l00])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dxi *fabs(Ed_xl)/Eavg, Rmin);
-	    R0 = MAX(dxi0*fabs(Ed_xl)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_l00] / (kappa[k_000] + kappa[k_l00]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_l00]);
-	  D_xl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_xl = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_xl  = limiter_(E[k_000], E[k_l00], kappa[k_000],
+			   kappa[k_l00], nUn_, lUn_, dxi);
+	  D0_xl = limiter_(E[k_000], E[k_l00], kappa[k_000],
+			   kappa[k_l00], nUn0_, lUn0_, dxi0);
 
 	  //--------------
 	  // x-directional limiter, upper face
 	  Ed_xr = E[k_r00] - E[k_000];
-	  Eavg = (E[k_r00] + E[k_000])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dxi *fabs(Ed_xr)/Eavg, Rmin);
-	    R0 = MAX(dxi0*fabs(Ed_xr)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_r00] / (kappa[k_000] + kappa[k_r00]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_r00]);
-	  D_xr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_xr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_xr  = limiter_(E[k_r00], E[k_000], kappa[k_000],
+			   kappa[k_r00], nUn_, lUn_, dxi);
+	  D0_xr = limiter_(E[k_r00], E[k_000], kappa[k_000],
+			   kappa[k_r00], nUn0_, lUn0_, dxi0);
 
 	  //--------------
 	  // y-directional limiter, upper face
 	  Ed_yr = E[k_0r0] - E[k_000];
-	  Eavg = (E[k_0r0] + E[k_000])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dyi *fabs(Ed_yr)/Eavg, Rmin);
-	    R0 = MAX(dyi0*fabs(Ed_yr)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_0r0] / (kappa[k_000] + kappa[k_0r0]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_0r0]);
-	  D_yr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_yr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_yr  = limiter_(E[k_0r0], E[k_000], kappa[k_000],
+			   kappa[k_0r0], nUn_, lUn_, dyi);
+	  D0_yr = limiter_(E[k_0r0], E[k_000], kappa[k_000],
+			   kappa[k_0r0], nUn0_, lUn0_, dyi0);
 
 	  //--------------
 	  // z-directional limiter, upper face
 	  Ed_zr = E[k_00r] - E[k_000];
-	  Eavg = (E[k_00r] + E[k_000])*0.5;
-	  if (Eavg != 0.0) {
-	    R  = MAX(dzi *fabs(Ed_zr)/Eavg, Rmin);
-	    R0 = MAX(dzi0*fabs(Ed_zr)/Eavg, Rmin);
-	  } else {
-	    R  = Rmin;
-	    R0 = Rmin;
-	  }
-	  kap = 2.0 * kappa[k_000] * kappa[k_00r] / (kappa[k_000] + kappa[k_00r]);
-	  // kap = 0.5 * (kappa[k_000] + kappa[k_00r]);
-	  D_zr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-	  D0_zr = c/sqrt(9.0*kap*kap*nUn0_*nUn0_ + R0*R0);
+	  D_zr  = limiter_(E[k_00r], E[k_000], kappa[k_000],
+			   kappa[k_00r], nUn_, lUn_, dzi);
+	  D0_zr = limiter_(E[k_00r], E[k_000], kappa[k_000],
+			   kappa[k_00r], nUn0_, lUn0_, dzi0);
 
 	  // opacity values in this cell
 	  kap = kappa[k_000];
@@ -1265,12 +1235,10 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
   int     badvalue;
 
   // declare shortcut variables
-  double Eavg, Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, R, kap;
+  double Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, kap;
   double D_zl, D_yl, D_xl, D_xr, D_yr, D_zr;
   double afac = adot_ / aval_;
   double dtfac = dt_ * theta_;
-  // double Rmin = 1.0e-20 / lUn_;
-  double Rmin = 1.0e-20;
   double c = 2.99792458e10;
 
   // access relevant arrays from this grid to compute RHS
@@ -1330,74 +1298,38 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	//--------------
 	// z-directional limiter, lower face
 	Ed_zl = E[k_000] - E[k_00l];
-	Eavg = (E[k_000] + E[k_00l])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dzi*fabs(Ed_zl)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_00l] / (kappa[k_000] + kappa[k_00l]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_00l]);
-	D_zl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_zl = limiter_(E[k_000], E[k_00l], kappa[k_000],
+			kappa[k_00l], nUn_, lUn_, dzi);
 	
 	//--------------
 	// y-directional limiter, lower face
 	Ed_yl = E[k_000] - E[k_0l0];
-	Eavg = (E[k_000] + E[k_0l0])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dyi*fabs(Ed_yl)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_0l0] / (kappa[k_000] + kappa[k_0l0]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_0l0]);
-	D_yl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_yl = limiter_(E[k_000], E[k_0l0], kappa[k_000],
+			kappa[k_0l0], nUn_, lUn_, dyi);
 	
 	//--------------
 	// x-directional limiter, lower face
 	Ed_xl = E[k_000] - E[k_l00];
-	Eavg = (E[k_000] + E[k_l00])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dxi*fabs(Ed_xl)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_l00] / (kappa[k_000] + kappa[k_l00]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_l00]);
-	D_xl = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_xl = limiter_(E[k_000], E[k_l00], kappa[k_000],
+			kappa[k_l00], nUn_, lUn_, dxi);
 	
 	//--------------
 	// x-directional limiter, upper face
 	Ed_xr = E[k_r00] - E[k_000];
-	Eavg = (E[k_r00] + E[k_000])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dxi*fabs(Ed_xr)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_r00] / (kappa[k_000] + kappa[k_r00]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_r00]);
-	D_xr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_xr = limiter_(E[k_000], E[k_r00], kappa[k_000],
+			kappa[k_r00], nUn_, lUn_, dxi);
 	
 	//--------------
 	// y-directional limiter, upper face
 	Ed_yr = E[k_0r0] - E[k_000];
-	Eavg = (E[k_0r0] + E[k_000])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dyi*fabs(Ed_yr)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_0r0] / (kappa[k_000] + kappa[k_0r0]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_0r0]);
-	D_yr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_yr = limiter_(E[k_000], E[k_0r0], kappa[k_000],
+			kappa[k_0r0], nUn_, lUn_, dyi);
 	
 	//--------------
 	// z-directional limiter, upper face
 	Ed_zr = E[k_00r] - E[k_000];
-	Eavg = (E[k_00r] + E[k_000])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dzi*fabs(Ed_zr)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_000] * kappa[k_00r] / (kappa[k_000] + kappa[k_00r]);
-	// kap = 0.5 * (kappa[k_000] + kappa[k_00r]);
-	D_zr = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
+	D_zr = limiter_(E[k_000], E[k_00r], kappa[k_000],
+			kappa[k_00r], nUn_, lUn_, dzi);
 	
 	// opacity values in this cell
 	kap = kappa[k_000]*nUn_;
@@ -2179,12 +2111,9 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
   int axis2 = (axis0+2)%3;
 
   // declare shortcut variables
-  Scalar Eavg, Ed, R, kap, D;
+  Scalar Ed, D;
   Scalar afac = adot_ / aval_;
   Scalar dtfac = dt_ * theta_;
-  // Scalar Rmin = 1.0e-20 / lUn_;
-  Scalar Rmin = 1.0e-20;
-  Scalar c = 2.99792458e10;
 
   // get active enzo grid size
   int n3[3];
@@ -2294,15 +2223,8 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 
 	// Compute limiter at this face
 	Ed = E[k_row] - E[k_col];
-	Eavg = (E[k_row] + E[k_col])*0.5;
-	if (Eavg != 0.0)
-	  R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
-	else
-	  R = Rmin;
-	kap = 2.0 * kappa[k_row] * kappa[k_col] / (kappa[k_row] + kappa[k_col]);
-	// kap = 0.5 * (kappa[k_row] + kappa[k_col]);
-	D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-
+	D = limiter_(E[k_row], E[k_col], kappa[k_row],
+		     kappa[k_col], nUn_, lUn_, dxi);
 
 	// Set matrix values across coarse/fine face
 	val = -val_s * dxfac * D;
