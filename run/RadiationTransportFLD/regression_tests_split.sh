@@ -48,19 +48,19 @@ cd ../
 echo "    "
 
 
-echo "    "
-echo "Running Radiation Stream 1D Split Test"
-cd RadiationStream1D_sp
-ln -fs ../../../src/enzo/enzo.exe enzo
-./enzo -d *.enzo &> output.txt 
-grep Wallclock output.txt
-grep "Successful run" output.txt
-python ./*makeplots.py &> /dev/null
-python ./*check.py &> PASS_FAIL.txt
-echo "error checking result:"
-cat PASS_FAIL.txt
-cd ../
-echo "    "
+# echo "    "
+# echo "Running Radiation Stream 1D Split Test"
+# cd RadiationStream1D_sp
+# ln -fs ../../../src/enzo/enzo.exe enzo
+# ./enzo -d *.enzo &> output.txt 
+# grep Wallclock output.txt
+# grep "Successful run" output.txt
+# python ./*makeplots.py &> /dev/null
+# python ./*check.py &> PASS_FAIL.txt
+# echo "error checking result:"
+# cat PASS_FAIL.txt
+# cd ../
+# echo "    "
 
 echo "    "
 echo "Running Radiating Shock Lab Split Test"
