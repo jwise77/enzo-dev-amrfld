@@ -23,10 +23,12 @@ function limiter(E1, E2, k1, k2, nUn, lUn, tUn, dxi)
   real*8 :: limiter, Eavg, kap, R, Emin, Rmin, Dmax
   
   ! set limiter bounds
-  Rmin = 1.d0/lUn
+  Rmin = 1.d-2/lUn
+  Rmin = min(Rmin, 1.d-20)    ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 0.0021565d0 * c_light * lUn  +  0.0167231d0 * lUn * lUn / tUn
 !  Dmax = 2.0539e-3 * c_light * lUn
+  Dmax = 0.0021565d0 * c_light * lUn  +  0.0167231d0 * lUn * lUn / tUn
+  Dmax = max(Dmax, 1.d20)     ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute limiter
   Eavg = max((E1 + E2)*0.5d0, Emin)
@@ -329,8 +331,8 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
            kap0 = kappa(i,j,k)*nUn0
 
            ! black-body radiation in this cell (if applicable; otherwise Temp=0)
-           eta  = 4.d0*kap*StBz/rUn*Temp(i,j,k)**4
-           eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i,j,k)**4
+           eta  = 4.d0*kap*StBz*Temp(i,j,k)**4
+           eta0 = 4.d0*kap0*StBz*Temp0(i,j,k)**4
 
            ! set the matrix entries.  Note: the diffusive component 
            ! need not be rescaled, since scaling and chain rule cancel 
@@ -615,8 +617,8 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
         kap0 = kappa(i,j)*nUn0
 
         ! black-body radiation in this cell (if applicable)
-        eta  = 4.d0*kap*StBz/rUn*Temp(i,j)**4
-        eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i,j)**4
+        eta  = 4.d0*kap*StBz*Temp(i,j)**4
+        eta0 = 4.d0*kap0*StBz*Temp0(i,j)**4
 
         ! set the matrix entries.  Note: the diffusive component 
         ! need not be rescaled, since scaling and chain rule cancel 
@@ -804,8 +806,8 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
      kap0 = kappa(i)*nUn0
 
      ! black-body radiation in this cell (if applicable)
-     eta  = 4.d0*kap*StBz/rUn*Temp(i)**4
-     eta0 = 4.d0*kap0*StBz/rUn0*Temp0(i)**4
+     eta  = 4.d0*kap*StBz*Temp(i)**4
+     eta0 = 4.d0*kap0*StBz*Temp0(i)**4
 
      ! set the matrix entries.  Note: the diffusive component 
      ! need not be rescaled, since scaling and chain rule cancel 
