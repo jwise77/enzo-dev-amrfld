@@ -118,7 +118,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
   ! locals
   integer  :: i, j, k
   real :: c, pi, dxi, dyi, dzi, Dlim
-  real :: Egf, omega, R, sigT, AGradEg, StBz, Tf, Rmin
+  real :: Egf, omega, R, sigT, AGradEg, StBz, Tf, Rmin, Emin, Dmax
   real, dimension(3) :: GradEgL, GradEgR, DEgL, DEgR
 
   !=======================================================================
@@ -134,7 +134,11 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
   c = c_light        ! speed of light [cm/s]
   pi = pi_val
   StBz = 5.6704d-5   ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
-  Rmin = 1.0d-20
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain
   do k=1,Nz,1
@@ -147,7 +151,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i-1,j,k))*dxi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i-1,j,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i-1,j,k))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i-1,j,k) &
@@ -177,6 +181,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgL(1) = Dlim
 
            !--------------
@@ -185,7 +190,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i+1,j,k) - EgOld(i,j,k))*dxi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i+1,j,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i+1,j,k))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i+1,j,k) &
@@ -215,6 +220,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgR(1) = Dlim
            
            ! correct diffusion coefficient for Marshak boundaries
@@ -228,7 +234,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j-1,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j-1,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j-1,k))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i,j-1,k) &
@@ -258,6 +264,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgL(2) = Dlim
 
            !--------------
@@ -266,7 +273,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i,j+1,k) - EgOld(i,j,k))*dyi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j+1,k))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j+1,k))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i,j+1,k) &
@@ -296,6 +303,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgR(2) = Dlim
            
            ! correct diffusion coefficient for Marshak boundaries
@@ -309,7 +317,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i,j,k) - EgOld(i,j,k-1))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k-1))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j,k-1))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i,j,k-1) &
@@ -339,6 +347,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgL(3) = Dlim
 
            !--------------
@@ -347,7 +356,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            AGradEg = abs(EgOld(i,j,k+1) - EgOld(i,j,k))*dzi
 
            !    face-centered radiation energy value
-           Egf = (EgOld(i,j,k) + EgOld(i,j,k+1))*0.5d0
+           Egf = max((EgOld(i,j,k) + EgOld(i,j,k+1))*0.5d0, Emin)
 
            !    absorption, scattering, total extinction coeffs on face
            sigT = 2.d0 * kappaE(i,j,k) * kappaE(i,j,k+1) &
@@ -377,6 +386,7 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
            else                         ! standard Levermore-Pomraning (LP, 1981)
               Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
            endif
+           Dlim = min(Dlim, Dmax)
            DEgR(3) = Dlim
            
            ! correct diffusion coefficient for Marshak boundaries
@@ -514,7 +524,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
   ! locals
   integer :: i, j, k
   real :: c, pi, dxi, dyi, Dlim
-  real :: Egf, omega, R, sigT, AGradEg, StBz, Tf, Rmin
+  real :: Egf, omega, R, sigT, AGradEg, StBz, Tf, Rmin, Emin, Dmax
   real, dimension(2) :: GradEgL, GradEgR, DEgL, DEgR
 
   !=======================================================================
@@ -529,7 +539,11 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
   c = c_light        ! speed of light [cm/s]
   pi = pi_val
   StBz = 5.6704d-5   ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
-  Rmin = 1.0d-20
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain
   do j=1,Ny,1
@@ -541,7 +555,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         AGradEg = abs(EgOld(i,j) - EgOld(i-1,j))*dxi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i-1,j))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i-1,j))*0.5d0, Emin)
 
         !    absorption, scattering, total extinction coeffs on face
         sigT = 2.d0 * kappaE(i,j) * kappaE(i-1,j) &
@@ -571,6 +585,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         else                         ! standard Levermore-Pomraning (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
         DEgL(1) = Dlim
 
         !--------------
@@ -579,7 +594,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         AGradEg = abs(EgOld(i+1,j) - EgOld(i,j))*dxi
         
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i+1,j))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i+1,j))*0.5d0, Emin)
         
         !    absorption, scattering, total extinction coeffs on face
         sigT = 2.d0 * kappaE(i,j) * kappaE(i+1,j) &
@@ -609,6 +624,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         else                         ! standard Levermore-Pomraning (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
         DEgR(1) = Dlim
            
         ! correct diffusion coefficient for Marshak boundaries
@@ -622,7 +638,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         AGradEg = abs(EgOld(i,j) - EgOld(i,j-1))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j-1))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i,j-1))*0.5d0, Emin)
 
         !    absorption, scattering, total extinction coeffs on face
         sigT = 2.d0 * kappaE(i,j) * kappaE(i,j-1) &
@@ -652,6 +668,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         else                         ! standard Levermore-Pomraning (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
         DEgL(2) = Dlim
 
         !--------------
@@ -660,7 +677,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         AGradEg = abs(EgOld(i,j+1) - EgOld(i,j))*dyi
 
         !    face-centered radiation energy value
-        Egf = (EgOld(i,j) + EgOld(i,j+1))*0.5d0
+        Egf = max((EgOld(i,j) + EgOld(i,j+1))*0.5d0, Emin)
 
         !    absorption, scattering, total extinction coeffs on face
         sigT = 2.d0 * kappaE(i,j) * kappaE(i,j+1) &
@@ -690,6 +707,7 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
         else                         ! standard Levermore-Pomraning (LP, 1981)
            Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
         endif
+        Dlim = min(Dlim, Dmax)
         DEgR(2) = Dlim
         
         ! correct diffusion coefficient for Marshak boundaries
@@ -822,7 +840,7 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
   integer  :: i
   real :: c, pi, dxi, Dlim
   real :: Egf, omega, R, sigT, AGradEg, StBz, Tf
-  real :: GradEgL, GradEgR, DEgL, DEgR, Rmin
+  real :: GradEgL, GradEgR, DEgL, DEgR, Rmin, Emin, Dmax
 
   !=======================================================================
 
@@ -835,7 +853,11 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
   c = c_light        ! speed of light [cm/s]
   pi = pi_val
   StBz = 5.6704d-5   ! Stefan-Boltzmann constant [ergs/(s cm^2 K^4)]
-  Rmin = 1.0d-20
+  Rmin = 1.d-2 / LenUnits
+  Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
+  Emin = 1.d-30
+  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain
   do i=1,Nx,1
@@ -846,7 +868,7 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
      AGradEg = abs(EgOld(i) - EgOld(i-1))*dxi
 
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i-1))*0.5d0
+     Egf = max((EgOld(i) + EgOld(i-1))*0.5d0, Emin)
 
      !    absorption, scattering, total extinction coeffs on face
      sigT = 2.d0 * kappaE(i) * kappaE(i-1) / (kappaE(i)+kappaE(i-1))
@@ -875,6 +897,7 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
      else                         ! standard Levermore-Pomraning (LP, 1981)
         Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
      endif
+     Dlim = min(Dlim, Dmax)
      DEgL = Dlim
 
      !--------------
@@ -883,7 +906,7 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
      AGradEg = abs(EgOld(i+1) - EgOld(i))*dxi
 
      !    face-centered radiation energy value
-     Egf = (EgOld(i) + EgOld(i+1))*0.5d0
+     Egf = max((EgOld(i) + EgOld(i+1))*0.5d0, Emin)
 
      !    absorption, scattering, total extinction coeffs on face
      sigT = 2.d0 * kappaE(i) * kappaE(i+1) / (kappaE(i)+kappaE(i+1))
@@ -912,6 +935,7 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
      else                         ! standard Levermore-Pomraning (LP, 1981)
         Dlim = c/omega*(cosh(R/sigT)/sinh(R/sigT)-sigT/R)/R
      endif
+     Dlim = min(Dlim, Dmax)
      DEgR = Dlim
         
      ! correct diffusion coefficient for Marshak boundaries
