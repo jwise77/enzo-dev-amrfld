@@ -87,9 +87,9 @@ subroutine gFLDProblem_RadiationSource(Ersrc, time, Era, eca, nHIa,     &
 !--------------
 ! locals
   integer :: i, j, k
-  real :: pi, h_nu0, etaconst
+  real :: pi, h_nu0, etaconst, specconst
   real :: dx, dy, dz, dV, cellXl, cellXr, cellYl, cellYr, cellZl, cellZr
-  real :: cellXc, cellYc, cellZc
+  real :: cellXc, cellYc, cellZc, ECenter(3), ERadius, NGDot
 
 !=======================================================================
 
@@ -109,6 +109,13 @@ subroutine gFLDProblem_RadiationSource(Ersrc, time, Era, eca, nHIa,     &
   dV    = dx*dy*dz*(LenUnits)**3      ! cell volume (proper)
   h_nu0 = 13.6d0*ev2erg               ! ionization energy of HI [ergs]
 
+  ! scaling factor for T=10^5 blackbody spectrum
+  if (ESpectrum == 1) then
+     specconst = 1.52877652583602d0
+  else
+     specconst = 1.d0
+  endif
+
   ! compute point source emissivity for various problems
 
   !   point-source emissivity at location (EtaCenter0,EtaCenter1,EtaCenter2)
@@ -119,15 +126,7 @@ subroutine gFLDProblem_RadiationSource(Ersrc, time, Era, eca, nHIa,     &
      if (EtaRadius == 0.d0) then
         
         ! compute eta factor for given ionization source
-        etaconst = h_nu0*NGammaDot/dV
-        ! [the differing factors arise due to monochromatic vs grey 
-        !  radiation energy densities, where the grey source has a 
-        !  T=1e5 blackbody spectrum; this factor is essentially 
-        !  (\int_{nu0}^{infty} chi(nu) dnu) / (\int_0^{infty} chi(nu)/nu dnu)]
-        if (ESpectrum == 1) then
-           etaconst = etaconst * 1.52877652583602d0
-        endif
-
+        etaconst = h_nu0*NGammaDot*specconst/dV
         
         ! place ionization source in one cell
         do k=1,Nz,1
@@ -162,13 +161,7 @@ subroutine gFLDProblem_RadiationSource(Ersrc, time, Era, eca, nHIa,     &
      else
 
         ! compute eta factor for given ionization source
-        etaconst = h_nu0*NGammaDot/dV/8.d0/(EtaRadius**3)
-        ! (the differing factors arise due to monochromatic vs grey 
-        !  radiation energy densities, where the grey source has a 
-        !  T=1e5 blackbody spectrum)
-        if (ESpectrum == 1) then
-           etaconst = etaconst * 1.52877652583602d0
-        endif
+        etaconst = h_nu0*NGammaDot*specconst/dV/8.d0/(EtaRadius**3)
         
         ! place ionization source in center of domain
         do k=1,Nz,1
@@ -202,26 +195,61 @@ subroutine gFLDProblem_RadiationSource(Ersrc, time, Era, eca, nHIa,     &
   !   emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
   else if (ProbType == 412) then
 
-     ! place ionization source along left wall (if on this subdomain)
-     if (x1L == 0.d0) then
+!!$     ! place ionization source along left wall (if on this subdomain)
+!!$     if (x0L == 0.d0) then
+!!$
+!!$        ! compute eta factor for given ionization source, and put on wall
+!!$!        etaconst = 1.0d6*h_nu0*specconst/dx/LenUnits
+!!$        etaconst = 5.0d5*h_nu0*specconst/dx/LenUnits
+!!$        do k=1,Nz,1
+!!$           do j=1,Ny,1
+!!$              Ersrc(1,j,k) = etaconst
+!!$           enddo
+!!$        enddo
+!!$     endif
+     
+     ! place source of radius 1 at center of x-left face
+     ECenter(1) = 0.d0
+     ECenter(2) = 3.3d0
+     ECenter(3) = 3.3d0
+     ERadius = 1.d0
+     NGDot = 3.d51
 
-        ! compute eta factor for given ionization source, and put on wall
-        etaconst = h_nu0*NGammaDot/dy
-        ! (the additional factor arises due to the grey source having a
-        !  T=1e5 blackbody spectrum)
-        etaconst = etaconst * 1.52877652583602d0
-        do k=1,Nz,1
-           do j=1,Ny,1
-              Ersrc(1,j,k) = etaconst
+     ! compute eta factor for given ionization source
+     etaconst = h_nu0*NGDot*specconst/dV/8.d0/(ERadius**3)
+        
+     ! place ionization source at specified location
+     do k=1,Nz,1
+
+        ! z-center (comoving) for this cell
+        cellZc = x2L + (k-0.5d0)*dz
+
+        do j=1,Ny,1
+
+           ! y-center (comoving) for this cell
+           cellYc = x1L + (j-0.5d0)*dy
+
+           do i=1,Nx,1
+
+              ! x-center (comoving) for this cell
+              cellXc = x0L + (i-0.5d0)*dx
+
+              ! see if cell is within source region
+              if ( (abs(cellXc-ECenter(1)) < ERadius*dx) .and. &
+                   (abs(cellYc-ECenter(2)) < ERadius*dy) .and. &
+                   (abs(cellZc-ECenter(3)) < ERadius*dz) ) then
+                 Ersrc(i,j,k) = etaconst
+              endif
+
            enddo
         enddo
-     endif
-     
+     enddo
+
   !   point-source emissivity at center of every processor
   elseif (ProbType == 414) then
 
      ! compute eta factor for given ionization source
-     etaconst = h_nu0*NGammaDot/dV
+     etaconst = h_nu0*NGammaDot*specconst/dV
         
      ! place ionization source in center of subdomain
      Ersrc(int(Nx/2),int(Ny/2),int(Nz/2)) = etaconst

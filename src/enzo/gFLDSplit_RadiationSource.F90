@@ -200,7 +200,7 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
      ! compute eta factor for given ionization source
      etaconst = h_nu0*NGDot*specconst/dV/8.d0/(ERadius**3)
         
-     ! place ionization source in center of domain
+     ! place ionization source at specified location
      do k=1,Nz,1
 
         ! z-center (comoving) for this cell
