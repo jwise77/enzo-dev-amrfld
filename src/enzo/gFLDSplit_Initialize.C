@@ -1031,13 +1031,12 @@ int gFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     
     
   // Ionization test 2: set zero-gradient (homogeneous Neumann)
-  // boundary conditions on x0 faces (others are periodic).
+  // boundary conditions on all non-periodic faces.
   case 412:
     // first call local problem initializer (to allocate/setup local data)
     if (RHIonizationClumpInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    // set homogeneous BCs on all non-periodic faces
     if (BdryType[0][0] != 0)
       if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
 	ENZO_FAIL("Error setting x0 left radiation BCs.");
