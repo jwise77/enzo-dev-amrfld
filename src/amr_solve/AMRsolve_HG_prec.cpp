@@ -228,11 +228,11 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   // copy coarse grid u into Bc_ vector
   ierr = AMRsolve_to_HYPRE_coarse_(Bc_, 1);
 
-  // clear out solution vector of old data
+  // clear out coarse solution vector of old data
   ierr = HYPRE_StructVectorSetConstantValues(*Xc_, 0.0);
   if (ierr != 0)  ERROR("could not initialize Xc_ to 0.0\n");
 
-  // Solve the coarse-grid linear system, update statistics
+  // Solve the coarse grid linear system, update statistics
   int iters;
   ierr = HYPRE_StructPFMGSolve(csolver_,*Ac_,*Bc_,*Xc_);
   if (ierr != 0)  ERROR("could not solve coarse problem with PFMG\n");
