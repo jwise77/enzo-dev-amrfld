@@ -40,8 +40,9 @@ AMRsolve_Domain AMRsolve_Grid::domain_;
 AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
   : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), 
     is_u_allocated_(false), f_(NULL), offset_f_(0), 
-    is_f_allocated_(false), counters_(NULL), counters_init_(0),
-    E_(NULL), E0_(NULL), eta_(NULL), phi_(NULL), gmass_(NULL)
+    is_f_allocated_(false), num_t_allocated_(0), 
+    counters_(NULL), counters_init_(0), E_(NULL), E0_(NULL), 
+    eta_(NULL), phi_(NULL), gmass_(NULL)
 {
   // Initialize 0-sentinels in arrays
   neighbors0_.push_back(0);
@@ -49,6 +50,9 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
 
   // Define a grid given text parameters, typically from a file
   input(parms);
+
+  // set all temporary array pointers to NULL
+  for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
 
   // Allocate AMRsolve_Faces was here.
   faces_ = new AMRsolve_Faces(n_);
@@ -69,8 +73,9 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
 AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 			     Scalar* xu, int* il, int* n) throw()
   : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), is_u_allocated_(false),
-    f_(NULL), offset_f_(0), is_f_allocated_(false), counters_(NULL),
-    E_(NULL), E0_(NULL), eta_(NULL), phi_(NULL), gmass_(NULL)
+    f_(NULL), offset_f_(0), is_f_allocated_(false), 
+    num_t_allocated_(0), counters_(NULL), E_(NULL), E0_(NULL), 
+    eta_(NULL), phi_(NULL), gmass_(NULL)
 {
   // Initialize 0-sentinels in arrays
   neighbors0_.push_back(0);
@@ -78,6 +83,9 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 
   // Define a grid given text parameters, typically from a file
   input(id,id_parent,ip,xl,xu,il,n);
+
+  // set all temporary array pointers to NULL
+  for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
 
   // Allocate AMRsolve_Faces was here.
   faces_ = new AMRsolve_Faces(n_);
@@ -98,9 +106,13 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 AMRsolve_Grid::AMRsolve_Grid(std::string field, FILE* fp) throw()
   : id_(-1), id_parent_(-1), ip_(-1), faces_(NULL), level_(-1),
     u_(NULL), offset_u_(0), is_u_allocated_(false), f_(NULL),
-    offset_f_(0), is_f_allocated_(false), counters_(NULL),
-    E_(NULL), E0_(NULL), eta_(NULL), phi_(NULL), gmass_(NULL)
+    offset_f_(0), is_f_allocated_(false), 
+    num_t_allocated_(0), counters_(NULL), E_(NULL), E0_(NULL), 
+    eta_(NULL), phi_(NULL), gmass_(NULL)
 {
+  // set all temporary array pointers to NULL
+  for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
+
   // read grid information from file
   this->read(field,fp);
 
@@ -184,6 +196,18 @@ void AMRsolve_Grid::write(std::string field, FILE* fp, bool brief) throw()
       }
     }
   }
+  if (field=="t" && t_ && ! brief) {
+    for (int itmp=0; itmp<num_t_allocated_; itmp++) {
+      for (int i0=0; i0<n_[0]; i0++) {
+	for (int i1=0; i1<n_[1]; i1++) {
+	  for (int i2=0; i2<n_[2]; i2++) {
+	    int i = index(i0,i1,i2,n_[0],n_[1],n_[2]);
+	    fprintf(fp,"%d %d %d %22.15e\n",i0,i1,i2,t_[itmp][i]);
+	  }
+	}
+      }
+    }
+  }
 }
 
 //======================================================================
@@ -220,12 +244,12 @@ void AMRsolve_Grid::read(std::string field, FILE* fp, bool brief) throw()
       u_[i] = u;
     }
   }
-  if (f_ && ! brief) {
+  if (field=="f" && ! brief) {
     nf_[0] = n_[0];
     nf_[1] = n_[1];
     nf_[2] = n_[2];
     int offset = 0;
-    allocate_u_(offset);
+    allocate_f_(offset);
     int i0,i1,i2;
     Scalar f;
     while (fscanf(fp,"%d%d%d"SCALAR_SCANF, &i0,&i1,&i2,&f) != EOF) {
@@ -324,12 +348,24 @@ void AMRsolve_Grid::set_f(Scalar* f, int dims[3]) throw()
   
 }
 
+//----------------------------------------------------------------------
+
+Scalar* AMRsolve_Grid::get_t(int itmp, int* nu0, int* nu1, int* nu2) throw()
+{
+  *nu0 = n_[0];
+  *nu1 = n_[1];
+  *nu2 = n_[2];
+  if ((itmp < 0) || (itmp >= num_t_allocated_))  return NULL;
+  return t_[itmp];
+}
+
 //======================================================================
 
 void AMRsolve_Grid::deallocate() throw()
 {
   deallocate_u_();
   deallocate_f_();
+  deallocate_t_();
 }
 
 //----------------------------------------------------------------------
@@ -364,12 +400,30 @@ void AMRsolve_Grid::deallocate_f_() throw()
   is_f_allocated_ = false; // reset default
 }
 
+//----------------------------------------------------------------------
+
+void AMRsolve_Grid::deallocate_t_() throw()
+{
+  for (int itmp=0; itmp<num_t_allocated_; itmp++) {
+    if (t_[itmp] != NULL) {
+      if (trace) {
+	printf("%s:%d TRACE deallocate_t_ %p\n",__FILE__,__LINE__,t_[itmp]);
+	fflush(stdout);
+      }
+      delete [] (t_[itmp]);
+    }
+    t_[itmp] = NULL;
+  }
+  num_t_allocated_ = 0; // reset default
+}
+
 //======================================================================
 
 void AMRsolve_Grid::allocate() throw()
 {
   allocate_u_(0);
   allocate_f_(0);
+  // note: no temporary vectors are allocated by default
 }
 
 //----------------------------------------------------------------------
@@ -398,6 +452,20 @@ void AMRsolve_Grid::allocate_f_(int offset) throw()
     printf("%s:%d TRACE allocate_f_ %p %d\n",__FILE__,__LINE__,f_,offset_f_);
     fflush(stdout);
   }
+}
+
+//----------------------------------------------------------------------
+
+int AMRsolve_Grid::allocate_t_(int offset) throw()
+{
+  int itmp = num_t_allocated_;
+  t_[itmp] = new Scalar[n_[0]*n_[1]*n_[2]];
+  num_t_allocated_++;
+  if (trace) {
+    printf("%s:%d TRACE allocate_t_ %p\n",__FILE__,__LINE__,t_[itmp]);
+    fflush(stdout);
+  }
+  return itmp;
 }
 
 //======================================================================
