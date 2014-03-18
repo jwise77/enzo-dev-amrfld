@@ -6,6 +6,8 @@
 #ifndef AMRSOLVE_GRID_H
 #define AMRSOLVE_GRID_H
 
+#define MAX_TMP 100  // maximum allowed number of temporary arrays
+
 class AMRsolve_Grid
 {
 
@@ -77,6 +79,10 @@ class AMRsolve_Grid
                             ///   f_-offset=new[]
   bool    is_f_allocated_;  /// Whether f_ was allocated by hypre-solve, or 
                             ///   attached to an external array
+
+  Scalar* t_[MAX_TMP];      /// Array of temporary vectors (single cell-centered variables)
+                            ///   Stored as 3D fortran-style arrays
+  int    num_t_allocated_;  /// Number of allocated temporary arrays t_[*]
 
   int* counters_;           /// Counters for nonstencil entries.  Required by
                             ///   hypre to maintain state between nonstencil 
@@ -180,6 +186,9 @@ class AMRsolve_Grid
   /// Set the right-hand side array associated with the Grid
   void set_f(Scalar*, int dims[3]) throw();
 
+  /// Return a pointer to the temporary array associated with the Grid
+  Scalar* get_t(int itmp, int* nu0, int* nu1, int* nu2) throw();
+
   /// Return a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
   Scalar* get_E()     throw() { assert(E_);     return E_;     }; 
@@ -234,6 +243,9 @@ class AMRsolve_Grid
   /// Deallocate storage for the f_ array
   void deallocate_f_() throw();
 
+  /// Deallocate storage for the all of the t_ arrays
+  void deallocate_t_() throw();
+
   /// Allocate storage for the array of values associated with the Grid
   void allocate() throw();
 
@@ -242,6 +254,9 @@ class AMRsolve_Grid
 
   /// Allocate storage for the f_ array
   void allocate_f_(int offset) throw();
+
+  /// Allocate storage for a new t_ array (return the array index)
+  int allocate_t_(int offset) throw();
 
   /// Input the Grid from the given string in compact format
   void input(std::string parms) throw();
