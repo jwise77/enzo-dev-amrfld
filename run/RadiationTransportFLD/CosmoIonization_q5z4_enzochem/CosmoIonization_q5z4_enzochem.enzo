@@ -17,7 +17,7 @@ RateDataCaseBRecombination = 1             // use case-B rates
 ComovingCoordinates        = 1             // Expansion ON
 UseHydro                   = 0             // no hydro
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
-RadHydroParamfile = CosmoIonization_q5z4_sp.gfld
+RadHydroParamfile = CosmoIonization_q5z4_enzochem.gfld
 #
 # grid and boundary 
 #

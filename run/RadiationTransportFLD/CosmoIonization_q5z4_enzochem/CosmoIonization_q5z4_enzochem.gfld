@@ -11,7 +11,7 @@
 RadHydroVelocity = 0.0 0.0 0.0       // initial velocity [cm/s]
 RadHydroTemperature      = 1.0e4     // initial temperature [K]
 RadHydroRadiationEnergy  = 1.0e-35   // initial radiation energy [erg/cm^3]
-RadHydroOmegaBaryonNow   = 0.1       // baryonic fraction of total Omega
+RadHydroOmegaBaryonNow   = 0.2       // baryonic fraction of total Omega
 RadiationBoundaryX0Faces = 2 2       // neumann
 RadiationBoundaryX1Faces = 2 2       // neumann
 RadiationBoundaryX2Faces = 2 2       // neumann
@@ -22,17 +22,15 @@ EtaCenter = 0.0e0 0.0e0 0.0e0        // center of emissivity source
 # General module and solver parameters
 # 
 RadHydroESpectrum       = -1         // monochromatic spectrum at nu_HI
-RadHydroModel           = 4          // isothermal, case-B HII recomb. coeff
+RadHydroModel           = 4          // isothermal, case-B HII recomb coeff
 EnergyCorrectionScaling = 1.0e4      // for Model 4, this holds the Temperature
 RadiationScaling        = 1.0e-1  
+AutomaticScaling        = 0
 RadHydroMaxDt           = 1.0e-2
 RadHydroMinDt           = 1.0e-6
 RadHydroInitDt          = 1.0e-6
-RadHydroDtRadFac        = 0.0002     // 0.02% desired change/step
+RadHydroDtRadFac        = 0.00005    // 0.005% desired change/step
 RadHydroMGPreRelax      = 3          // MG pre-relaxation sweeps
 RadHydroMGPostRelax     = 3          // MG post-relaxation sweeps
 
 #############################
-
-
-
