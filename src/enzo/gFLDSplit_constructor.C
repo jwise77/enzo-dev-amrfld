@@ -52,6 +52,7 @@ gFLDSplit::gFLDSplit()
   sol_npost = -1;
   sol_printl = -1;
   sol_log = -1;
+  Krylov_method = 1;
   totIters = -1;
   for (dim=0; dim<3; dim++) {
     for (face=0; face<2; face++)
@@ -90,6 +91,7 @@ gFLDSplit::gFLDSplit()
   dtfac[1] = 1.0e20;
   dtfac[2] = 1.0e20;
   dtnorm = 0.0;
+  dtgrowth = 1.1;
   tnew = -1.0;
   told = -1.0;
   dt = -1.0;
@@ -110,6 +112,8 @@ gFLDSplit::gFLDSplit()
   ErScale = 1.0;
   ecScale = 1.0;
   NiScale = 1.0;
+  autoScale = true;
+  StartAutoScale = false;
   ErUnits = 1.0;
   ErUnits0 = 1.0;
   ecUnits = 1.0;

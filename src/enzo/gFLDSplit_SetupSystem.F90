@@ -10,7 +10,7 @@
 !=======================================================================
 
 
-function limiter(E1, E2, k1, k2, nUn, lUn, tUn, dxi)
+function gFLD_limiter(E1, E2, k1, k2, nUn, lUn, dxi)
 !=======================================================================
 !  written by: Daniel R. Reynolds
 !  date:       February 2013
@@ -19,31 +19,30 @@ function limiter(E1, E2, k1, k2, nUn, lUn, tUn, dxi)
 !  PURPOSE: Computes the flux limiter at a given face
 !=======================================================================
   implicit none
-  real*8, intent(in) :: E1, E2, k1, k2, nUn, lUn, tUn, dxi
-  real*8 :: limiter, Eavg, kap, R, Emin, Rmin, Dmax
+  real*8, intent(in) :: E1, E2, k1, k2, nUn, lUn, dxi
+  real*8 :: gFLD_limiter, Eavg, kap, R, Emin, Rmin, Dmax
   
   ! set limiter bounds
   Rmin = 1.d-2/lUn
   Rmin = min(Rmin, 1.d-20)    ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-!  Dmax = 2.0539e-3 * c_light * lUn
-  Dmax = 0.0021565d0 * c_light * lUn  +  0.0167231d0 * lUn * lUn / tUn
+  Dmax = 10.d0 * c_light * lUn
   Dmax = max(Dmax, 1.d20)     ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute limiter
   Eavg = max((E1 + E2)*0.5d0, Emin)
   kap = 2.d0*k1*k2/(k1+k2)*nUn        ! harmonic mean
   R = max(dxi*abs(E1 - E2)/Eavg, Rmin)
-  limiter = min(c_light/sqrt(9.d0*kap*kap + R*R), Dmax)
+  gFLD_limiter = min(c_light/sqrt(9.d0*kap*kap + R*R), Dmax)
 
-end function limiter
+end function gFLD_limiter
 !=======================================================================
 
 
 
 subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, rank, dx, dy, dz,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, rank, dx, dy, dz,     &
      BCXl, BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e,  &
      Nx, Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, xlface, xrface,    &
      ylface, yrface, zlface, zrface, ier)
@@ -145,7 +144,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
   integer, intent(in)  :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
   REALSUB, intent(in)  :: a, a0, adot, adot0
   real,    intent(in)  :: dt, theta, dx, dy, dz
-  real,    intent(in)  :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
+  real,    intent(in)  :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
   real,    intent(in)  :: E0(*), E(*), Temp(*), Temp0(*), kappa(*), src(*)
   real*8,  intent(out) :: matentries(*)
   real*8,  intent(out) :: rhsentries(*)
@@ -160,7 +159,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, dz, BCXl,  &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, dz, BCXl,  &
           BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx, &
           Ny, Nz, NGxl, NGxr, NGyl, NGyr, NGzl, NGzr, xlface, xrface,     &
           ylface, yrface, zlface, zrface, ier)
@@ -169,7 +168,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, BCXl,      &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, BCXl,      &
           BCXr, BCYl, BCYr, x0s, x0e, x1s, x1e, Nx, Ny, NGxl, NGxr, NGyl, &
           NGyr, xlface, xrface, ylface, yrface, ier)
 
@@ -177,7 +176,7 @@ subroutine gFLDSplit_SetupSystem(matentries, rhsentries, rhsnorm, E0,   &
 
      call gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0,    &
           E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,  &
-          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, BCXl, BCXr,    &
+          theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, BCXl, BCXr,    &
           x0s, x0e, Nx, NGxl, NGxr, xlface, xrface, ier)
 
   else
@@ -194,7 +193,7 @@ end subroutine gFLDSplit_SetupSystem
 
 subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, dz, BCXl,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, dz, BCXl,     &
      BCXr, BCYl, BCYr, BCZl, BCZr, x0s, x0e, x1s, x1e, x2s, x2e, Nx,    &
      Ny, Nz, NGxl, NGxr, NGyl, NGyr,  NGzl, NGzr, xlface, xrface,       &
      ylface, yrface, zlface, zrface, ier)
@@ -215,7 +214,7 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
   integer,  intent(in) :: BCZl, BCZr, x2s, x2e, Nz, NGzl, NGzr, zlface, zrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx, dy, dz
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
   real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr,1-NGzl:Nz+NGzr), intent(in) &
        :: E0, E, kappa, src, Temp, Temp0
   real*8,  intent(out) :: matentries(7,x0s:x0e,x1s:x1e,x2s:x2e)
@@ -226,13 +225,13 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
   !--------------
   ! locals
   integer :: i, j, k
-  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, StBz
-  real*8  :: dxi, dxi0, dyi, dyi0, dzi, dzi0, afac, afac0
+  real    :: dxi, dxi0, dyi, dyi0, dzi, dzi0
+  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, StBz, afac, afac0
   real*8  :: dxfac, dyfac, dzfac, dxfac0, dyfac0, dzfac0
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8  :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
   real*8  :: D_zl, D0_zl, D_zr, D0_zr, E0d_zl, E0d_zr, Ed_zl, Ed_zr
-  real*8, external :: limiter
+  real*8, external :: gFLD_limiter
 
 !=======================================================================
 
@@ -273,58 +272,64 @@ subroutine gFLDSplit_SetupSystem3D(matentries, rhsentries, rhsnorm, E0, &
         do i=1,Nx,1
 
            !--------------
-           ! z-direction, lower face
+           ! z-directional limiter, lower face
+           !    compute gradients of E0, Ediff
            E0d_zl = E0(i,j,k) - E0(i,j,k-1)
            Ed_zl  = E(i,j,k) - E(i,j,k-1)
-           D0_zl  = limiter(E0(i,j,k), E0(i,j,k-1), kappa(i,j,k), &
-                            kappa(i,j,k-1), nUn0, lUn0, tUn, dzi)
-           D_zl   = limiter(E(i,j,k), E(i,j,k-1), kappa(i,j,k), &
-                            kappa(i,j,k-1), nUn, lUn, tUn, dzi)
+           D0_zl  = gFLD_limiter(E0(i,j,k), E0(i,j,k-1), kappa(i,j,k), &
+                            kappa(i,j,k-1), nUn0, lUn0, dzi)
+           D_zl   = gFLD_limiter(E(i,j,k), E(i,j,k-1), kappa(i,j,k), &
+                            kappa(i,j,k-1), nUn, lUn, dzi)
 
            !--------------
-           ! y-direction, lower face
+           ! y-directional limiter, lower face
+           !    compute gradients of E0, Ediff
            E0d_yl = E0(i,j,k) - E0(i,j-1,k)
            Ed_yl  = E(i,j,k) - E(i,j-1,k)
-           D0_yl  = limiter(E0(i,j,k), E0(i,j-1,k), kappa(i,j,k), &
-                            kappa(i,j-1,k), nUn0, lUn0, tUn, dyi)
-           D_yl   = limiter(E(i,j,k), E(i,j-1,k), kappa(i,j,k), &
-                            kappa(i,j-1,k), nUn, lUn, tUn, dyi)
+           D0_yl  = gFLD_limiter(E0(i,j,k), E0(i,j-1,k), kappa(i,j,k), &
+                            kappa(i,j-1,k), nUn0, lUn0, dyi)
+           D_yl   = gFLD_limiter(E(i,j,k), E(i,j-1,k), kappa(i,j,k), &
+                            kappa(i,j-1,k), nUn, lUn, dyi)
 
            !--------------
-           ! x-direction, lower face
+           ! x-directional limiter, lower face
+           !    compute gradients of E0, Ediff
            E0d_xl = E0(i,j,k) - E0(i-1,j,k)
            Ed_xl  = E(i,j,k) - E(i-1,j,k)
-           D0_xl  = limiter(E0(i,j,k), E0(i-1,j,k), kappa(i,j,k), &
-                            kappa(i-1,j,k), nUn0, lUn0, tUn, dxi)
-           D_xl   = limiter(E(i,j,k), E(i-1,j,k), kappa(i,j,k), &
-                            kappa(i-1,j,k), nUn, lUn, tUn, dxi)
+           D0_xl  = gFLD_limiter(E0(i,j,k), E0(i-1,j,k), kappa(i,j,k), &
+                            kappa(i-1,j,k), nUn0, lUn0, dxi)
+           D_xl   = gFLD_limiter(E(i,j,k), E(i-1,j,k), kappa(i,j,k), &
+                            kappa(i-1,j,k), nUn, lUn, dxi)
 
            !--------------
-           ! x-direction, upper face
+           ! x-directional limiter, upper face
+           !    compute gradients of E0, Ediff
            E0d_xr = E0(i+1,j,k) - E0(i,j,k)
            Ed_xr  = E(i+1,j,k) - E(i,j,k)
-           D0_xr  = limiter(E0(i,j,k), E0(i+1,j,k), kappa(i,j,k), &
-                            kappa(i+1,j,k), nUn0, lUn0, tUn, dxi)
-           D_xr   = limiter(E(i,j,k), E(i+1,j,k), kappa(i,j,k), &
-                            kappa(i+1,j,k), nUn, lUn, tUn, dxi)
+           D0_xr  = gFLD_limiter(E0(i,j,k), E0(i+1,j,k), kappa(i,j,k), &
+                            kappa(i+1,j,k), nUn0, lUn0, dxi)
+           D_xr   = gFLD_limiter(E(i,j,k), E(i+1,j,k), kappa(i,j,k), &
+                            kappa(i+1,j,k), nUn, lUn, dxi)
 
            !--------------
-           ! y-direction, upper face
+           ! y-directional limiter, upper face
+           !    compute gradients of E0, Ediff
            E0d_yr = E0(i,j+1,k) - E0(i,j,k)
            Ed_yr  = E(i,j+1,k) - E(i,j,k)
-           D0_yr  = limiter(E0(i,j,k), E0(i,j+1,k), kappa(i,j,k), &
-                            kappa(i,j+1,k), nUn0, lUn0, tUn, dyi)
-           D_yr   = limiter(E(i,j,k), E(i,j+1,k), kappa(i,j,k), &
-                            kappa(i,j+1,k), nUn, lUn, tUn, dyi)
+           D0_yr  = gFLD_limiter(E0(i,j,k), E0(i,j+1,k), kappa(i,j,k), &
+                            kappa(i,j+1,k), nUn0, lUn0, dyi)
+           D_yr   = gFLD_limiter(E(i,j,k), E(i,j+1,k), kappa(i,j,k), &
+                            kappa(i,j+1,k), nUn, lUn, dyi)
 
            !--------------
-           ! z-direction, upper face
+           ! z-directional limiter, upper face
+           !    compute gradients of E0, Ediff
            E0d_zr = E0(i,j,k+1) - E0(i,j,k)
            Ed_zr  = E(i,j,k+1) - E(i,j,k)
-           D0_zr  = limiter(E0(i,j,k), E0(i,j,k+1), kappa(i,j,k), &
-                            kappa(i,j,k+1), nUn0, lUn0, tUn, dzi)
-           D_zr   = limiter(E(i,j,k), E(i,j,k+1), kappa(i,j,k), &
-                            kappa(i,j,k+1), nUn, lUn, tUn, dzi)
+           D0_zr  = gFLD_limiter(E0(i,j,k), E0(i,j,k+1), kappa(i,j,k), &
+                            kappa(i,j,k+1), nUn0, lUn0, dzi)
+           D_zr   = gFLD_limiter(E(i,j,k), E(i,j,k+1), kappa(i,j,k), &
+                            kappa(i,j,k+1), nUn, lUn, dzi)
 
            ! opacity values in this cell
            kap  = kappa(i,j,k)*nUn
@@ -507,7 +512,7 @@ end subroutine gFLDSplit_SetupSystem3D
 
 subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,       &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, dy, BCXl, BCXr,     &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, dy, BCXl, BCXr,     &
      BCYl, BCYr, x0s, x0e, x1s, x1e, Nx, Ny, NGxl, NGxr, NGyl, NGyr,      &
      xlface, xrface, ylface, yrface, ier)
 !=======================================================================
@@ -526,7 +531,7 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
   integer,  intent(in) :: BCYl, BCYr, x1s, x1e, Ny, NGyl, NGyr, ylface, yrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx, dy
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
   real, dimension(1-NGxl:Nx+NGxr,1-NGyl:Ny+NGyr), intent(in) &
        :: E0, E, src, kappa, Temp, Temp0
   real*8,   intent(out) :: matentries(5,x0s:x0e,x1s:x1e)
@@ -537,12 +542,12 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
   !--------------
   ! locals
   integer :: i, j
-  real*8  :: dtfac, dtfac0, kap, kap0, StBz, eta, eta0
-  real*8  :: dxi, dxi0, dyi, dyi0, afac, afac0
+  real    :: dxi, dxi0, dyi, dyi0
+  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, StBz, afac, afac0
   real*8  :: dxfac, dyfac, dxfac0, dyfac0
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
   real*8  :: D_yl, D0_yl, D_yr, D0_yr, E0d_yl, E0d_yr, Ed_yl, Ed_yr
-  real*8, external :: limiter
+  real*8, external :: gFLD_limiter
 
 !=======================================================================
   
@@ -577,40 +582,44 @@ subroutine gFLDSplit_SetupSystem2D(matentries, rhsentries, rhsnorm, E0,   &
      do i=1,Nx,1
 
         !--------------
-        ! y-direction, lower face
+        ! y-directional limiter, lower face
+        !    compute gradients of E0, Ediff
         E0d_yl = E0(i,j) - E0(i,j-1)
         Ed_yl  = E(i,j) - E(i,j-1)
-        D0_yl  = limiter(E0(i,j), E0(i,j-1), kappa(i,j), &
-                         kappa(i,j-1), nUn0, lUn0, tUn, dyi)
-        D_yl   = limiter(E(i,j), E(i,j-1), kappa(i,j), &
-                         kappa(i,j-1), nUn, lUn, tUn, dyi)
+        D0_yl  = gFLD_limiter(E0(i,j), E0(i,j-1), kappa(i,j), &
+                         kappa(i,j-1), nUn0, lUn0, dyi)
+        D_yl   = gFLD_limiter(E(i,j), E(i,j-1), kappa(i,j), &
+                         kappa(i,j-1), nUn, lUn, dyi)
 
         !--------------
-        ! x-direction, lower face
+        ! x-directional limiter, lower face
+        !    compute gradients of E0, Ediff
         E0d_xl = E0(i,j) - E0(i-1,j)
         Ed_xl  = E(i,j) - E(i-1,j)
-        D0_xl  = limiter(E0(i,j), E0(i-1,j), kappa(i,j), &
-                         kappa(i-1,j), nUn0, lUn0, tUn, dxi)
-        D_xl   = limiter(E(i,j), E(i-1,j), kappa(i,j), &
-                         kappa(i-1,j), nUn, lUn, tUn, dxi)
+        D0_xl  = gFLD_limiter(E0(i,j), E0(i-1,j), kappa(i,j), &
+                         kappa(i-1,j), nUn0, lUn0, dxi)
+        D_xl   = gFLD_limiter(E(i,j), E(i-1,j), kappa(i,j), &
+                         kappa(i-1,j), nUn, lUn, dxi)
 
         !--------------
-        ! x-direction, upper face
+        ! x-directional limiter, upper face
+        !    compute gradients of E0, Ediff
         E0d_xr = E0(i+1,j) - E0(i,j)
         Ed_xr  = E(i+1,j) - E(i,j)
-        D0_xr  = limiter(E0(i,j), E0(i+1,j), kappa(i,j), &
-                         kappa(i+1,j), nUn0, lUn0, tUn, dxi)
-        D_xr   = limiter(E(i,j), E(i+1,j), kappa(i,j), &
-                         kappa(i+1,j), nUn, lUn, tUn, dxi)
+        D0_xr  = gFLD_limiter(E0(i,j), E0(i+1,j), kappa(i,j), &
+                         kappa(i+1,j), nUn0, lUn0, dxi)
+        D_xr   = gFLD_limiter(E(i,j), E(i+1,j), kappa(i,j), &
+                         kappa(i+1,j), nUn, lUn, dxi)
 
         !--------------
-        ! y-direction, upper face
+        ! y-directional limiter, upper face
+        !    compute gradients of E0, Ediff
         E0d_yr = E0(i,j+1) - E0(i,j)
         Ed_yr  = E(i,j+1) - E(i,j)
-        D0_yr  = limiter(E0(i,j), E0(i,j+1), kappa(i,j), &
-                         kappa(i,j+1), nUn0, lUn0, tUn, dyi)
-        D_yr   = limiter(E(i,j), E(i,j+1), kappa(i,j), &
-                         kappa(i,j+1), nUn, lUn, tUn, dyi)
+        D0_yr  = gFLD_limiter(E0(i,j), E0(i,j+1), kappa(i,j), &
+                         kappa(i,j+1), nUn0, lUn0, dyi)
+        D_yr   = gFLD_limiter(E(i,j), E(i,j+1), kappa(i,j), &
+                         kappa(i,j+1), nUn, lUn, dyi)
 
         ! opacity values in this cell
         kap  = kappa(i,j)*nUn
@@ -727,7 +736,7 @@ end subroutine gFLDSplit_SetupSystem2D
 
 subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
      E, Temp, Temp0, kappa, src, dt, a, a0, adot, adot0, ESpectrum,     &
-     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn, dx, BCXl, BCXr, x0s,  &
+     theta, aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, dx, BCXl, BCXr, x0s,  &
      x0e, Nx, NGxl, NGxr, xlface, xrface, ier)
 !=======================================================================
 !  written by: Daniel R. Reynolds
@@ -744,7 +753,7 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   integer,  intent(in) :: BCXl, BCXr, x0s, x0e, Nx, NGxl, NGxr, xlface, xrface
   REALSUB,  intent(in) :: a, a0, adot, adot0
   real,     intent(in) :: dt, theta, dx
-  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0, tUn
+  real,     intent(in) :: aUn, lUn, lUn0, rUn, rUn0, nUn, nUn0
   real, dimension(1-NGxl:Nx+NGxr), intent(in) :: E0, E, src, kappa, Temp, Temp0
   real*8,   intent(out) :: matentries(3,x0s:x0e)
   real*8,   intent(out) :: rhsentries(x0s:x0e)
@@ -754,11 +763,11 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   !--------------
   ! locals
   integer :: i
-  real*8  :: dtfac, dtfac0, kap, kap0, StBz, eta, eta0
-  real*8  :: dxi, dxi0, afac, afac0
+  real    :: dxi, dxi0
+  real*8  :: dtfac, dtfac0, kap, kap0, eta, eta0, StBz, afac, afac0
   real*8  :: dxfac, dxfac0
   real*8  :: D_xl, D0_xl, D_xr, D0_xr, E0d_xl, E0d_xr, Ed_xl, Ed_xr
-  real*8, external :: limiter
+  real*8, external :: gFLD_limiter
 
 !=======================================================================
   
@@ -788,18 +797,20 @@ subroutine gFLDSplit_SetupSystem1D(matentries, rhsentries, rhsnorm, E0, &
   do i=1,Nx,1
 
      !--------------
-     ! x-direction, lower face
+     ! x-directional limiter, lower face
+     !    compute gradients of E0, Ediff
      E0d_xl = E0(i) - E0(i-1)
      Ed_xl  = E(i) - E(i-1)
-     D0_xl  = limiter(E0(i), E0(i-1), kappa(i), kappa(i-1), nUn0, lUn0, tUn, dxi)
-     D_xl   = limiter(E(i), E(i-1), kappa(i), kappa(i-1), nUn, lUn, tUn, dxi)
+     D0_xl  = gFLD_limiter(E0(i), E0(i-1), kappa(i), kappa(i-1), nUn0, lUn0, dxi)
+     D_xl   = gFLD_limiter(E(i), E(i-1), kappa(i), kappa(i-1), nUn, lUn, dxi)
 
      !--------------
-     ! x-direction, upper face
+     ! x-directional limiter, upper face
+     !    compute gradients of E0, Ediff
      E0d_xr = E0(i+1) - E0(i)
      Ed_xr  = E(i+1) - E(i)
-     D0_xr  = limiter(E0(i), E0(i+1), kappa(i), kappa(i+1), nUn0, lUn0, tUn, dxi)
-     D_xr   = limiter(E(i), E(i+1), kappa(i), kappa(i+1), nUn, lUn, tUn, dxi)
+     D0_xr  = gFLD_limiter(E0(i), E0(i+1), kappa(i), kappa(i+1), nUn0, lUn0, dxi)
+     D_xr   = gFLD_limiter(E(i), E(i+1), kappa(i), kappa(i+1), nUn, lUn, dxi)
 
      ! opacity values in this cell
      kap  = kappa(i)*nUn

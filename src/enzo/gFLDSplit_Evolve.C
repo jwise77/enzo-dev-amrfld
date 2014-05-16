@@ -24,8 +24,11 @@
 #ifdef TRANSFER
  
 #include "gFLDSplit.h"
-#include "InexactNewton.h"
 #include "CosmologyParameters.h"
+
+
+//#define FAIL_ON_NAN
+#define NO_FAIL_ON_NAN
 
 
 /* function prototypes */
@@ -174,11 +177,6 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
       RadSrc[i] = EmissivitySource[i];
 
     eta_set = 1;
-    float srcNorm = extsrc->rmsnorm_component(0);
-    float srcMax  = extsrc->infnorm_component(0);
-    if (debug) {
-      printf("   emissivity norm = %g,  max = %g\n",srcNorm,srcMax);
-    }
   }
 #endif
 
@@ -255,7 +253,7 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	   UTypVals[0],UTypVals[0]*ErUnits, UMaxVals[0],UMaxVals[0]*ErUnits);
     printf("      ec rms = %13.7e (%8.2e), max = %13.7e (%8.2e)\n",
 	   UTypVals[1],UTypVals[1]*ecUnits, UMaxVals[1],UMaxVals[1]*ecUnits);
-    if (Nchem == 1) {
+    if (Nchem >= 1) {
       printf("     nHI rms = %13.7e (%8.2e), max = %13.7e (%8.2e)\n",
 	     UTypVals[2],UTypVals[2]*NiUnits, UMaxVals[2],UMaxVals[2]*NiUnits);
     }
@@ -264,6 +262,30 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	     UTypVals[3],UTypVals[3]*NiUnits, UMaxVals[3],UMaxVals[3]*NiUnits);
       printf("   nHeII rms = %13.7e (%8.2e), max = %13.7e (%8.2e)\n",
 	     UTypVals[4],UTypVals[4]*NiUnits, UMaxVals[4],UMaxVals[4]*NiUnits);
+    }
+  }
+
+  // if autoScale enabled, determine scaling factor updates here
+  float ScaleCorrTol = 1.e-2;
+  float ErScaleCorr = 1.0;
+  float ecScaleCorr = 1.0;
+  float NiScaleCorr = 1.0;
+  if (StartAutoScale && autoScale) {
+    if ((UMaxVals[0] - UTypVals[0]) > ScaleCorrTol*UMaxVals[0])
+      ErScaleCorr = UMaxVals[0];
+    if ((UMaxVals[1] - UTypVals[1]) > ScaleCorrTol*UMaxVals[1])
+      ecScaleCorr = UMaxVals[1];
+    if (Nchem > 0) {
+      float NiMax = UMaxVals[2];
+      float NiTyp = UTypVals[2];
+      if (Nchem > 1) {
+	NiMax = max(NiMax, UMaxVals[3]);
+	NiTyp = max(NiTyp, UTypVals[3]);
+	NiMax = max(NiMax, UMaxVals[4]);
+	NiTyp = max(NiTyp, UTypVals[4]);
+      }
+      if ((NiMax - NiTyp) > ScaleCorrTol*NiMax)
+	NiScaleCorr = NiMax;
     }
   }
 
@@ -285,7 +307,7 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   // internal time-stepping loop to catch up with Hydro time
   float end_time = tnew + dthydro;
   radstop = 0;
-  for (radstep=0; radstep<=maxsubcycles*10; radstep++) {
+  for (radstep=0; radstep<=maxsubcycles*100; radstep++) {
       
     // start MPI timer for radiation solver
 #ifdef USE_MPI
@@ -316,13 +338,18 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
       
       // take a radiation step
       recompute_step = this->RadStep(ThisGrid, eta_set);
-
-      // if the radiation step was unsuccessful, update dtrad and try again
-      if (recompute_step)  dtrad = max(dtrad/10, mindt);
+      
+      // if the radiation step was unsuccessful, back-track to previous 
+      // step and pull back on dtrad
+      if (recompute_step) {
+	dtrad = max(dtrad*0.5, mindt);
+	tnew = told;
+	radstop = 0;
+      }
 
     }
-
-	
+    
+    
     // stop MPI timer for radiation solver, increment total
 #ifdef USE_MPI
     ftime2 = MPI_Wtime();
@@ -331,7 +358,7 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 #endif
     HYPREtime += ftime2-stime2;
     
-
+    
     // subcycle the chemistry and gas energy equations (if not handled elsewhere)
     if (!RadiativeCooling) {
       
@@ -400,7 +427,7 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
     // update the radiation time step size for next time step
     //   (limit growth at each cycle)
     float dt_est = this->ComputeTimeStep(U0,sol,0);
-    dtrad = min(dt_est, 1.1*dtrad);
+    dtrad = min(dt_est, dtgrowth*dtrad);
 
     // update Enzo radiation field with new values
     U0->copy_component(sol, 0);
@@ -437,6 +464,13 @@ int gFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   U0->scale_component(0,ErScale);
   U0->scale_component(1,ecScale);
   for (i=1; i<=Nchem; i++)  U0->scale_component(i+1, NiScale);
+
+  // update scaling factors to account for new values
+  if (StartAutoScale && autoScale) {
+    ErScale *= ErScaleCorr;
+    ecScale *= ecScaleCorr;
+    NiScale *= NiScaleCorr;
+  }
 
   //   Update dependent chemical species densities (ne, nHII, nHeIII) 
   //   using computed values
@@ -711,16 +745,23 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   told *= TimeUnits;
   tnew *= TimeUnits;
 
-  //   compute emissivity at this internal time step (if provided internally)
+  // compute emissivity at this internal time step (if provided internally)
   float *RadSrc = extsrc->GetData(0);
   if (eta_set == 0) {
     if (this->RadiationSource(RadSrc, &tnew) != SUCCESS) 
       ENZO_FAIL("gFLDSplit_RadStep: Error in RadiationSource routine");
-    float srcNorm = extsrc->rmsnorm_component(0);
-    float srcMax  = extsrc->infnorm_component(0);
-    if (debug)  printf("   emissivity norm = %g,  max = %g\n",srcNorm,srcMax);
   }
+
+  // compute emissivity statistics  
+  float srcNorm = extsrc->rmsnorm_component(0);
+  float srcMax  = extsrc->infnorm_component(0);
+  if (debug)  printf("   emissivity norm = %g,  max = %g\n",srcNorm,srcMax);
     
+  // turn on automatic scaling for next step if this step has nontrivial emissivity
+  float ScaleCorrTol = 1.e-2;
+  if ((srcMax - srcNorm) > ScaleCorrTol*srcMax)  
+    StartAutoScale = true;
+
   // Multigrid solver: for periodic dims, only coarsen until grid no longer divisible by 2
   Eint32 max_levels, level=-1;
   int Ndir;
@@ -799,8 +840,9 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   HYPRE_StructVectorSetBoxValues(rhsvec, ilower, iupper, rhsentries);
   
   // set linear solver tolerance (rescale to relative residual and not actual)
-  delta = sol_tolerance / rhsnorm;
-  delta = max(delta, 1.0e-6);
+  delta = (rhsnorm > 1.e-8) ? sol_tolerance/rhsnorm : delta;
+  //  delta = min(delta, 1.0e-6);
+  delta = min(delta, 1.0e-2);
   
   // insert sol initial guess into HYPRE vector x 
   int xBuff, yBuff, zBuff, Zbl, Ybl, ix, iy, iz;  // mesh indexing shortcuts
@@ -822,10 +864,20 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   // assemble vectors
   HYPRE_StructVectorAssemble(solvec);
   HYPRE_StructVectorAssemble(rhsvec);
-  
-  // set up the solver [PCG] and preconditioner [PFMG]
+
+  // set up the solver and preconditioner [PFMG]
   //    create the solver & preconditioner
-  HYPRE_StructPCGCreate(MPI_COMM_WORLD, &solver);
+  switch (Krylov_method) {
+  case 0:   // PCG
+    HYPRE_StructPCGCreate(MPI_COMM_WORLD, &solver);
+    break;
+  case 2:   // GMRES
+    HYPRE_StructGMRESCreate(MPI_COMM_WORLD, &solver);
+    break;
+  default:  // BiCGStab
+    HYPRE_StructBiCGSTABCreate(MPI_COMM_WORLD, &solver);
+    break;
+  }
   HYPRE_StructPFMGCreate(MPI_COMM_WORLD, &preconditioner);
   
   //    set preconditioner options
@@ -837,59 +889,111 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
   HYPRE_StructPFMGSetNumPostRelax(preconditioner, sol_npost);
   
   //    set solver options
-  HYPRE_StructPCGSetPrintLevel(solver, sol_printl);
-  HYPRE_StructPCGSetLogging(solver, sol_log);
-  HYPRE_StructPCGSetRelChange(solver, 1);
-  if (rank > 1) {
-    HYPRE_StructPCGSetMaxIter(solver, sol_maxit);
-    HYPRE_StructPCGSetPrecond(solver, 
-			      (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSolve,  
-			      (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSetup, 
-			      preconditioner);
+  switch (Krylov_method) {
+  case 0:   // PCG
+    HYPRE_StructPCGSetPrintLevel(solver, sol_printl);
+    HYPRE_StructPCGSetLogging(solver, sol_log);
+    HYPRE_StructPCGSetRelChange(solver, 1);
+    if (rank > 1) {
+      HYPRE_StructPCGSetMaxIter(solver, sol_maxit);
+      HYPRE_StructPCGSetPrecond(solver, 
+				(HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSolve,  
+				(HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSetup, 
+				preconditioner);
+    }
+    else {    // ignore preconditioner for 1D tests (bug); increase CG its
+      HYPRE_StructPCGSetMaxIter(solver, sol_maxit*500);
+    }
+    if (delta != 0.0)   HYPRE_StructPCGSetTol(solver, delta);
+    HYPRE_StructPCGSetup(solver, P, rhsvec, solvec);
+    break;
+  case 2:   // GMRES
+    //  HYPRE_StructGMRESSetPrintLevel(solver, sol_printl);
+    HYPRE_StructGMRESSetLogging(solver, sol_log);
+    //  HYPRE_StructGMRESSetRelChange(solver, 1);
+    if (rank > 1) {
+      HYPRE_StructGMRESSetMaxIter(solver, sol_maxit);
+      HYPRE_StructGMRESSetKDim(solver, sol_maxit);
+      HYPRE_StructGMRESSetPrecond(solver, 
+				  (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSolve,  
+				  (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSetup, 
+				  preconditioner);
+    }
+    else {    // ignore preconditioner for 1D tests (bug); increase CG its
+      HYPRE_StructGMRESSetMaxIter(solver, sol_maxit*50);
+      HYPRE_StructGMRESSetKDim(solver, sol_maxit*50);
+    }
+    if (delta != 0.0)   HYPRE_StructGMRESSetTol(solver, delta);
+    HYPRE_StructGMRESSetup(solver, P, rhsvec, solvec);
+    break;
+  default:  // BiCGStab
+    //  HYPRE_StructBiCGSTABSetPrintLevel(solver, sol_printl);
+    HYPRE_StructBiCGSTABSetLogging(solver, sol_log);
+    if (rank > 1) {
+      HYPRE_StructBiCGSTABSetMaxIter(solver, sol_maxit);
+      HYPRE_StructBiCGSTABSetPrecond(solver, 
+				     (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSolve,  
+				     (HYPRE_PtrToStructSolverFcn) HYPRE_StructPFMGSetup, 
+				     preconditioner);
+    }
+    else {    // ignore preconditioner for 1D tests (bug); increase its
+      HYPRE_StructBiCGSTABSetMaxIter(solver, sol_maxit*500);
+    }
+    if (delta != 0.0)   HYPRE_StructBiCGSTABSetTol(solver, delta);
+    HYPRE_StructBiCGSTABSetup(solver, P, rhsvec, solvec);
+    break;
   }
-  else {    // ignore smg preconditioner for 1D tests (bug); increase CG its
-    HYPRE_StructPCGSetMaxIter(solver, sol_maxit*500);
-  }
-  if (delta != 0.0)   HYPRE_StructPCGSetTol(solver, delta);
-  HYPRE_StructPCGSetup(solver, P, rhsvec, solvec);
   
   // solve the linear system
   if (debug)
     printf(" ----------------------------------------------------------------------\n");
-  HYPRE_StructPCGSolve(solver, P, rhsvec, solvec);
-
-
-  
-  // if (debug)  printf("Writing out matrix to file P.mat\n");
-  // HYPRE_StructMatrixPrint("P.mat",P,0);
-  // if (debug)  printf("Writing out rhs to file b.vec\n");
-  // HYPRE_StructVectorPrint("b.vec",rhsvec,0);
-  // if (debug)  printf("Writing out current solution to file x.vec\n");
-  // HYPRE_StructVectorPrint("x.vec",solvec,0);
-
-
+  switch (Krylov_method) {
+  case 0:   // PCG
+    HYPRE_StructPCGSolve(solver, P, rhsvec, solvec);
+    break;
+  case 2:   // GMRES
+    HYPRE_StructGMRESSolve(solver, P, rhsvec, solvec);
+    break;
+  default:  // BiCGStab
+    HYPRE_StructBiCGSTABSolve(solver, P, rhsvec, solvec);
+    break;
+  }
   
   // extract solver & preconditioner statistics
   Eflt64 finalresid=1.0;  // HYPRE solver statistics
   Eint32 Sits=0, Pits=0;  // HYPRE solver statistics
-  HYPRE_StructPCGGetFinalRelativeResidualNorm(solver, &finalresid);
-  HYPRE_StructPCGGetNumIterations(solver, &Sits);
+  switch (Krylov_method) {
+  case 0:   // PCG
+    HYPRE_StructPCGGetFinalRelativeResidualNorm(solver, &finalresid);
+    HYPRE_StructPCGGetNumIterations(solver, &Sits);
+    break;
+  case 2:   // GMRES
+    HYPRE_StructGMRESGetFinalRelativeResidualNorm(solver, &finalresid);
+    HYPRE_StructGMRESGetNumIterations(solver, &Sits);
+    break;
+  default:  // BiCGStab
+    HYPRE_StructBiCGSTABGetFinalRelativeResidualNorm(solver, &finalresid);
+    HYPRE_StructBiCGSTABGetNumIterations(solver, &Sits);
+    break;
+  }
   HYPRE_StructPFMGGetNumIterations(preconditioner, &Pits);
   totIters += Sits;
   if (debug) printf("   lin resid = %.1e (tol = %.1e, |rhs| = %.1e), its = (%i,%i)\n",
-		    finalresid*rhsnorm, delta, rhsnorm, Sits, Pits);
+		    finalresid, delta, rhsnorm, Sits, Pits);
   int recompute_step = 0;
-  if ((delta != 0.0) || (finalresid != finalresid)) {
-    // if the final residual is too large, or is nan, set return value to reduce 
+   if ((sol_tolerance != 0.0) || isnan(finalresid)) {
+    // if final residual is too large (or nan) set return value to reduce 
     // dt and recompute step, unless we're at the minimum step size already
-    if ((finalresid*rhsnorm > delta) || (finalresid != finalresid)) {
+    if ((finalresid*rhsnorm > sol_tolerance) || isnan(finalresid)) {
 
+#ifndef FAIL_ON_NAN
       if (dt > mindt*TimeUnits) {
 	// allow remainder of function to complete (to reset units, etc.), 
 	// but have calling routine update dt and compute step again.
 	recompute_step = 1;
       }
       else {
+#endif
 	fprintf(stderr,"gFLDSplit_RadStep: could not achieve prescribed tolerance!\n");
 	
 	// output linear system to disk
@@ -903,27 +1007,40 @@ int gFLDSplit::RadStep(HierarchyEntry *ThisGrid, int eta_set)
 	// dump module parameters to disk
 	this->Dump(sol);
 	ENZO_FAIL("Error in gFLDSplit_RadStep");
+#ifndef FAIL_ON_NAN
       }
+#endif
     }
   }
   if (debug)  printf(" ======================================================================\n\n");
   
   
-  // extract values from solution vector, adding them to solution
-  for (iz=SolvIndices[2][0]; iz<=SolvIndices[2][1]; iz++) {
-    Zbl = (iz+zBuff)*ArrDims[0]*ArrDims[1];
-    ilower[2] = iz;  iupper[2] = iz;
-    for (iy=SolvIndices[1][0]; iy<=SolvIndices[1][1]; iy++) {
-      Ybl = (iy+yBuff)*ArrDims[0];
-      ilower[1] = iy;  iupper [1] = iy;
-      HYPRE_StructVectorGetBoxValues(solvec, ilower, iupper, HYPREbuff);
-      for (ix=0; ix<=SolvIndices[0][1]-SolvIndices[0][0]; ix++) 
-	Eg_new[Zbl+Ybl+xBuff+ix] += HYPREbuff[ix];
+  // if solve was successful: extract values and add to current solution
+  if (!recompute_step) 
+    for (iz=SolvIndices[2][0]; iz<=SolvIndices[2][1]; iz++) {
+      Zbl = (iz+zBuff)*ArrDims[0]*ArrDims[1];
+      ilower[2] = iz;  iupper[2] = iz;
+      for (iy=SolvIndices[1][0]; iy<=SolvIndices[1][1]; iy++) {
+	Ybl = (iy+yBuff)*ArrDims[0];
+	ilower[1] = iy;  iupper [1] = iy;
+	HYPRE_StructVectorGetBoxValues(solvec, ilower, iupper, HYPREbuff);
+	for (ix=0; ix<=SolvIndices[0][1]-SolvIndices[0][0]; ix++) 
+	  Eg_new[Zbl+Ybl+xBuff+ix] += HYPREbuff[ix];
+      }
     }
-  }
   
   // destroy HYPRE solver & preconditioner structures
-  HYPRE_StructPCGDestroy(solver);
+  switch (Krylov_method) {
+  case 0:   // PCG
+    HYPRE_StructPCGDestroy(solver);
+    break;
+  case 2:   // GMRES
+    HYPRE_StructGMRESDestroy(solver);
+    break;
+  default:  // BiCGStab
+    HYPRE_StructBiCGSTABDestroy(solver);
+    break;
+  }
   HYPRE_StructPFMGDestroy(preconditioner);
   
   // enforce a solution floor on radiation
