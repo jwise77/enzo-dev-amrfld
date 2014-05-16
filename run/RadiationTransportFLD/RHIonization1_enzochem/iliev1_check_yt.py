@@ -4,15 +4,17 @@
 # imports
 from pylab import *
 from yt.mods import *
+import numpy as np
+
+# reduce log level of yt 
+from yt.config import ytcfg
+ytcfg["yt","loglevel"] = "50"
 
 # set the total number of snapshots
 te = 50
 
 # set the solution tolerance
-tol = 0.002
-
-# load the reference solution
-r_sol = np.load('r_sol.npy')
+tol = 0.02
 
 # set some constants
 Ngammadot = 5.0e48     # ionization source strength [photons/sec]
@@ -47,17 +49,6 @@ add_field("logE", take_log=True, function=_logE,
           display_name="Radiation\; Energy\; Density", 
           units=r"\rm{erg}/\rm{cm}^3")
 
-#   Temperature (log plot)
-def _logT(field, data):
-    mp = 1.67262171e-24
-    kb = 1.3806504e-16
-    gamma = 5.0/3.0
-    tmp = (data["Total_Energy"] * data["Density"] / 
-           (2.0*data["Density"] - data["HI_Density"]))
-    return ((gamma - 1.0)*mp/kb * tmp)
-add_field("logT", take_log=True, function=_logT, 
-          display_name="Temperature", units=r"\rm{K}")
-
 #   Radius from domain center
 def _radius(field, data):
     return (np.sqrt(data["x"]*data["x"] + data["y"]*data["y"] +
@@ -69,11 +60,12 @@ add_field("radius", take_log=False, function=_radius,
           display_name="radius", units=r"\rm{cm}")
 
 
-
 # initialize time-history outputs
 #    row 1: time (t)
 #    row 2: computed i-front radius
-rdata = zeros( (2, te+1), dtype=float);
+#    row 3: predicted i-front radius (rI)
+#    row 4: stromgren sphere radius (rs)
+rdata = zeros( (4, te+1), dtype=float);
 
 
 # loop over snapshots, loading values and times
@@ -95,13 +87,18 @@ for tstep in range(0,te+1):
     HIIvolume = (sp["xHII"]*sp["CellVolumeCode"]*pf["cm"]**3).sum()*spherical
     radius = (3.0/4.0*HIIvolume/pi)**(1.0/3.0)
     
+    # compute analytical solution
+    ranal = rs0*(1.0 - exp(-t/trec))**(1.0/3.0)
+    
     # store data
     rdata[0][tstep] = t/trec
     rdata[1][tstep] = radius
+    rdata[2][tstep] = ranal
+    rdata[3][tstep] = rs0
     
 
-# compute I-front radius comparison, error norm
-r_err = (rdata[1] - r_sol)/rs0
+# I-front radius comparison (skip left-most point)
+r_err = (rdata[1][1:] - rdata[2][1:])/rs0
 r_err_norm = (np.sum(np.multiply(r_err,r_err))/te)**(0.5)
 if (r_err_norm < tol):
     print 'Error of ',r_err_norm,' is below tolerance ',tol
@@ -109,4 +106,3 @@ if (r_err_norm < tol):
 else:
     print 'Error of ',r_err_norm,' is above tolerance ',tol
     print 'FAIL'
-

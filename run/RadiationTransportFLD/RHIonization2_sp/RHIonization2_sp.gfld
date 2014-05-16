@@ -26,6 +26,7 @@ RadHydroMinDt        = 1.0e-8
 RadHydroInitDt       = 1.0e-8
 RadHydroMaxSubcycles = 1.0e3
 RadHydroMaxChemSubcycles = 1.0e3
+AutomaticScaling     = 0
 RadHydroDtRadFac     = 0.00005       // 0.005% desired change/step
 RadHydroDtGasFac     = 0.00005
 RadHydroDtChemFac    = 0.00005
