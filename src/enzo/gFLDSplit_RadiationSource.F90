@@ -28,7 +28,9 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
 !     ESpectrum  - radiation spectrum choice
 !                       1 -> 1e5 black body spectrum
 !                       0 -> power law spectrum
-!                      -1 -> monochromatic 
+!                      -1 -> monochromatic at hnu0_HI
+!                      -2 -> monochromatic at hnu0_HeI
+!                      -3 -> monochromatic at hnu0_HeII
 !     NGammaDot  - ionization source
 !     EtaRadius  - ionization source radius in cells
 !     EtaCenter  - ionization source center (comoving, 3D coordinates in cm)
@@ -68,7 +70,7 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
   !--------------
   ! locals
   integer :: i, j, k
-  real :: pi, h_nu0, etaconst, specconst, factor, etaloc(3)
+  real :: pi, h_nu0, h_nu1, h_nu2, etaconst, specconst, factor, etaloc(3)
   real :: dx, dy, dz, dV, cellXl, cellXr, cellYl, cellYr, cellZl, cellZr
   real :: cellXc, cellYc, cellZc, ECenter(3), ERadius, NGDot
 
@@ -90,11 +92,26 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
   dz    = (x2R-x2L)/Nz                ! mesh spacing (comoving), x2 direction
   dV    = dx*dy*dz*(LenUnits)**3      ! cell volume (proper)
   h_nu0 = 13.6d0*ev2erg               ! ionization energy of HI [ergs]
+  h_nu1 = 24.6d0*ev2erg               ! ionization energy of HeI [ergs]
+  h_nu2 = 54.4d0*ev2erg               ! ionization energy of HeII [ergs]
 
-  ! scaling factor for T=10^5 blackbody spectrum
+  ! scaling factor for relevant spectrum 
+  !   = (int_{nu0}^{infty} chi(nu) dnu) / (int_{0}^{infty} chi(nu)*(nu0/nu) dnu)
+  ! where chi(nu) is the SED for the emitting source 
   if (ESpectrum == 1) then
+     ! T=10^5 blackbody 
      specconst = 1.52877652583602d0
+  elseif (ESpectrum == 0) then
+     ! power law: chi(nu)=0 for nu<nu0, chi(nu) = (nu/nu0)^(-1.5) otherwise
+     specconst = 1.d0
+  elseif (ESpectrum == -3) then
+     ! monochromatic at nu=nu2
+     specconst = h_nu2/h_nu0
+  elseif (ESpectrum == -2) then
+     ! monochromatic at nu=nu1
+     specconst = h_nu1/h_nu0
   else
+     ! monochromatic at nu=nu0
      specconst = 1.d0
   endif
 
@@ -247,22 +264,22 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
 
      ! place sources based on grid indices 
      factor = 1.d52*h_nu0*specconst*4.d0*pi/dV
-     Ersrc(69,87,88)   = 0.646477039572334*factor
-     Ersrc(68,120,103) = 0.687331910809231*factor
-     Ersrc(61,79,65)   = 0.720977691827869*factor
-     Ersrc(78,98,119)  = 0.745010302555466*factor
-     Ersrc(74,97,123)  = 0.783462353719616*factor
-     Ersrc(100,45,60)  = 0.869979626338959*factor
-     Ersrc(86,10,27)   = 0.915642027721405*factor
-     Ersrc(31,77,48)   = 0.939674638449001*factor
-     Ersrc(104,55,62)  = 1.21845279688911*factor
-     Ersrc(41,73,47)   = 1.63902316962204*factor
-     Ersrc(73,89,96)   = 1.99710825046320*factor
-     Ersrc(65,110,91)  = 2.27348358883057*factor
-     Ersrc(77,91,106)  = 2.38643629225025*factor
-     Ersrc(113,61,64)  = 3.25881936866198*factor
-     Ersrc(124,62,61)  = 5.81348456600542*factor
-     Ersrc(81,97,114)  = 7.96921044127083*factor
+     Ersrc(69,87,88)   = 0.646477039572334d0*factor
+     Ersrc(68,120,103) = 0.687331910809231d0*factor
+     Ersrc(61,79,65)   = 0.720977691827869d0*factor
+     Ersrc(78,98,119)  = 0.745010302555466d0*factor
+     Ersrc(74,97,123)  = 0.783462353719616d0*factor
+     Ersrc(100,45,60)  = 0.869979626338959d0*factor
+     Ersrc(86,10,27)   = 0.915642027721405d0*factor
+     Ersrc(31,77,48)   = 0.939674638449001d0*factor
+     Ersrc(104,55,62)  = 1.21845279688911d0*factor
+     Ersrc(41,73,47)   = 1.63902316962204d0*factor
+     Ersrc(73,89,96)   = 1.99710825046320d0*factor
+     Ersrc(65,110,91)  = 2.27348358883057d0*factor
+     Ersrc(77,91,106)  = 2.38643629225025d0*factor
+     Ersrc(113,61,64)  = 3.25881936866198d0*factor
+     Ersrc(124,62,61)  = 5.81348456600542d0*factor
+     Ersrc(81,97,114)  = 7.96921044127083d0*factor
 
   !   Consolidated HII region with two sources
   elseif (ProbType == 418) then

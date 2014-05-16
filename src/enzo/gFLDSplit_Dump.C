@@ -96,24 +96,24 @@ int gFLDSplit::Dump(EnzoVector *ucur)
     ucur->writeall(ofile,ns);
   }
 
-  // output opacities (create temporary vector to do output)
-  int empty = 1;
-  EnzoVector Opacities = EnzoVector(LocDims[0], LocDims[1], LocDims[2], 
-				    GhDims[0][0], GhDims[0][1], GhDims[1][0], 
-				    GhDims[1][1], GhDims[2][0], GhDims[2][1], 
-				    1, NBors[0][0], NBors[0][1], NBors[1][0], 
-				    NBors[1][1], NBors[2][0], NBors[2][1], empty);
-  Opacities.SetData(0, OpacityE);
-  rmstmp = Opacities.rmsnorm_component(0);
-  inftmp = Opacities.infnorm_component(0);
-  if (debug) 
-    fprintf(stderr,"\n  Energy mean opacity: rms = %g, max = %g\n",rmstmp,inftmp);
+  // // output opacities (create temporary vector to do output)
+  // int empty = 1;
+  // EnzoVector Opacities = EnzoVector(LocDims[0], LocDims[1], LocDims[2], 
+  // 				    GhDims[0][0], GhDims[0][1], GhDims[1][0], 
+  // 				    GhDims[1][1], GhDims[2][0], GhDims[2][1], 
+  // 				    1, NBors[0][0], NBors[0][1], NBors[1][0], 
+  // 				    NBors[1][1], NBors[2][0], NBors[2][1], empty);
+  // Opacities.SetData(0, OpacityE);
+  // rmstmp = Opacities.rmsnorm_component(0);
+  // inftmp = Opacities.infnorm_component(0);
+  // if (debug) 
+  //   fprintf(stderr,"\n  Energy mean opacity: rms = %g, max = %g\n",rmstmp,inftmp);
 
-  strcpy(ofile,"opacityE");
-  strcat(ofile,".vec");
-  if (debug) 
-    fprintf(stderr,"  writing Energy mean opacity to %s\n",ofile);
-  Opacities.writeall(ofile,0);
+  // strcpy(ofile,"opacityE");
+  // strcat(ofile,".vec");
+  // if (debug) 
+  //   fprintf(stderr,"  writing Energy mean opacity to %s\n",ofile);
+  // Opacities.writeall(ofile,0);
 
   return SUCCESS;
 }

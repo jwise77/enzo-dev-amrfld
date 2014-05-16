@@ -70,6 +70,10 @@ class gFLDSplit : public virtual ImplicitProblemABC {
   Eint32 sol_npost;              // num. post-relaxation sweeps
   Eint32 sol_printl;             // print output level
   Eint32 sol_log;                // amount of logging
+  int    Krylov_method;          // flag denoting which outer solver to use:
+                                 //    0 => PCG
+                                 //    1 => BiCGStab (default)
+                                 //    2 => GMRES
   Eint32 SolvIndices[3][2];      // L/R edge indices of subdomain in global mesh
                                  // Note: these INCLUDE Dirichlet zones, even 
                                  //   though those are not included as active 
@@ -116,6 +120,7 @@ class gFLDSplit : public virtual ImplicitProblemABC {
   float dtnorm;        // norm choice for computing relative change:
                        //    0 -> max pointwise norm (default)
                        //   >0 -> rms p-norm over entire domain
+  float dtgrowth;      // time step growth factor (1 < dtgrowth < 10)
   float tnew;          // new time
   float told;          // old time
   float dt;            // time step size
@@ -145,6 +150,8 @@ class gFLDSplit : public virtual ImplicitProblemABC {
   float ErScale;       // radiation energy density scaling factor
   float ecScale;       // specific energy correction scaling factor
   float NiScale;       // species density scaling factor
+  bool  autoScale;     // flag to enable/disable automatic scaling factors
+  bool  StartAutoScale;  // flag to turn begin automatic scaling in a run
   float ErUnits;       // radiation energy density unit conversion factor
   float ecUnits;       // specific energy correction unit conversion factor
   float NiUnits;       // species density unit conversion factor
@@ -171,10 +178,13 @@ class gFLDSplit : public virtual ImplicitProblemABC {
   float hnu0_HI;            // HI ionization threshold (eV)
   float hnu0_HeI;           // HeI ionization threshold (eV)
   float hnu0_HeII;          // HeII ionization threshold (eV)
-  int ESpectrum;            // integer flag determining spectrum choice
+  int ESpectrum;            // integer flag determining spectrum choice, 
+                            // negative values imply monochromatic SED
                             //   1 -> 1e5 black body spectrum
                             //   0 -> simple power law spectrum
-                            //  -1 -> monochromatic spectrum
+                            //  -1 -> monochromatic spectrum @ hnu0_HI
+                            //  -2 -> monochromatic spectrum @ hnu0_HeI
+                            //  -3 -> monochromatic spectrum @ hnu0_HeII
   float intSigE;            // int_{nu0}^{inf} sigma_E(nu) d nu
   float intSigESigHI;       // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu) d nu
   float intSigESigHeI;      // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu) d nu
