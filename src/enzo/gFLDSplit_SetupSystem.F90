@@ -26,7 +26,9 @@ function gFLD_limiter(E1, E2, k1, k2, nUn, lUn, dxi)
   Rmin = 1.d-2/lUn
   Rmin = min(Rmin, 1.d-20)    ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 10.d0 * c_light * lUn
+!!$  Dmax = 10.d0 * c_light * lUn
+!!$  Dmax = 1.d-2 * c_light * lUn
+  Dmax = 2.d-3 * c_light * lUn
   Dmax = max(Dmax, 1.d20)     ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute limiter
