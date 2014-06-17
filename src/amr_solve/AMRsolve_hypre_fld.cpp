@@ -886,7 +886,8 @@ Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2,
   Scalar Rmin = 1.0e-2 / lUn_;
   //  Rmin = MIN(Rmin, 1.e-20);   // 1st is astro/cosmo, 2nd is lab frame
   Scalar Emin = 1.0e-30;
-  Scalar Dmax = 2.0539e-3 * c * lUn_;
+  Scalar Dmax = 1.e-2 * c * lUn_;
+  // Scalar Dmax = 2.0539e-3 * c * lUn_;
   // Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
 
   Scalar Eavg = MAX((E1 + E2)*0.5, Emin);
