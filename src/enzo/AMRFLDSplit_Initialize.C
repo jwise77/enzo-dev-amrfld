@@ -150,7 +150,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       BdryType[dim][face] = 0;
 
   // set default solver parameters
-  sol_tolerance = 1e-8;  // HYPRE solver tolerance
+  sol_tolerance = 1e-5;  // HYPRE solver tolerance
   sol_maxit     = 200;   // HYPRE max linear iters
   sol_type      = 1;     // HYPRE solver
   sol_printl    = 1;     // HYPRE print level

@@ -137,7 +137,8 @@ subroutine gFLDProblem_DiffRHS_3D(rhs, EgCur, EgOld, Temp, kappaE,     &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain
@@ -542,7 +543,8 @@ subroutine gFLDProblem_DiffRHS_2D(rhs, EgCur, EgOld, Temp, kappaE,      &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain
@@ -856,7 +858,8 @@ subroutine gFLDProblem_DiffRHS_1D(rhs, EgCur, EgOld, Temp, kappaE, &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! compute radiation energy gradient over domain

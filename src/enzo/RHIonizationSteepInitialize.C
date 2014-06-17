@@ -80,7 +80,7 @@ int RHIonizationSteepInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroX1Velocity           = 0.0;
   float RadHydroX2Velocity           = 0.0;
   float RadHydroNumDensity           = 3.2;           // [cm^{-3}]
-  float RadHydroDensityRadius        = 2.8234155e+20; // 91.5 pc [cm]
+  float RadHydroDensityRadius        = 1.14375e-1;    // [code units]
   float DensityCenter0               = 0.0;
   float DensityCenter1               = 0.0;
   float DensityCenter2               = 0.0;
