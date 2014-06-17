@@ -141,7 +141,8 @@ subroutine gFLDProblem_MatrixEntries_3D(matentries, EgCur, EgOld, Temp,  &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain
@@ -586,7 +587,8 @@ subroutine gFLDProblem_MatrixEntries_2D(matentries, EgCur, EgOld, Temp,  &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain
@@ -923,7 +925,8 @@ subroutine gFLDProblem_MatrixEntries_1D(matentries, EgCur, EgOld, Temp, &
   Rmin = 1.d-2 / LenUnits
   Rmin = min(Rmin, 1.d-20)  ! 1st is astro/cosmo, 2nd is lab frame
   Emin = 1.d-30
-  Dmax = 2.0539e-3 * c * LenUnits
+!!$  Dmax = 2.0539e-3 * c * LenUnits
+  Dmax = 1.0d-2 * c * LenUnits
   Dmax = max(Dmax, 1.d20)   ! 1st is astro/cosmo, 2nd is lab frame
 
   ! iterate over the active domain

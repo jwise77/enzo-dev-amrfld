@@ -236,6 +236,9 @@ int RadiativeTransferInitialize(char *ParameterFile,
       TypesToAdd[FieldsToAdd++] = kphHI;
       TypesToAdd[FieldsToAdd++] = PhotoGamma;
       if (RadiativeTransferHydrogenOnly == FALSE) {
+	TypesToAdd[FieldsToAdd++] = HeIDensity;
+	TypesToAdd[FieldsToAdd++] = HeIIDensity;
+	TypesToAdd[FieldsToAdd++] = HeIIIDensity;
 	TypesToAdd[FieldsToAdd++] = kphHeI;
 	TypesToAdd[FieldsToAdd++] = kphHeII;
       }

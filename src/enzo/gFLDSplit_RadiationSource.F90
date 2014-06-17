@@ -194,55 +194,55 @@ subroutine gFLDSplit_RadiationSource(Ersrc, time, a, ProbType, ESpectrum, &
   !   emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
   else if (ProbType == 412) then
 
-!!$     ! place ionization source along left wall (if on this subdomain)
-!!$     if (x0L == 0.d0) then
-!!$
-!!$        ! compute eta factor for given ionization source, and put on wall
-!!$!        etaconst = 1.0d6*h_nu0*specconst/dx/LenUnits
-!!$        etaconst = 5.0d5*h_nu0*specconst/dx/LenUnits
-!!$        do k=1,Nz,1
-!!$           do j=1,Ny,1
-!!$              Ersrc(1,j,k) = etaconst
-!!$           enddo
-!!$        enddo
-!!$     endif
+     ! place ionization source along left wall (if on this subdomain)
+     if (x0L == 0.d0) then
 
-     ! place source of radius 1 at center of x-left face
-     ECenter(1) = 0.d0
-     ECenter(2) = 3.3d0
-     ECenter(3) = 3.3d0
-     ERadius = 1.d0
-     NGDot = 3.d51
-
-     ! compute eta factor for given ionization source
-     etaconst = h_nu0*NGDot*specconst/dV/8.d0/(ERadius**3)
-        
-     ! place ionization source at specified location
-     do k=1,Nz,1
-
-        ! z-center (comoving) for this cell
-        cellZc = x2L + (k-0.5d0)*dz
-
-        do j=1,Ny,1
-
-           ! y-center (comoving) for this cell
-           cellYc = x1L + (j-0.5d0)*dy
-
-           do i=1,Nx,1
-
-              ! x-center (comoving) for this cell
-              cellXc = x0L + (i-0.5d0)*dx
-
-              ! see if cell is within source region
-              if ( (abs(cellXc-ECenter(1)) < ERadius*dx) .and. &
-                   (abs(cellYc-ECenter(2)) < ERadius*dy) .and. &
-                   (abs(cellZc-ECenter(3)) < ERadius*dz) ) then
-                 Ersrc(i,j,k) = etaconst
-              endif
-
+        ! compute eta factor for given ionization source, and put on wall
+        etaconst = 1.0d6*h_nu0*specconst/dx/LenUnits
+!        etaconst = 5.0d5*h_nu0*specconst/dx/LenUnits
+        do k=1,Nz,1
+           do j=1,Ny,1
+              Ersrc(1,j,k) = etaconst
            enddo
         enddo
-     enddo
+     endif
+
+!!$     ! place source of radius 1 at center of x-left face
+!!$     ECenter(1) = 0.d0
+!!$     ECenter(2) = 3.3d0
+!!$     ECenter(3) = 3.3d0
+!!$     ERadius = 1.d0
+!!$     NGDot = 3.d51
+!!$
+!!$     ! compute eta factor for given ionization source
+!!$     etaconst = h_nu0*NGDot*specconst/dV/8.d0/(ERadius**3)
+!!$        
+!!$     ! place ionization source at specified location
+!!$     do k=1,Nz,1
+!!$
+!!$        ! z-center (comoving) for this cell
+!!$        cellZc = x2L + (k-0.5d0)*dz
+!!$
+!!$        do j=1,Ny,1
+!!$
+!!$           ! y-center (comoving) for this cell
+!!$           cellYc = x1L + (j-0.5d0)*dy
+!!$
+!!$           do i=1,Nx,1
+!!$
+!!$              ! x-center (comoving) for this cell
+!!$              cellXc = x0L + (i-0.5d0)*dx
+!!$
+!!$              ! see if cell is within source region
+!!$              if ( (abs(cellXc-ECenter(1)) < ERadius*dx) .and. &
+!!$                   (abs(cellYc-ECenter(2)) < ERadius*dy) .and. &
+!!$                   (abs(cellZc-ECenter(3)) < ERadius*dz) ) then
+!!$                 Ersrc(i,j,k) = etaconst
+!!$              endif
+!!$
+!!$           enddo
+!!$        enddo
+!!$     enddo
      
   !   point-source emissivity at center of every processor
   elseif (ProbType == 414) then
