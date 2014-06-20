@@ -486,7 +486,7 @@ Combining all of the above terms,
 our multi-group radiation energy density equations may be written as
 \begin{align}
   \label{eq:mgfld_multigroup}
-  &\partial_{t} E_k - \nabla\cdot(D_k\,\nabla E_k) 
+  \partial_{t} E_k - \nabla\cdot(D_k\,\nabla E_k) 
       + \frac{3 \adot}{a} E_k - (\Diamond)
     = \eta_k - c \kappa_k E_k,\quad k=0,\ldots,N_f-1,
 \end{align}
@@ -556,11 +556,6 @@ any interval bounds to account for regions where $\sigma_i(\nu)=0$.
 
 
 
-{\bf [RESUME HERE]}
-
-
-
-
 \section{Units in Enzo cosmology}
 \label{sec:units}
 
@@ -583,7 +578,7 @@ time, since
   a = \frac{1}{1+z}.
 \end{align}
 
-Enzo then defines the non-dimensionalization factors:
+Enzo then defines the unit non-dimensionalization factors:
 \begin{align}
   \label{eq:Dunit}
   \Dunit &= (1.88\times10^{-29}) \Omega_{mn} H_{cn}^2 (1 + z)^3, \\
@@ -621,8 +616,9 @@ constant (minor difference) and also by a factor of $(1+z_I)/(1+z)$, that grows
 in magnitude as time proceeds, especially for simulations having large
 initial redshift (major difference).
 
-With these units defined, we may also consider a unit normalization
-factor for radiation energy density, that can be defined as either
+With these unit normalization factors defined, we may also consider a
+unit normalization factor for radiation energy density, that can be
+defined as either 
 \[
   \Dunit \Vunit^2, \quad\text{or}\quad 
   \Dunit \frac{\Lunit^2}{\Tunit^2},
@@ -635,17 +631,24 @@ definitions are not the same.  We choose the first of these,
   \Eunit = \Dunit \Vunit^2.
 \end{equation}
 
+We note that even when run without cosmology, unit scaling factors may
+be defined within Enzo for running a simulation.  In this case, we
+similarly use Enzo's internal unit scaling factors to define the
+radiation unit scaling factor, $\Eunit$. 
+
+
 
 
 
 \section{Recasting to comoving, normalized form}
 \label{sec:comoving_eqn}
 
-Our equations \eqref{eq:mgfld_grey} and
-\eqref{eq:Morel_limiterD}-\eqref{eq:Morel_limiterR}  
-are valid in proper CGS units, whereas Enzo's fields are stored in
-comoving, normalized form.  Specifically, the terms in our equations
-relate to Enzo's comoving, normalized terms in the following manner:
+Our equations \eqref{eq:mgfld_multichromatic},
+\eqref{eq:mgfld_multigroup} and
+\eqref{eq:Morel_limiterD}-\eqref{eq:Morel_limiterR} are valid in
+proper CGS units, whereas Enzo's fields are stored in comoving,
+normalized form.  Specifically, the terms in our equations relate to
+Enzo's comoving, normalized terms in the following manner: 
 \begin{itemize}
 \item $\rhob = \Dunit \tRho$, where $\rhob$ is the proper, CGS
   density, and $\tRho$ is Enzo's comoving, normalized
@@ -656,9 +659,10 @@ relate to Enzo's comoving, normalized terms in the following manner:
 \item $e = \Vunit^2 \tilde{e}$, where $e$ is the proper
   baryonic energy per unit mass, and $\tilde{e}$ is Enzo's comoving,
   normalized energy value,
-\item $E = \Eunit \tE$, where $E$ is the proper, CGS radiation
-  energy, and $\tE$ is Enzo's comoving, normalized
-  radiation energy value,
+\item $E_k = \Eunit \tE$, where $E_k$ is the proper, CGS radiation
+  energy (monochromatic or group), and $\tE_k$ is Enzo's comoving,
+  normalized radiation energy value for the specified frequency or
+  group,
 \item $a = \Aunit \tA$, as described above in equation
   \eqref{eq:Aunit},
 \item $\adot = \left(\Aunit/\Tunit\right) \dot{\tA}$, where $\adot$ is
@@ -668,19 +672,19 @@ relate to Enzo's comoving, normalized terms in the following manner:
   proper, CGS position, and $\xvec$ is Enzo's comoving normalized position,
 \item $t = \Tunit \tT$, where $t$ is the CGS time, and $\tT$ is Enzo's
   normalized time,
-\item $\kappa = \tK \Kunit$, where $\kappa$ is the proper, CGS
-  opacity, $\tK$ is Enzo's normalized value, and $\Kunit \propto
-  \Lunit^{-1}$.
+\item $\kappa_k = \tK \Kunit$, where $\kappa_k$ is the proper, CGS
+  opacity for the $k$th frequency or group, $\tK_k$ is Enzo's
+  normalized value, and $\Kunit \propto \Lunit^{-1}$.
 \end{itemize}
 
 We also note that in order for us to convert our equations
-for the proper CGS radiation energy ($E$) to the normalized,
-comoving radiation energy density ($\tE$) we must consider how our
-time derivative must be modified.  Specifically, since $E = \Eunit
-\tE$, then by the product rule,
+for the proper CGS radiation energy ($E_k$) to the normalized,
+comoving radiation energy density ($\tE_k$) we must consider how our
+time derivative must be modified.  Specifically, since $E_k = \Eunit
+\tE_k$, then by the product rule,
 \[
-   \partial_t E = \partial_t \left(\Eunit \tE\right) = 
-   \Eunit\, \partial_t \tE + \tE\, \partial_t \Eunit.
+   \partial_t E_k = \partial_t \left(\Eunit \tE_k\right) = 
+   \Eunit\, \partial_t \tE_k + \tE_k\, \partial_t \Eunit.
 \]
 Due to our choice of $\Eunit = \Dunit \Vunit^2 \propto (1+z)^3$, we then have 
 \[
@@ -693,21 +697,43 @@ Moreover, because $z = \frac{1}{a}-1$ we have $\partial_t z =
 \]
 As a result, we have 
 \begin{align*}
-   \partial_t E &= \Eunit\, \partial_t \tE - 3\Eunit \frac{\adot}{a} \tE \\
-   &= \Eunit\, \partial_t \tE - 3\frac{\adot}{a} E,
+   \partial_t E_k &= \Eunit\, \partial_t \tE_k - 3\Eunit \frac{\adot}{a} \tE_k \\
+   &= \Eunit\, \partial_t \tE_k - 3\frac{\adot}{a} E_k,
 \end{align*}
-which will cancel a portion of the term $\alpha\frac{\adot}{a} E$ in
-the equation \eqref{eq:mgfld_grey}.  Specifically, after dividing
-through by $\Eunit$ and canceling like terms, the equation
-\eqref{eq:mgfld_grey} may instead be written in terms of the comoving,
-normalized radiation energy density: 
+which will cancel the term $3 \frac{\adot}{a} E_k$ in either of the
+equations \eqref{eq:mgfld_multichromatic} or
+\eqref{eq:mgfld_multigroup}.  Specifically, after dividing through by 
+$\Eunit$ and canceling like terms, the multi-chromatic equation
+\eqref{eq:mgfld_multichromatic} may instead be written in terms of the
+comoving, normalized radiation energy density: 
 \begin{align}
-  \label{eq:mgfld_grey_Ecomoving}
-  \partial_{t} \tE - \nabla\cdot\(D\,\nabla \tE\)
-    + \talpha\frac{\adot}{a} \tE = \frac{\eta}{\Eunit} - c\kappa \tE,
+  \label{eq:mgfld_multichromatic_Ecomoving}
+  \partial_{t} \tE_k - \nabla\cdot(D_k\,\nabla \tE_k) 
+    = \frac{\eta_k}{\Eunit} - c \kappa_k \tE_k, \qquad k=0,\ldots,N_f.
 \end{align}
-where now for monochromatic radiation spectra $\talpha=0$ and
-otherwise $\talpha=1$.
+Similarly, the multi-group equation \eqref{eq:mgfld_multigroup} can be
+written in comoving, normalized for as:
+\begin{align}
+  \label{eq:mgfld_multigroup_Ecomoving}
+  \partial_{t} \tE_k - \nabla\cdot(D_k\,\nabla \tE_k) +
+    \frac{\adot}{a}\tE_k - (\square)_k = \frac{\eta_k}{\Eunit} - c
+    \kappa_k \tE_k, \quad k=0,\ldots,N_f-1,
+\end{align}
+where we now define $(\square)_k$ as 
+\[
+  (\square)_k = \begin{cases}
+    \frac{\adot}{2a|g_k|}\left(
+      \nu_{k+1} (\tE_k+\tE_{k+1}) - 2\nu_k \tE_k\right),&
+      \text{if}\quad k=0,\\
+    \frac{\adot}{2a|g_k|}\left(
+      2\nu_{k+1} \tE_k - \nu_k (\tE_{k-1}+\tE_k)\right),&
+      \text{if}\quad k=N_f-1,\\
+    \frac{\adot}{2a|g_k|}\left(
+      \nu_{k+1} (\tE_k+\tE_{k+1}) - \nu_{k}(\tE_{k-1}+\tE_{k})\right),& 
+      \text{otherwise}.
+  \end{cases}
+\]
+
 
 Similarly, since the proper position changes as a function of time,
 then we may consider spatial differentiation with respect to the
@@ -728,13 +754,25 @@ as $\tnabla$, such that
 \[
    \nabla = \frac{1}{\Lunit}\tnabla.
 \]
-Resultingly, upon converting to comoving, normalized units, we have
-the equation
+Resultingly, upon converting \eqref{eq:mgfld_multichromatic_Ecomoving}
+to comoving, normalized units, we have the multi-chromatic equation
 \begin{align}
-  \label{eq:mgfld_grey_comoving}
-  \partial_{t} \tE - \frac{1}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
-    + \talpha\frac{\adot}{a} \tE = \frac{\eta}{\Eunit} - c\kappa \tE.
+  \label{eq:mgfld_multichromatic_comoving}
+  \partial_{t} \tE_k - \frac{1}{\Lunit^2}\tnabla\cdot\(D_k\,\tnabla \tE_k\)
+    = \frac{\eta_k}{\Eunit} - c\kappa_k \tE_k, \quad k=0,\ldots,N_f-1,
 \end{align}
+and converting \eqref{eq:mgfld_multigroup_Ecomoving} we obtain the
+multi-group equation 
+\begin{align}
+  \label{eq:mgfld_multigroup_comoving}
+  \partial_{t} \tE_k - \frac{1}{\Lunit^2}\tnabla\cdot(D_k\,\tnabla \tE_k) +
+    \frac{\adot}{a}\tE_k - (\square)_k = \frac{\eta_k}{\Eunit} - c
+    \kappa_k \tE_k, \quad k=0,\ldots,N_f-1.
+\end{align}
+
+{\bf [RESUME HERE]}
+
+
 
 Similarly, we may consider time differentiation with respect to our
 normalized time value, $\tT$:
