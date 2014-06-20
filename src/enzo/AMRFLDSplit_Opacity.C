@@ -15,10 +15,10 @@
 /  date:       July 2012
 /  modified1:  
 /
-/  PURPOSE: Computes the temperature, density and chemistry-dependent 
-/  opacity field throughout the domain, storing it in the photo-heating
-/  baryon field (since that is not used by the code during this phase 
-/  of the calculation).
+/  PURPOSE: Computes the opacity field (possibly temperature, density 
+/  and chemistry-dependent) throughout the domain, storing it in the 
+/  photo-heating baryon field (since that is not used by the code during 
+/  this phase of the calculation).
 /
 ************************************************************************/
 #ifdef TRANSFER
@@ -27,14 +27,15 @@
  
  
 
-int AMRFLDSplit::Opacity(LevelHierarchyEntry *LevelArray[], int level, float time)
+int AMRFLDSplit::Opacity(int Bin, LevelHierarchyEntry *LevelArray[], 
+			 int level, float time)
 {
 
   // initialize local variables to be reused
   int i, j, k;
-  float HIconst   = intSigESigHI   / intSigE;
-  float HeIconst  = intSigESigHeI  / intSigE / 4.0;
-  float HeIIconst = intSigESigHeII / intSigE / 4.0;
+  float HIconst   = intSigESigHI[Bin]   / intSigE[Bin];
+  float HeIconst  = intSigESigHeI[Bin]  / intSigE[Bin] / 4.0;
+  float HeIIconst = intSigESigHeII[Bin] / intSigE[Bin] / 4.0;
   
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -67,12 +68,14 @@ int AMRFLDSplit::Opacity(LevelHierarchyEntry *LevelArray[], int level, float tim
 	// check that required field data exists
 	if (HI==NULL)
 	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HI array!");
-	if (Nchem==3 && HeI==NULL)
-	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeI array!");
-	if (Nchem==3 && HeII==NULL)
-	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeII array!");
 	if (kap==NULL)
 	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no PhotoGamma array!");
+	if (RadiativeTransferHydrogenOnly == FALSE) {
+	  if (HeI==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeI array!");
+	  if (HeII==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeII array!");
+	}
 
 
 	/////////////
@@ -80,22 +83,24 @@ int AMRFLDSplit::Opacity(LevelHierarchyEntry *LevelArray[], int level, float tim
 	switch (ProblemType) {
 
 
-	// Insert user-defined opacity fields here (don'te forget to "break")...
+	// Insert user-defined opacity fields here (don't forget to "break")...
+
 
 
 	// Standard chemistry-dependent opacity field
 	default:
 
 	  // Hydrogen-only calculation
-	  if (Nchem == 1)
+	  if (RadiativeTransferHydrogenOnly) {
 	    for (i=0; i<x0len*x1len*x2len; i++) 
 	      kap[i] = HI[i]*HIconst;
 
 	  // Hydrogen + Helium calculation
-	  if (Nchem == 3)
+	  } else {
 	    for (i=0; i<x0len*x1len*x2len; i++) 
 	      kap[i] = HI[i]*HIconst + HeI[i]*HeIconst + HeII[i]*HeIIconst;
-	  
+	  }
+
 	  break;
 
 	}

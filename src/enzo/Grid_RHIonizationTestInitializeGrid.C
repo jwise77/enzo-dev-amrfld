@@ -34,12 +34,13 @@ int GetUnits(float *DensityUnits, float *LengthUnits,
 
 
 int grid::RHIonizationTestInitializeGrid(int NumChemicals,
+					 int NumBins, 
 					 float DensityConstant, 
 					 float VxConstant, 
 					 float VyConstant, 
 					 float VzConstant, 
 					 float IEConstant, 
-					 float EgConstant, 
+					 float ErConst, 
 					 float HydrogenMassFraction, 
 					 float InitialFractionHII, 
 					 float InitialFractionHeII, 
@@ -69,9 +70,11 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
 
 
   // create necessary baryon fields
-  int RhoNum, TENum, IENum, V0Num, V1Num, V2Num, EgNum, DeNum, 
-    HINum, HIINum, HeINum, HeIINum, HeIIINum, kphHINum, kphHeINum, 
-    kphHeIINum, gammaNum, kdissH2INum, etaNum, gPotNum;
+  int RhoNum, TENum, IENum, V0Num, V1Num, V2Num, DeNum, HINum, HIINum, 
+    HeINum, HeIINum, HeIIINum, kphHINum, kphHeINum, kphHeIINum, gammaNum, 
+    kdissH2INum, gPotNum, E0Num, E1Num, E2Num, E3Num, E4Num, E5Num, 
+    E6Num, E7Num, E8Num, E9Num, eta0Num, eta1Num, eta2Num, eta3Num, 
+    eta4Num, eta5Num, eta6Num, eta7Num, eta8Num, eta9Num;
   NumberOfBaryonFields = 0;
   FieldType[RhoNum = NumberOfBaryonFields++] = Density;
   FieldType[TENum = NumberOfBaryonFields++]  = TotalEnergy;
@@ -80,7 +83,25 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
   FieldType[V0Num = NumberOfBaryonFields++]    = Velocity1;
   FieldType[V1Num = NumberOfBaryonFields++]    = Velocity2;
   FieldType[V2Num = NumberOfBaryonFields++]    = Velocity3;
-  FieldType[EgNum = NumberOfBaryonFields++]    = RadiationFreq0;
+  FieldType[E0Num = NumberOfBaryonFields++]    = RadiationFreq0;
+  if (NumBins > 1)
+    FieldType[E1Num = NumberOfBaryonFields++]    = RadiationFreq1;
+  if (NumBins > 2)
+    FieldType[E2Num = NumberOfBaryonFields++]    = RadiationFreq2;
+  if (NumBins > 3)
+    FieldType[E3Num = NumberOfBaryonFields++]    = RadiationFreq3;
+  if (NumBins > 4)
+    FieldType[E4Num = NumberOfBaryonFields++]    = RadiationFreq4;
+  if (NumBins > 5)
+    FieldType[E5Num = NumberOfBaryonFields++]    = RadiationFreq5;
+  if (NumBins > 6)
+    FieldType[E6Num = NumberOfBaryonFields++]    = RadiationFreq6;
+  if (NumBins > 7)
+    FieldType[E7Num = NumberOfBaryonFields++]    = RadiationFreq7;
+  if (NumBins > 8)
+    FieldType[E8Num = NumberOfBaryonFields++]    = RadiationFreq8;
+  if (NumBins > 9)
+    FieldType[E9Num = NumberOfBaryonFields++]    = RadiationFreq9;
   if (NumChemicals > 0) {
     FieldType[DeNum = NumberOfBaryonFields++]    = ElectronDensity;
     FieldType[HINum = NumberOfBaryonFields++]    = HIDensity;
@@ -102,9 +123,28 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
     if (MultiSpecies > 1)
       FieldType[kdissH2INum = NumberOfBaryonFields++] = kdissH2I;
   }
-  // if using the AMRFLDSplit solver, set a field for the emissivity
-  if (ImplicitProblem == 6) 
-    FieldType[etaNum = NumberOfBaryonFields++] = Emissivity0;
+  // if using the AMRFLDSplit solver, set fields for the emissivity
+  if (ImplicitProblem == 6) {
+    FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
+    if (NumBins > 1)
+      FieldType[eta1Num = NumberOfBaryonFields++] = Emissivity1;
+    if (NumBins > 2)
+      FieldType[eta2Num = NumberOfBaryonFields++] = Emissivity2;
+    if (NumBins > 3)
+      FieldType[eta3Num = NumberOfBaryonFields++] = Emissivity3;
+    if (NumBins > 4)
+      FieldType[eta4Num = NumberOfBaryonFields++] = Emissivity4;
+    if (NumBins > 5)
+      FieldType[eta5Num = NumberOfBaryonFields++] = Emissivity5;
+    if (NumBins > 6)
+      FieldType[eta6Num = NumberOfBaryonFields++] = Emissivity6;
+    if (NumBins > 7)
+      FieldType[eta7Num = NumberOfBaryonFields++] = Emissivity7;
+    if (NumBins > 8)
+      FieldType[eta8Num = NumberOfBaryonFields++] = Emissivity8;
+    if (NumBins > 9)
+      FieldType[eta9Num = NumberOfBaryonFields++] = Emissivity9;
+  }
   // if using gravity, set a field for the gravitational potential
   if (SelfGravity) 
     FieldType[gPotNum = NumberOfBaryonFields++] = GravPotential;
@@ -161,26 +201,42 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
     float eUnits = VelocityUnits*VelocityUnits;
     float EUnits = DensityUnits*eUnits;
 
-    for (i=0; i<size; i++) {
-      BaryonField[TENum][i]    = TEConstant/eUnits;
-      BaryonField[V0Num][i]    = VxConstant/VelocityUnits;
-      BaryonField[V1Num][i]    = VyConstant/VelocityUnits;
-      BaryonField[V2Num][i]    = VzConstant/VelocityUnits;
-      BaryonField[EgNum][i]    = EgConstant/EUnits;
-      if (NumChemicals > 0) {
-	BaryonField[DeNum][i]    = DeConstant/DensityUnits;
-	BaryonField[HINum][i]    = HIConstant/DensityUnits;
-	BaryonField[HIINum][i]   = HIIConstant/DensityUnits;
-      }
-      if ((NumChemicals == 3) || (MultiSpecies > 0)) {
-	BaryonField[HeINum][i]   = HeIConstant/DensityUnits;
-	BaryonField[HeIINum][i]  = HeIIConstant/DensityUnits;
-	BaryonField[HeIIINum][i] = HeIIIConstant/DensityUnits;
-      }
+    for (i=0; i<size; i++)  BaryonField[TENum][i] = TEConstant/eUnits;
+    for (i=0; i<size; i++)  BaryonField[V0Num][i] = VxConstant/VelocityUnits;
+    for (i=0; i<size; i++)  BaryonField[V1Num][i] = VyConstant/VelocityUnits;
+    for (i=0; i<size; i++)  BaryonField[V2Num][i] = VzConstant/VelocityUnits;
+    for (i=0; i<size; i++)  BaryonField[E0Num][i] = ErConst/EUnits;
+    if (NumBins > 1) 
+      for (i=0; i<size; i++)  BaryonField[E1Num][i]  = ErConst/EUnits;
+    if (NumBins > 2) 
+      for (i=0; i<size; i++)  BaryonField[E2Num][i]  = ErConst/EUnits;
+    if (NumBins > 3) 
+      for (i=0; i<size; i++)  BaryonField[E3Num][i]  = ErConst/EUnits;
+    if (NumBins > 4) 
+      for (i=0; i<size; i++)  BaryonField[E4Num][i]  = ErConst/EUnits;
+    if (NumBins > 5) 
+      for (i=0; i<size; i++)  BaryonField[E5Num][i]  = ErConst/EUnits;
+    if (NumBins > 6) 
+      for (i=0; i<size; i++)  BaryonField[E6Num][i]  = ErConst/EUnits;
+    if (NumBins > 7) 
+      for (i=0; i<size; i++)  BaryonField[E7Num][i]  = ErConst/EUnits;
+    if (NumBins > 8) 
+      for (i=0; i<size; i++)  BaryonField[E8Num][i]  = ErConst/EUnits;
+    if (NumBins > 9) 
+      for (i=0; i<size; i++)  BaryonField[E9Num][i]  = ErConst/EUnits;
+    if (NumChemicals > 0) {
+      for (i=0; i<size; i++)  BaryonField[DeNum][i]  = DeConstant/DensityUnits;
+      for (i=0; i<size; i++)  BaryonField[HINum][i]  = HIConstant/DensityUnits;
+      for (i=0; i<size; i++)  BaryonField[HIINum][i] = HIIConstant/DensityUnits;
     }
+    if ((NumChemicals == 3) || (MultiSpecies > 0)) {
+      for (i=0; i<size; i++)  BaryonField[HeINum][i]   = HeIConstant/DensityUnits;
+      for (i=0; i<size; i++)  BaryonField[HeIINum][i]  = HeIIConstant/DensityUnits;
+      for (i=0; i<size; i++)  BaryonField[HeIIINum][i] = HeIIIConstant/DensityUnits;
+    }
+
     if (DualEnergyFormalism)
-      for (i=0; i<size; i++)
-	BaryonField[IENum][i] = IEConstant/eUnits;
+      for (i=0; i<size; i++)  BaryonField[IENum][i] = IEConstant/eUnits;
 
     // if using external chemistry/cooling, set rate fields
     if (RadiativeCooling) {
@@ -194,9 +250,28 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
 	for (i=0; i<size; i++)  BaryonField[kdissH2INum][i] = 0.0;
     }
 
-    // if using the AMRFLDSplit solver, set emissivity field
-    if (ImplicitProblem == 6) 
-      for (i=0; i<size; i++)  BaryonField[etaNum][i] = 0.0;
+    // if using the AMRFLDSplit solver, set emissivity fields
+    if (ImplicitProblem == 6) {
+      for (i=0; i<size; i++)  BaryonField[eta0Num][i] = 0.0;
+      if (NumBins > 1) 
+	for (i=0; i<size; i++)  BaryonField[eta1Num][i] = 0.0;
+      if (NumBins > 2) 
+	for (i=0; i<size; i++)  BaryonField[eta2Num][i] = 0.0;
+      if (NumBins > 3) 
+	for (i=0; i<size; i++)  BaryonField[eta3Num][i] = 0.0;
+      if (NumBins > 4) 
+	for (i=0; i<size; i++)  BaryonField[eta4Num][i] = 0.0;
+      if (NumBins > 5) 
+	for (i=0; i<size; i++)  BaryonField[eta5Num][i] = 0.0;
+      if (NumBins > 6) 
+	for (i=0; i<size; i++)  BaryonField[eta6Num][i] = 0.0;
+      if (NumBins > 7) 
+	for (i=0; i<size; i++)  BaryonField[eta7Num][i] = 0.0;
+      if (NumBins > 8) 
+	for (i=0; i<size; i++)  BaryonField[eta8Num][i] = 0.0;
+      if (NumBins > 9) 
+	for (i=0; i<size; i++)  BaryonField[eta9Num][i] = 0.0;
+    }      
 
     // if using self gravity, initialize the potential field
     if (SelfGravity) 
@@ -278,7 +353,7 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
       fprintf(stdout,"     x-velocity = %g\n",VxConstant);
       fprintf(stdout,"     y-velocity = %g\n",VyConstant);
       fprintf(stdout,"     z-velocity = %g\n",VzConstant);
-      fprintf(stdout,"      radiation = %g\n",EgConstant);
+      fprintf(stdout,"      radiation = %g\n",ErConst);
       if (NumChemicals > 0) {
 	fprintf(stdout,"      electrons = %g\n",DeConstant);
 	fprintf(stdout,"            nHI = %g\n",HIConstant);
@@ -298,7 +373,7 @@ int grid::RHIonizationTestInitializeGrid(int NumChemicals,
       fprintf(stdout,"     x-velocity = %g\n",BaryonField[V0Num][1]);
       fprintf(stdout,"     y-velocity = %g\n",BaryonField[V1Num][1]);
       fprintf(stdout,"     z-velocity = %g\n",BaryonField[V2Num][1]);
-      fprintf(stdout,"      radiation = %g\n",BaryonField[EgNum][1]);
+      fprintf(stdout,"      radiation = %g\n",BaryonField[E0Num][1]);
       if (NumChemicals > 0) {
 	fprintf(stdout,"      electrons = %g\n",BaryonField[DeNum][1]);
 	fprintf(stdout,"            nHI = %g\n",BaryonField[HINum][1]);

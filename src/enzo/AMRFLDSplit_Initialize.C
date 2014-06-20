@@ -24,9 +24,9 @@
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
 #include "CosmologyParameters.h"
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+// #ifdef _OPENMP
+// #include <omp.h>
+// #endif
 
 // character strings
 EXTERN char outfilename[];
@@ -44,15 +44,6 @@ int GetUnits(float *DensityUnits, float *LengthUnits,
 int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 			      HierarchyEntry &TopGrid,
 			      TopGridData &MetaData, int local);
-int RadHydroStreamTestInitialize(FILE *fptr, FILE *Outfptr,
-				 HierarchyEntry &TopGrid,
-				 TopGridData &MetaData, int local);
-int RadHydroRadShockInitialize(FILE *fptr, FILE *Outfptr,
-			       HierarchyEntry &TopGrid,
-			       TopGridData &MetaData, int local);
-int RadHydroPulseTestInitialize(FILE *fptr, FILE *Outfptr,
-				HierarchyEntry &TopGrid,
-				TopGridData &MetaData, int local);
 int RadHydroConstTestInitialize(FILE *fptr, FILE *Outfptr,
 				HierarchyEntry &TopGrid,
 				TopGridData &MetaData, int local);
@@ -77,7 +68,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // find root grid corresponding to this process from the Hierarcy
   HierarchyEntry *RootGrid = &TopGrid;
-  int i, dim, face, foundgrid=0;
+  int i, ibin, dim, face, foundgrid=0;
   for (i=0; i<=MAX_NUMBER_OF_SUBGRIDS; i++) {
     if (MyProcessorNumber != RootGrid->GridData->ReturnProcessorNumber()) 
       RootGrid = RootGrid->NextGridThisLevel;
@@ -89,12 +80,12 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     ENZO_FAIL("Error in AMRFLDSplit_Initialize");
   }
 
-#ifdef _OPENMP
-  // output number of OpenMP threads that will be used in this run
-  int nthreads = omp_get_max_threads();
-  printf("FLD Initialize: MPI task %"ISYM" has %"ISYM" available OpenMP threads\n",
-	 MyProcessorNumber,nthreads);
-#endif
+// #ifdef _OPENMP
+//   // output number of OpenMP threads that will be used in this run
+//   int nthreads = omp_get_max_threads();
+//   printf("FLD Initialize: MPI task %"ISYM" has %"ISYM" available OpenMP threads\n",
+// 	 MyProcessorNumber,nthreads);
+// #endif
 
 #ifndef MPI_INT
   // in case MPI is not included
@@ -137,14 +128,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // set default module parameters
   WeakScaling = 0;      // standard run, source based on other inputs or physics
-  ESpectrum = 1;        // T=10^5 blackbody spectrum
+  NumBins = 1;          // one radiation field
   Nchem  = 1;           // hydrogen only
   Model  = 1;           // standard non-LTE, non-isothermal model
   theta  = 1.0;         // backwards euler implicit time discret.
   maxsubcycles = 1.0;   // step ratio between radiation and hydro
   dt_control = 2;       // PID controller
   dtnorm = 2.0;         // use 2-norm for time step estimation
-  ErScale = 1.0;        // no radiation equation scaling
+  dtgrowth = 1.1;       // 10% allowed growth in dt per step
+  for (ibin=0; ibin<MAX_RADIATION_BINS; ibin++)
+    ErScale[ibin] = 1.0;   // no radiation equation scaling
+  int autoscale = 1;    // enable automatic variable scaling
   for (dim=0; dim<rank; dim++)     // set default radiation boundaries to 
     for (face=0; face<2; face++)   //   periodic in each direction
       BdryType[dim][face] = 0;
@@ -168,13 +162,6 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   sol_precrelax  = 1;    // weighted Jacobi
   sol_precrestol = 0.0;  // use an iteration-based stop criteria
 
-  // set default ionization parameters
-  NGammaDot    = 0.0;    // ionization strength
-  EtaRadius    = 0.0;    // single cell
-  EtaCenter[0] = 0.0;    // x-location
-  EtaCenter[1] = 0.0;    // y-location
-  EtaCenter[2] = 0.0;    // z-location
-
   // set default chemistry constants
   hnu0_HI   = 13.6;      // ionization energy of HI   [eV]
   hnu0_HeI  = 24.6;      // ionization energy of HeI  [eV]
@@ -185,7 +172,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   // if input file present, over-write defaults with module inputs
   FILE *fptr;
   char line[MAX_LINE_LENGTH];
-  int ret;
+  int bin, ival, ret;
+  float fval, fval2, fval3;
   char *dummy = new char[MAX_LINE_LENGTH];
   dummy[0] = 0;
 
@@ -199,7 +187,21 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       // read until out of lines
       while (fgets(line, MAX_LINE_LENGTH, fptr) != NULL) {
 	ret = 0;
-	ret += sscanf(line, "RadHydroESpectrum = %"ISYM, &ESpectrum);
+	ret += sscanf(line, "RadHydroNumBins = %"ISYM, &NumBins);
+	if (sscanf(line, "RadHydroESpectrum[%"ISYM"] = %"ISYM, &bin, &ival) == 2) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("RadHydroESpectrum %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  ESpectrum[bin] = ival;
+	}
+	if (sscanf(line, "RadHydroBinFrequency[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("RadHydroBinFrequency %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  BinFrequency[bin] = fval;
+	}
 	ret += sscanf(line, "RadHydroModel = %"ISYM, &Model);
 	ret += sscanf(line, "RadHydroChemistry = %"ISYM, &Nchem);
 	ret += sscanf(line, "RadHydroMaxDt = %"FSYM, &maxdt);
@@ -208,8 +210,18 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "RadHydroDtControl = %"ISYM, &dt_control);
 	ret += sscanf(line, "RadHydroMaxSubcycles = %"FSYM, &maxsubcycles);
 	ret += sscanf(line, "RadHydroDtNorm = %"FSYM, &dtnorm);
+	ret += sscanf(line, "RadHydroDtGrowth = %"FSYM, &dtgrowth);
 	ret += sscanf(line, "RadHydroDtRadFac = %"FSYM, &dtfac);
-	ret += sscanf(line, "RadiationScaling = %"FSYM, &ErScale);
+
+	if (sscanf(line, "RadiationScaling[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("RadiationScaling %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  ErScale[bin] = fval;
+	}
+
+	ret += sscanf(line, "AutomaticScaling = %"ISYM, &autoscale);
 	ret += sscanf(line, "RadHydroTheta = %"FSYM, &theta);
 	ret += sscanf(line, "RadiationBoundaryX0Faces = %i %i", 
 		      BdryType[0], BdryType[0]+1);
@@ -227,10 +239,33 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 	ret += sscanf(line, "RadHydroMGRelaxType = %i", &sol_rlxtype);
 	ret += sscanf(line, "RadHydroMGPreRelax = %i", &sol_npre);
 	ret += sscanf(line, "RadHydroMGPostRelax = %i", &sol_npost);
-	ret += sscanf(line, "NGammaDot = %"FSYM, &NGammaDot);
-	ret += sscanf(line, "EtaRadius = %"FSYM, &EtaRadius);
-	ret += sscanf(line, "EtaCenter = %"FSYM" %"FSYM" %"FSYM, 
-		      &(EtaCenter[0]), &(EtaCenter[1]), &(EtaCenter[2]));
+
+	if (sscanf(line, "NGammaDot[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("NGammaDot %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  NGammaDot[bin] = fval;
+	}
+	if (sscanf(line, "EtaRadius[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("EtaRadius %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  EtaRadius[bin] = fval;
+	}
+
+	if (sscanf(line, "EtaCenter[%"ISYM"] = %"FSYM" %"FSYM" %"FSYM, 
+		   &bin, &fval, &fval2, &fval3) == 4) {
+	  ret++;  
+	  if (bin >= MAX_RADIATION_BINS) {
+	    ENZO_VFAIL("EtaCenter %"ISYM" > maximum allowed.\n", bin)
+	  }
+	  EtaCenter[bin][0] = fval;
+	  EtaCenter[bin][1] = fval2;
+	  EtaCenter[bin][2] = fval3;
+	}
+
 
 	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
 	ret += sscanf(line, "RadHydroSol_precmaxit = %"ISYM, &sol_precmaxit);
@@ -258,17 +293,15 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   //   active cells only (no ghost or boundary cells)
   for (dim=0; dim<rank; dim++)
     LocDims[dim] = RootGrid->GridData->GetGridEndIndex(dim)
-      - RootGrid->GridData->GetGridStartIndex(dim) + 1;
+                 - RootGrid->GridData->GetGridStartIndex(dim) + 1;
 
 
   //// Check input parameters ////
 
   // First, ensure that Enzo was called with RadiativeCooling enabled 
   // (since AMRFLDSplit doesn't handle chemistry/cooling)
-  if (!RadiativeCooling) {
-    fprintf(stderr,"AMRFLDSplit_Initialize: RadiativeCooling must be on!  Enabling\n");
-    RadiativeCooling = 1;
-  }
+  if (!RadiativeCooling) 
+    ENZO_FAIL("AMRFLDSplit_Initialize: RadiativeCooling must be on!  Halting run");
   
   // check for appropriate BdryType values, otherwise set dim to periodic
   for (dim=0; dim<rank; dim++) 
@@ -289,9 +322,10 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
 
   // ensure that new BdryVals array pointers are set to NULL
-  for (dim=0; dim<rank; dim++) 
-    for (face=0; face<2; face++) 
-      BdryVals[dim][face] = NULL;
+  for (ibin=0; ibin<MAX_RADIATION_BINS; ibin++) 
+    for (dim=0; dim<rank; dim++) 
+      for (face=0; face<2; face++) 
+	BdryVals[ibin][dim][face] = NULL;
 
   // Model gives the physical set of equations to use {1,4} allowed for AMRFLDSplit
   if ((Model != 1) && (Model != 4)) {
@@ -301,7 +335,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   }
 
   // Nchem gives the number of chemical species
-  if ((Nchem < 1) || (Nchem > 3)) {
+  if ((Nchem != 1) && (Nchem != 3)) {
     fprintf(stderr,"AMRFLDSplit Initialize: illegal Nchem = %"ISYM"\n",Nchem);
     fprintf(stderr,"   re-setting Nchem to 1\n");
     Nchem = 1;  // default is hydrogen only
@@ -343,6 +377,27 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     initdt = huge_number;  // default is no limit
   }
 
+  // dtfac gives the desired percent change in values per step
+  if (dtfac <= 0.0) {
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroDtRadFac = %g\n",dtfac);
+    fprintf(stderr,"   re-setting to %g\n",huge_number);
+    dtfac = huge_number;  // default is no limit
+  }
+
+  // dtnorm gives the norm for calculating allowed relative change per step
+  if (dtnorm < 0.0) {
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal DtNorm = %g\n",dtnorm);
+    fprintf(stderr,"   re-setting to 2.0 (2-norm)\n");
+    dtnorm = 2.0;  // default is 2-norm
+  }
+
+  // dtgrowth gives the maximum growth factor in dt per step
+  if (dtgrowth < 1.0 || dtgrowth > 10.0) {
+    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroDtGrowth = %g\n",dtgrowth);
+    fprintf(stderr,"   re-setting to 1.1\n");
+    dtgrowth = 1.1;
+  }
+
   // maxsubcycles gives the maximum desired ratio between hydro time step 
   // size and radiation time step size (dt_rad <= dt_hydro)
   // ***warn if subcycling radiation***
@@ -369,26 +424,38 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   adot = 0.0;
   adot0 = 0.0;
 
+  // check for legal NumBins parameter
+  if ((NumBins < 1) || (NumBins > MAX_RADIATION_BINS))
+    ENZO_FAIL("AMRFLDSplit_Initialize: Illegal RadHydroNumBins!  Halting run");
+
+  // check for legal radiation spectra
+  for (ibin=0; ibin<NumBins; ibin++) 
+    if ((ESpectrum[ibin] < -1) || (ESpectrum[ibin] > 5)) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: Illegal RadHydroESpectrum[%"ISYM"] = %"FSYM"\n", 
+		 ibin, ESpectrum[ibin]);
+    }
+
+  // check for legal radiation frequencies
+  for (ibin=0; ibin<NumBins; ibin++) 
+    if ((ESpectrum[ibin] == -1) && (BinFrequency[ibin] <= 0.0)) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: Illegal RadHydroBinFrequency[%"ISYM"] = %"FSYM"\n", 
+		 ibin, BinFrequency[ibin]);
+    }
+
   // ErScale gives variable scalings for implicit solver
-  if (ErScale <= 0.0) {
-    fprintf(stderr,"Initialize: illegal RadiationScaling = %g\n",ErScale);
-    fprintf(stderr,"   re-setting to 1.0\n");
-    ErScale = 1.0;  // default is no scaling
-  }
-  if (debug)  printf("AMRFLDSplit::Initialize: ErScale = %g\n",ErScale);
-
-  // dtfac gives the desired percent change in values per step
-  if (dtfac <= 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroDtRadFac = %g\n",dtfac);
-    fprintf(stderr,"   re-setting to %g\n",huge_number);
-    dtfac = huge_number;  // default is no limit
-  }
-
-  // dtnorm gives the norm for calculating allowed relative change per step
-  if (dtnorm < 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal DtNorm = %g\n",dtnorm);
-    fprintf(stderr,"   re-setting to 2.0 (2-norm)\n");
-    dtnorm = 2.0;  // default is 2-norm
+  for (ibin=0; ibin<NumBins; ibin++) 
+    if (ErScale[ibin] <= 0.0) {
+      fprintf(stderr,"Initialize: illegal RadiationScaling[%"ISYM"] = %g\n",
+	      ibin, ErScale[ibin]);
+      fprintf(stderr,"   re-setting to 1.0\n");
+      ErScale[ibin] = 1.0;  // default is no scaling
+    }
+  autoScale = (autoscale != 0);  // set bool based on integer input
+  if (debug) {
+    printf("AMRFLDSplit::Initialize scaling factors:\n");
+    for (ibin=0; ibin<NumBins; ibin++) 
+      printf("    ErScale[%"ISYM"] = %g\n", ibin, ErScale[ibin]);
+    printf("    autoScale = %"ISYM"\n", autoscale);
   }
 
   //   check linear solver parameters
@@ -440,8 +507,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
   }
   if (debug){
-    printf("AMRFLDSplit::Initialize: rank = %"ISYM", Nchem = %"ISYM"\n",
-	   rank, Nchem);
+    printf("AMRFLDSplit::Initialize: rank = %"ISYM", Nchem = %"ISYM", NumBins = %"ISYM"\n",
+	   rank, Nchem, NumBins);
     printf("AMRFLDSplit::Initialize: layout = (%"ISYM",%"ISYM",%"ISYM")\n",
 	   layout[0],layout[1],layout[2]);
     printf("AMRFLDSplit::Initialize: BdryType = (%i:%i,%i:%i,%i:%i)\n",
@@ -469,10 +536,12 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // if this is a weak scaling test, overwrite EtaCenter and EtaRadius on each process
   if (WeakScaling) {
-    for (dim=0; dim<3; dim++)
-      EtaCenter[dim] = 0.5*( RootGrid->GridData->GetGridLeftEdge(dim) 
-			   + RootGrid->GridData->GetGridRightEdge(dim) );
-    EtaRadius = 1.0;
+    for (ibin=0; ibin<NumBins; ibin++) {
+      for (dim=0; dim<3; dim++)
+	EtaCenter[ibin][dim] = 0.5*( RootGrid->GridData->GetGridLeftEdge(dim) 
+				     + RootGrid->GridData->GetGridRightEdge(dim) );
+      EtaRadius[ibin] = 1.0;
+    }
   }
 
   // compute Radiation Energy spectrum integrals
@@ -480,13 +549,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     ENZO_FAIL("AMRFLDSplit::Initialize Error in radiation spectrum integrals");
 
   // set radiation integrals into global_data for opacity-based refinement
-  IntegralRadiationSpectrum       = intSigE;
-  IntegralRadiationSpectrumHI     = intSigESigHI;
-  IntegralRadiationSpectrumHeI    = intSigESigHeI;
-  IntegralRadiationSpectrumHeII   = intSigESigHeII;
-  IntegralRadiationSpectrumHINu   = intSigESigHInu;
-  IntegralRadiationSpectrumHeINu  = intSigESigHeInu;
-  IntegralRadiationSpectrumHeIINu = intSigESigHeIInu;
+  // [REMOVE, OR UPDATE FOR MULTI-FREQUENCY CASE]
+  IntegralRadiationSpectrum       = intSigE[0];
+  IntegralRadiationSpectrumHI     = intSigESigHI[0];
+  IntegralRadiationSpectrumHeI    = intSigESigHeI[0];
+  IntegralRadiationSpectrumHeII   = intSigESigHeII[0];
+  IntegralRadiationSpectrumHINu   = intSigESigHInu[0];
+  IntegralRadiationSpectrumHeINu  = intSigESigHeInu[0];
+  IntegralRadiationSpectrumHeIINu = intSigESigHeIInu[0];
 
 #ifdef USE_HYPRE
 
@@ -497,7 +567,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 #endif
   // initialize amrsolve stuff
   //    initialize the diagnostic information
-  totIters = 0;
+  for (ibin=0; ibin<NumBins; ibin++)
+    totIters[ibin] = 0;
 
   //    set amrsolve parameters
   amrsolve_params = new AMRsolve_Parameters();
@@ -576,216 +647,32 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     // first call local problem initializer (to allocate/setup local data)
     if (RadHydroConstTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RadHydroConstTestInitialize.");
-    
-    if (BdryType[0][0] != 0) {
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    if ( MetaData.TopGridRank >= 2 ) {
-      if (BdryType[1][0] != 0) {
-	if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 left radiation BCs.");
-	if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 right radiation BCs.");
+
+    for (ibin=0; ibin<NumBins; ibin++) {
+      if (BdryType[0][0] != 0) {
+	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 left radiation BCs.");
+	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 right radiation BCs.");
       }
-    }
-    if ( MetaData.TopGridRank == 3 ) {
-      if (BdryType[2][0] != 0) {
-	if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-	if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+      if ( MetaData.TopGridRank >= 2 ) {
+	if (BdryType[1][0] != 0) {
+	  if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	    ENZO_FAIL("Error setting x1 left radiation BCs.");
+	  if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	    ENZO_FAIL("Error setting x1 right radiation BCs.");
+	}
       }
-    }
-    break;
-    
-  // Streaming test problem: set Dirichlet BC to value of 1.0, 
-  // or Neumann BC to value of 0.0; leave Periodic BC alone
-  case 401:
-    // first call local problem initializer (to allocate/setup local data)
-    if (RadHydroStreamTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
-      ENZO_FAIL("Error in RadHydroStreamTestInitialize.");
-    
-    //   x0, left
-    if (BdryType[0][0] == 1) {
-      if (this->SetupBoundary(0,0,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    }
-    else if (BdryType[0][0] == 2) {
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    }
-    
-    //   x0, right
-    if (BdryType[0][1] == 1) {
-      if (this->SetupBoundary(0,1,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    else if (BdryType[0][1] == 2) {
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    
-    //   x1, left
-    if (BdryType[1][0] == 1) {
-      if (this->SetupBoundary(1,0,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    }
-    else if (BdryType[1][0] == 2) {
-      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    }
-    
-    //   x1, right
-    if (BdryType[1][1] == 1) {
-      if (this->SetupBoundary(1,1,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    }
-    else if (BdryType[1][1] == 2) {
-      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    }
-    
-    //   x2, left
-    if ( MetaData.TopGridRank == 3 ) {
-      if (BdryType[2][0] == 1) {
-	if (this->SetupBoundary(2,0,1,&ONE) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      }
-      else if (BdryType[2][0] == 2) {
-	if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      }
-      
-      //   x2, right
-      if (BdryType[2][1] == 1) {
-	if (this->SetupBoundary(2,1,1,&ONE) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
-      }
-      else if (BdryType[2][1] == 2) {
-	if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+      if ( MetaData.TopGridRank == 3 ) {
+	if (BdryType[2][0] != 0) {
+	  if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	    ENZO_FAIL("Error setting x2 left radiation BCs.");
+	  if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	    ENZO_FAIL("Error setting x2 right radiation BCs.");
+	}
       }
     }
     break;
-    
-  // Pulse test problem: set Dirichlet BC to value of 1.0, 
-  // or Neumann BC to value of 0.0; leave Periodic BC alone
-  case 402:
-    // first call local problem initializer (to allocate/setup local data)
-    if (RadHydroPulseTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
-      ENZO_FAIL("Error in RadHydroPulseTestInitialize.");
-    
-    //   x0, left
-    if (BdryType[0][0] == 1) {
-      if (this->SetupBoundary(0,0,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    }
-    else if (BdryType[0][0] == 2) {
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    }
-    
-    //   x0, right
-    if (BdryType[0][1] == 1) {
-      if (this->SetupBoundary(0,1,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    else if (BdryType[0][1] == 2) {
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    
-    //   x1, left
-    if (BdryType[1][0] == 1) {
-      if (this->SetupBoundary(1,0,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    }
-    else if (BdryType[1][0] == 2) {
-      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    }
-    
-    //   x1, right
-    if (BdryType[1][1] == 1) {
-      if (this->SetupBoundary(1,1,1,&ONE) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    }
-    else if (BdryType[1][1] == 2) {
-      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    }
-    
-    //   x2, left
-    if ( MetaData.TopGridRank == 3 ) {
-      if (BdryType[2][0] == 1) {
-	if (this->SetupBoundary(2,0,1,&ONE) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      }
-      else if (BdryType[2][0] == 2) {
-	if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      }
-      
-      //   x2, right
-      if (BdryType[2][1] == 1) {
-	if (this->SetupBoundary(2,1,1,&ONE) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
-      }
-      else if (BdryType[2][1] == 2) {
-	if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
-      }
-    }
-    break;
-    
-  // Astrophysical and Lowrie & Edwards Radiating shock test problems: 
-  // set Neumann value to 0.0; leave Periodic BC alone
-  case 404:
-  case 405:
-    // first call local problem initializer (to allocate/setup local data)
-    if (RadHydroRadShockInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
-      ENZO_FAIL("Error in RadHydroRadShockInitialize.");
-    //   x0, left
-    if (BdryType[0][0] == 2) {
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    }
-    
-    //   x0, right
-    if (BdryType[0][1] == 2) {
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    }
-    
-    //   x1, left
-    if (BdryType[1][0] == 2) {
-      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    }
-    
-    //   x1, right
-    if (BdryType[1][1] == 2) {
-      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    }
-    
-    //   x2, left
-    if (BdryType[2][0] == 2) {
-      if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-    }
-    
-    //   x1, right
-    if (BdryType[2][1] == 2) {
-      if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
-    }
-    
-    break;
-    
     
   // Ionization tests 0 and 1: set zero-gradient (homogeneous Neumann)
   // boundary conditions on all faces.
@@ -795,24 +682,26 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationTestInitialize.");
     
-    //   x0, left
-    if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 left radiation BCs.");
-    //   x0, right
-    if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 right radiation BCs.");
-    //   x1, left
-    if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 left radiation BCs.");
-    //   x1, right
-    if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 right radiation BCs.");
-    //   x2, left
-    if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 left radiation BCs.");
-    //   x2, right
-    if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumBins; ibin++) {
+      //   x0, left
+      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 left radiation BCs.");
+      //   x0, right
+      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 right radiation BCs.");
+      //   x1, left
+      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 left radiation BCs.");
+      //   x1, right
+      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 right radiation BCs.");
+      //   x2, left
+      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 left radiation BCs.");
+      //   x2, right
+      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    }
     break;
     
     
@@ -823,24 +712,26 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationClumpInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    if (BdryType[0][0] != 0)
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    if (BdryType[0][1] != 0)
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    if (BdryType[1][0] != 0)
-      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    if (BdryType[1][1] != 0)
-      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    if (BdryType[2][0] != 0)
-      if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-    if (BdryType[2][1] != 0)
-      if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumBins; ibin++) {
+      if (BdryType[0][0] != 0)
+	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 left radiation BCs.");
+      if (BdryType[0][1] != 0)
+	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 right radiation BCs.");
+      if (BdryType[1][0] != 0)
+	if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x1 left radiation BCs.");
+      if (BdryType[1][1] != 0)
+	if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x1 right radiation BCs.");
+      if (BdryType[2][0] != 0)
+	if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x2 left radiation BCs.");
+      if (BdryType[2][1] != 0)
+	if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+    }
     break;
     
     
@@ -851,24 +742,26 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationSteepInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    //   x0, left
-    if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 left radiation BCs.");
-    //   x0, right
-    if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 right radiation BCs.");
-    //   x1, left
-    if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 left radiation BCs.");
-    //   x1, right
-    if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 right radiation BCs.");
-    //   x2, left
-    if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 left radiation BCs.");
-    //   x2, right
-    if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumBins; ibin++) {
+      //   x0, left
+      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 left radiation BCs.");
+      //   x0, right
+      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 right radiation BCs.");
+      //   x1, left
+      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 left radiation BCs.");
+      //   x1, right
+      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 right radiation BCs.");
+      //   x2, left
+      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 left radiation BCs.");
+      //   x2, right
+      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    }
     break;
     
     
@@ -888,60 +781,56 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (CosmoIonizationInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in CosmoIonizationInitialize.");
     
-    //   x0, left
-    if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 left radiation BCs.");
-    //   x0, right
-    if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x0 right radiation BCs.");
-    //   x1, left
-    if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 left radiation BCs.");
-    //   x1, right
-    if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x1 right radiation BCs.");
-    //   x2, left
-    if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 left radiation BCs.");
-    //   x2, right
-    if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-      ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumBins; ibin++) {
+      //   x0, left
+      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 left radiation BCs.");
+      //   x0, right
+      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x0 right radiation BCs.");
+      //   x1, left
+      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 left radiation BCs.");
+      //   x1, right
+      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x1 right radiation BCs.");
+      //   x2, left
+      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 left radiation BCs.");
+      //   x2, right
+      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    }
     break;
     
-    
-  // Temperature jump test 16: periodic BCs on all faces
-  case 416:
-    // first call local problem initializer (to allocate/setup local data)
-    if (RadHydroConstTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
-      ENZO_FAIL("Error in RadHydroConstTestInitialize.");
-    break;
-    
-
     
   // Insert new problem intializers here...
 
 
 
   default:
+
     // set BCs based on inputs, for non periodic set to 0-valued
-    if (BdryType[0][0] != 0)
-      if (this->SetupBoundary(0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-    if (BdryType[0][1] != 0)
-      if (this->SetupBoundary(0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-    if (BdryType[1][0] != 0)
-      if (this->SetupBoundary(1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-    if (BdryType[1][1] != 0)
-      if (this->SetupBoundary(1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-    if (BdryType[2][0] != 0)
-      if (this->SetupBoundary(2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-    if (BdryType[2][1] != 0)
-      if (this->SetupBoundary(2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumBins; ibin++) {
+      if (BdryType[0][0] != 0)
+	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 left radiation BCs.");
+      if (BdryType[0][1] != 0)
+	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x0 right radiation BCs.");
+      if (BdryType[1][0] != 0)
+	if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x1 left radiation BCs.");
+      if (BdryType[1][1] != 0)
+	if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x1 right radiation BCs.");
+      if (BdryType[2][0] != 0)
+	if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x2 left radiation BCs.");
+      if (BdryType[2][1] != 0)
+	if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
+	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+    }
     break;
   }
   ////////////////////////////////
@@ -968,42 +857,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       ENZO_FAIL("Error in AMRFLDSplit_Initialize");
     }
     else {
-      fprintf(outfptr, "RadHydroESpectrum = %"ISYM"\n", ESpectrum);
-      fprintf(outfptr, "RadHydroModel = %"ISYM"\n", Model);
-      fprintf(outfptr, "RadHydroChemistry = %"ISYM"\n", Nchem);
-      fprintf(outfptr, "RadHydroMaxDt = %g\n", maxdt);
-      fprintf(outfptr, "RadHydroMinDt = %g\n", mindt);
-      fprintf(outfptr, "RadHydroInitDt = %g\n", initdt);
-      fprintf(outfptr, "RadHydroMaxSubcycles = %g\n", maxsubcycles);
-      fprintf(outfptr, "RadHydroDtNorm = %"FSYM"\n", dtnorm);
-      fprintf(outfptr, "RadHydroDtRadFac = %g\n", dtfac);
-      fprintf(outfptr, "RadiationScaling = %g\n", ErScale);
-      fprintf(outfptr, "RadHydroTheta = %g\n", theta);
-      fprintf(outfptr, "RadiationBoundaryX0Faces = %i %i\n", 
-	      BdryType[0][0], BdryType[0][1]);
-      if (rank > 1) {
-	fprintf(outfptr, "RadiationBoundaryX1Faces = %i %i\n", 
-		BdryType[1][0], BdryType[1][1]);
-	if (rank > 2) {
-	  fprintf(outfptr, "RadiationBoundaryX2Faces = %i %i\n", 
-		  BdryType[2][0], BdryType[2][1]);
-	}
-      }
-      fprintf(outfptr, "RadHydroSolType = %i\n", sol_type);
-      fprintf(outfptr, "RadHydroSolPrec = %i\n", sol_prec);
-      fprintf(outfptr, "RadHydroSolTolerance = %g\n", sol_tolerance);    
-      fprintf(outfptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
-      fprintf(outfptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
-      fprintf(outfptr, "RadHydroMGPreRelax = %i\n", sol_npre);    
-      fprintf(outfptr, "RadHydroMGPostRelax = %i\n", sol_npost);    
-      fprintf(outfptr, "NGammaDot = %g\n", NGammaDot);
-      fprintf(outfptr, "EtaRadius = %g\n", EtaRadius);
-      fprintf(outfptr, "EtaCenter = %g  %g  %g\n", 
-	      EtaCenter[0], EtaCenter[1], EtaCenter[2]);
-
-      fprintf(outfptr, "WeakScaling = %i\n", WeakScaling);    
-
-      // close parameter file
+      // write parameters to log file and close
+      this->WriteParameters(outfptr);
       fclose(outfptr);
     }
   }

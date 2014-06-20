@@ -26,7 +26,10 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
 
 //   if (debug)  printf("Entering AMRFLDSplit::WriteParameters routine\n");
   
-  fprintf(fptr, "RadHydroESpectrum = %"ISYM"\n", ESpectrum);
+  fprintf(fptr, "RadHydroNumBins = %"ISYM"\n", NumBins);
+  for (int ibin=0; ibin<NumBins; ibin++)
+    fprintf(fptr, "RadHydroESpectrum[%"ISYM"] = %"ISYM"\n", 
+	    ibin, ESpectrum[ibin]);
   fprintf(fptr, "RadHydroChemistry = %"ISYM"\n", Nchem);
   fprintf(fptr, "RadHydroModel = %"ISYM"\n", Model);
 
@@ -42,8 +45,16 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   fprintf(fptr, "RadHydroDtControl = %"ISYM"\n", dt_control);
   fprintf(fptr, "RadHydroMaxSubcycles = %22.16e\n", maxsubcycles);
   fprintf(fptr, "RadHydroDtNorm = %22.16e\n", dtnorm);
+  fprintf(fptr, "RadHydroDtGrowth = %22.16e\n", dtgrowth);
   fprintf(fptr, "RadHydroDtRadFac = %22.16e\n", dtfac);
-  fprintf(fptr, "RadiationScaling = %22.16e\n", ErScale);
+  for (int ibin=0; ibin<NumBins; ibin++)
+    fprintf(fptr, "RadiationScaling["ISYM"] = %22.16e\n", 
+	    ibin, ErScale[ibin]);
+  if (autoScale) {
+    fprintf(fptr, "AutomaticScaling = 1\n");
+  } else {
+    fprintf(fptr, "AutomaticScaling = 0\n");
+  }
   fprintf(fptr, "RadHydroTheta = %22.16e\n", theta);
   fprintf(fptr, "RadiationBoundaryX0Faces = %i %i\n", 
 	  BdryType[0][0], BdryType[0][1]);
@@ -73,10 +84,14 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   // if doing an ionization problem (ProblemTypes 410-415),
   // output additional parameters 
   if ((ProblemType >= 410) && (ProblemType <= 415)) {
-    fprintf(fptr, "NGammaDot = %22.16e\n", NGammaDot);
-    fprintf(fptr, "EtaRadius = %22.16e\n", EtaRadius);
-    fprintf(fptr, "EtaCenter = %22.16e %22.16e %22.16e\n",
-	    EtaCenter[0], EtaCenter[1], EtaCenter[2]);
+    for (int ibin=0; ibin<NumBins; ibin++) {
+      fprintf(fptr, "NGammaDot[%"ISYM"] = %22.16e\n", 
+	      ibin, NGammaDot[ibin]);
+      fprintf(fptr, "EtaRadius[%"ISYM"] = %22.16e\n", 
+	      ibin, EtaRadius[ibin]);
+      fprintf(fptr, "EtaCenter[%"ISYM"] = %22.16e %22.16e %22.16e\n",
+	      ibin, EtaCenter[ibin][0], EtaCenter[ibin][1], EtaCenter[ibin][2]);
+    }
   }
 
   // output relevant units: although these aren't required for restart, 

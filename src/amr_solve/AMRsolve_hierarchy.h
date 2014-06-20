@@ -66,7 +66,7 @@ protected:
 		       int level_fine   = LEVEL_UNKNOWN) throw();
 
   /// ENZO INTERFACE: attach to the Enzo hierarchy for radiation solves
-  void enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
+  void enzo_attach_fld(LevelHierarchyEntry *LevelArray[], int NumBins,
 		       int level_coarse = LEVEL_UNKNOWN,
 		       int level_fine   = LEVEL_UNKNOWN) throw();
 

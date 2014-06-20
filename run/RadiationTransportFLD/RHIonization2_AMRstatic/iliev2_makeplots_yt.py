@@ -38,7 +38,7 @@ add_field("xHII", take_log=True, function=_xHII,
 
 #   Radiation energy density (log plot)
 def _logE(field, data):
-    return (data["Grey_Radiation_Energy"])
+    return (data["Radiation0"])
 def _convertlogE(data):
     return ( data.convert("MassUnits")/data.convert("TimeUnits") / 
              data.convert("TimeUnits")/data.convert("cm"))

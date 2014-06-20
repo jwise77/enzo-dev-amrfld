@@ -33,8 +33,10 @@ DomainRightEdge            =  1.2  1.2  1.2
 #
 StaticHierarchy            = 0
 RefineBy                   = 2
-CellFlaggingMethod         = 21
-MinimumSlopeForRefinement  = 0.0 0.0 1.2 0.0 0.0 0.0 0.0 
+#CellFlaggingMethod         = 21
+#MinimumSlopeForRefinement  = 0.0 0.0 1.2 0.0 0.0 0.0 0.0 
+CellFlaggingMethod         = 20
+MinimumSlopeForRefinement  = 0.0 1.2 0.0 0.0 0.0 0.0 0.0 
 MaximumRefinementLevel     = 2
 #
 # runtime and I/O

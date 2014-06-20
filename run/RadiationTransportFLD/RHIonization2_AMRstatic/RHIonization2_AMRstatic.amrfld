@@ -6,6 +6,15 @@
 #
 #############################
 #
+# Specify radiation field(s) to use in solver
+#
+RadHydroNumBins = 1                  // one radiation field
+#   bin 0
+RadHydroESpectrum[0] = 1             // T=1e5 blackbody
+NGammaDot[0] = 5.0e48                // emissivity source strength
+EtaRadius[0] = 1.0                   // emissivity source radius [cells]
+EtaCenter[0] = 0.0 0.0 0.0           // emissivity source location
+#
 # Problem-specific initialization parameters
 # 
 RadHydroVelocity = 0.0 0.0 0.0       // initial velocity [cm/s]
@@ -16,9 +25,6 @@ RadHydroInitialFractionHII = 0.0012  // initial 0.12% HII fraction
 RadiationBoundaryX0Faces = 2 2       // Neumann
 RadiationBoundaryX1Faces = 2 2       // Neumann
 RadiationBoundaryX2Faces = 2 2       // Neumann
-NGammaDot = 5.0e48                   // ionization rate [photons/sec]
-EtaRadius = 1.0e0                    // radius for emissivity source [cells]
-EtaCenter = 0.0e0 0.0e0 0.0e0        // center of emissivity source
 #
 # General module and solver parameters
 # 
@@ -26,7 +32,9 @@ RadHydroMaxDt        = 1.0e-2
 RadHydroMinDt        = 1.0e-8
 RadHydroInitDt       = 1.0e-8
 RadHydroDtRadFac     = 0.0001        // 0.01% desired change/step
+AutomaticScaling     = 0
 RadHydroSolType      = 1             // BiCGStab
+RadHydroSolTolerance = 1.e-5
 RadHydroSolPrec      = 0             // no preconditioning
 RadHydroMGPreRelax   = 2             // MG pre-relaxation sweeps
 RadHydroMGPostRelax  = 2             // MG post-relaxation sweeps

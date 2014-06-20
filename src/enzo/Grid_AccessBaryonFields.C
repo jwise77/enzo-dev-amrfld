@@ -420,6 +420,78 @@ float* grid::AccessEmissivity0() {
   return BaryonField[EtaNum];
 }
 
+// Emissivity1 field 
+float* grid::AccessEmissivity1() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity1, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity2 field 
+float* grid::AccessEmissivity2() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity2, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity3 field 
+float* grid::AccessEmissivity3() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity3, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity4 field 
+float* grid::AccessEmissivity4() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity4, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity5 field 
+float* grid::AccessEmissivity5() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity5, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity6 field 
+float* grid::AccessEmissivity6() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity6, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity7 field 
+float* grid::AccessEmissivity7() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity7, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity8 field 
+float* grid::AccessEmissivity8() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity8, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
+// Emissivity9 field 
+float* grid::AccessEmissivity9() {
+  int EtaNum = -1;
+  if ((EtaNum = FindField(Emissivity9, FieldType, NumberOfBaryonFields))<0) 
+    return NULL;
+  return BaryonField[EtaNum];
+}
+
 // Potential field 
 float* grid::AccessPotentialField() {
   return PotentialField;

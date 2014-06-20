@@ -19,6 +19,8 @@ OBJS_CONFIG_LIB = \
         AdiabaticExpansionInitialize.o \
         AdjustRefineRegion.o \
         AdjustMustRefineParticlesRefineToLevel.o \
+	AMRFLDSplit_AccessEmissivityBin.o \
+	AMRFLDSplit_AccessRadiationBin.o \
 	AMRFLDSplit_ComputeRadiationIntegrals.o \
 	AMRFLDSplit_ComputeTimeStep.o \
 	AMRFLDSplit_constructor.o \

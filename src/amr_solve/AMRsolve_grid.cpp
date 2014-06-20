@@ -41,8 +41,8 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
   : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), 
     is_u_allocated_(false), f_(NULL), offset_f_(0), 
     is_f_allocated_(false), num_t_allocated_(0), 
-    counters_(NULL), counters_init_(0), E_(NULL), E0_(NULL), 
-    eta_(NULL), phi_(NULL), gmass_(NULL)
+    counters_(NULL), counters_init_(0), E0_(NULL), 
+    phi_(NULL), gmass_(NULL)
 {
   // Initialize 0-sentinels in arrays
   neighbors0_.push_back(0);
@@ -50,6 +50,12 @@ AMRsolve_Grid::AMRsolve_Grid(std::string parms) throw()
 
   // Define a grid given text parameters, typically from a file
   input(parms);
+
+  // set radiation and emissivity bin pointers to NULL
+  for (int i=0; i<MAX_BINS; i++) {
+    E_[i] = NULL;
+    eta_[i] = NULL;
+  }
 
   // set all temporary array pointers to NULL
   for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
@@ -74,8 +80,7 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 			     Scalar* xu, int* il, int* n) throw()
   : faces_(NULL), level_(-1), u_(NULL), offset_u_(0), is_u_allocated_(false),
     f_(NULL), offset_f_(0), is_f_allocated_(false), 
-    num_t_allocated_(0), counters_(NULL), E_(NULL), E0_(NULL), 
-    eta_(NULL), phi_(NULL), gmass_(NULL)
+    num_t_allocated_(0), counters_(NULL), E0_(NULL), phi_(NULL), gmass_(NULL)
 {
   // Initialize 0-sentinels in arrays
   neighbors0_.push_back(0);
@@ -83,6 +88,12 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 
   // Define a grid given text parameters, typically from a file
   input(id,id_parent,ip,xl,xu,il,n);
+
+  // set radiation and emissivity bin pointers to NULL
+  for (int i=0; i<MAX_BINS; i++) {
+    E_[i] = NULL;
+    eta_[i] = NULL;
+  }
 
   // set all temporary array pointers to NULL
   for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
@@ -106,10 +117,15 @@ AMRsolve_Grid::AMRsolve_Grid(int id, int id_parent, int ip, Scalar* xl,
 AMRsolve_Grid::AMRsolve_Grid(std::string field, FILE* fp) throw()
   : id_(-1), id_parent_(-1), ip_(-1), faces_(NULL), level_(-1),
     u_(NULL), offset_u_(0), is_u_allocated_(false), f_(NULL),
-    offset_f_(0), is_f_allocated_(false), 
-    num_t_allocated_(0), counters_(NULL), E_(NULL), E0_(NULL), 
-    eta_(NULL), phi_(NULL), gmass_(NULL)
+    offset_f_(0), is_f_allocated_(false), E0_(NULL), 
+    num_t_allocated_(0), counters_(NULL), phi_(NULL), gmass_(NULL)
 {
+  // set radiation and emissivity bin pointers to NULL
+  for (int i=0; i<MAX_BINS; i++) {
+    E_[i] = NULL;
+    eta_[i] = NULL;
+  }
+
   // set all temporary array pointers to NULL
   for (int i=0; i<MAX_TMP; i++)  t_[i] = NULL;
 

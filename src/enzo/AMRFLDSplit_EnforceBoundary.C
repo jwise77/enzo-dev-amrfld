@@ -33,7 +33,7 @@
 
 
 
-int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
+int AMRFLDSplit::EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[])
 {
 //   if (debug)
 //     printf("Entering AMRFLDSplit::EnforceBoundary routine\n");
@@ -66,14 +66,46 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
       
   // access old/new radiation fields (old stored in KPhHI)
   float *Eold = ThisGrid->GridData->AccessKPhHI();
-  float *Enew = ThisGrid->GridData->AccessRadiationFrequency0();
+  float *Enew = NULL;
+  switch (Bin) {
+  case 0:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency0();
+    break;
+  case 1:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency1();
+    break;
+  case 2:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency2();
+    break;
+  case 3:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency3();
+    break;
+  case 4:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency4();
+    break;
+  case 5:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency5();
+    break;
+  case 6:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency6();
+    break;
+  case 7:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency7();
+    break;
+  case 8:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency8();
+    break;
+  case 9:
+    Enew = ThisGrid->GridData->AccessRadiationFrequency9();
+    break;
+  }
 
   // set some shortcuts
   float *fields[2];
   fields[0] = Eold;
   fields[1] = Enew;
   float dxscale[] = {LenUnits0, LenUnits};
-  float units[] = {ErUnits0, ErUnits};
+  float units[] = {ErUnits0[Bin], ErUnits[Bin]};
   float dxa, dya, dza, unit, *udata;
   int i, i2, j, j2, k, k2, idx, idx2, idxbc;
 
@@ -95,7 +127,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	  for (i=0; i<ghXl; i++) {
 	    idxbc = k*n3[1] + j;
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
-	    udata[idx] = BdryVals[0][0][idxbc]/unit;
+	    udata[idx] = BdryVals[Bin][0][0][idxbc]/unit;
 	  }
     }
     //   Neumann
@@ -106,7 +138,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	  idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
 	  idxbc = k*n3[1] + j;
-	  udata[idx] = udata[idx2] + dxa*BdryVals[0][0][idxbc]/unit;
+	  udata[idx] = udata[idx2] + dxa*BdryVals[Bin][0][0][idxbc]/unit;
 	}
     }
     
@@ -118,7 +150,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	  for (i=x0len-ghXl; i<x0len; i++) {
 	    idxbc = k*n3[1] + j;
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
-	    udata[idx] = BdryVals[0][1][idxbc]/unit;
+	    udata[idx] = BdryVals[Bin][0][1][idxbc]/unit;
 	  }
     }
     //   Neumann
@@ -129,7 +161,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	  idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
 	  idxbc = k*n3[1] + j;
-	  udata[idx] = udata[idx2] + dxa*BdryVals[0][1][idxbc]/unit;
+	  udata[idx] = udata[idx2] + dxa*BdryVals[Bin][0][1][idxbc]/unit;
 	}
     }
     
@@ -143,7 +175,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    for (i=0; i<n3[0]; i++) {
 	      idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
 	      idxbc = i*n3[2] + k;
-	      udata[idx] = BdryVals[1][0][idxbc]/unit;
+	      udata[idx] = BdryVals[Bin][1][0][idxbc]/unit;
 	    }
       }
       //   Neumann
@@ -154,7 +186,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
 	    idxbc = i*n3[2] + k;
-	    udata[idx] = udata[idx2] + dya*BdryVals[1][0][idxbc]/unit;
+	    udata[idx] = udata[idx2] + dya*BdryVals[Bin][1][0][idxbc]/unit;
 	  }
       }
       
@@ -166,7 +198,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    for (i=0; i<n3[0]; i++) {
 	      idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
 	      idxbc = i*n3[2] + k;
-	      udata[idx] = BdryVals[1][1][idxbc]/unit;
+	      udata[idx] = BdryVals[Bin][1][1][idxbc]/unit;
 	    }
       }
       //   Neumann
@@ -177,7 +209,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
 	    idxbc = i*n3[2] + k;
-	    udata[idx] = udata[idx2] + dya*BdryVals[1][1][idxbc]/unit;
+	    udata[idx] = udata[idx2] + dya*BdryVals[Bin][1][1][idxbc]/unit;
 	  }
       }
     }  // end if rank > 1
@@ -192,7 +224,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    for (i=0; i<n3[0]; i++) {
 	      idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
 	      idxbc = j*n3[0] + i;
-	      udata[idx] = BdryVals[2][0][idxbc]/unit;
+	      udata[idx] = BdryVals[Bin][2][0][idxbc]/unit;
 	    }
       }
       //   Neumann
@@ -203,7 +235,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idxbc = j*n3[0] + i;
-	    udata[idx] = udata[idx2] + dza*BdryVals[2][0][idxbc]/unit;
+	    udata[idx] = udata[idx2] + dza*BdryVals[Bin][2][0][idxbc]/unit;
 	  }
       }
       
@@ -215,7 +247,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    for (i=0; i<n3[0]; i++) {
 	      idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
 	      idxbc = j*n3[0] + i;
-	      udata[idx] = BdryVals[2][1][idxbc]/unit;
+	      udata[idx] = BdryVals[Bin][2][1][idxbc]/unit;
 	    }
       }
       //   Neumann
@@ -226,7 +258,7 @@ int AMRFLDSplit::EnforceBoundary(LevelHierarchyEntry *LevelArray[])
 	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
 	    idxbc = j*n3[0] + i;
-	    udata[idx] = udata[idx2] + dza*BdryVals[2][1][idxbc]/unit;
+	    udata[idx] = udata[idx2] + dza*BdryVals[Bin][2][1][idxbc]/unit;
 	  }
       }
     }  // end if rank > 2

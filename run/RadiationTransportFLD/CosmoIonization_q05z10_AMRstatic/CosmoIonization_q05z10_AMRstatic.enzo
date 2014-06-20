@@ -18,7 +18,7 @@ RateDataCaseBRecombination = 1             // use case-B rates
 UseHydro                   = 0             // no hydro
 SelfGravity                = 0             // no gravity
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
-RadHydroParamfile = CosmoIonization_q05z10_AMRdynamic.amrfld
+RadHydroParamfile = CosmoIonization_q05z10_AMRstatic.amrfld
 #
 # grid and boundary 
 #

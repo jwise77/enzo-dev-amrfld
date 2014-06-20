@@ -1282,6 +1282,15 @@ public:
    float* AccessRadPressure1();
    float* AccessRadPressure2();
    float* AccessEmissivity0();
+   float* AccessEmissivity1();
+   float* AccessEmissivity2();
+   float* AccessEmissivity3();
+   float* AccessEmissivity4();
+   float* AccessEmissivity5();
+   float* AccessEmissivity6();
+   float* AccessEmissivity7();
+   float* AccessEmissivity8();
+   float* AccessEmissivity9();
    float* AccessRadiationFrequency0();
    float* AccessRadiationFrequency1();
    float* AccessRadiationFrequency2();
@@ -2151,7 +2160,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				     float InitFracHeIII, int local);
 
   /* FLD Radiation test problem: initialize grid (SUCCESS or FAIL) */
-  int RadHydroConstTestInitializeGrid(int NumChem, float DensityConst, 
+  int RadHydroConstTestInitializeGrid(int NumChem, int NumBins, float DensityConst, 
 				      float V0Const, float V1Const, 
 				      float V2Const, float IEConst, 
 				      float EgConst, float HMassFrac, 
@@ -2159,7 +2168,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				      float InitFracHeIII, int local);
 
   /* FLD Radiation ionization test problem: initialize grid (SUCCESS or FAIL) */
-  int RHIonizationTestInitializeGrid(int NumChem, float DensityConst, 
+  int RHIonizationTestInitializeGrid(int NumChem, int NumBins, float DensityConst, 
 				     float V0Const, float V1Const, 
 				     float V2Const, float IEConst, 
 				     float EgConst, float HMassFrac, 
@@ -2168,7 +2177,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				     int local);
 
   /* FLD Radiation clump ionization problem: initialize grid (SUCCESS or FAIL) */
-  int RHIonizationClumpInitializeGrid(int NumChem, float NumDensityIn, 
+  int RHIonizationClumpInitializeGrid(int NumChem, int NumBins, float NumDensityIn, 
 				      float NumDensityOut, float V0Const,
 				      float V1Const, float V2Const,
 				      float IEConstIn, float IEConstOut, 
@@ -2179,7 +2188,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				      float ClumpRadius, int local);
 
   /* FLD Rad r^{-2} density ionization problem: initialize grid (SUCCESS or FAIL) */
-  int RHIonizationSteepInitializeGrid(int NumChem, float NumDensity, 
+  int RHIonizationSteepInitializeGrid(int NumChem, int NumBins, float NumDensity, 
 				      float DensityRadius, float DensityCenter0, 
 				      float DensityCenter1, float DensityCenter2, 
 				      float V0Const, float V1Const, 
@@ -2189,8 +2198,8 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 				      float InitFracHeIII, int local);
 
   /* FLD Radiation test problem: cosmological HII ioniztion (SUCCESS or FAIL) */
-  int CosmoIonizationInitializeGrid(int NumChem, float VxConst, float VyConst, 
-				    float VzConst, float IEConst, 
+  int CosmoIonizationInitializeGrid(int NumChem, int NumBins, float VxConst, 
+				    float VyConst, float VzConst, float IEConst, 
 				    float EgConst, float HMassFrac, 
 				    float InitFracHII, float InitFracHeII, 
 				    float InitFracHeIII, float OmegaBaryonNow, 

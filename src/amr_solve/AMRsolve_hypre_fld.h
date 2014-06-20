@@ -37,6 +37,7 @@ private:
   int                  citer_;         // Coarse solver iterations
 
   const int            r_factor_;      // Refinement factor
+  int                  bin_;           // current radiation bin
   int                  Nchem_;         // number of chemical species
   double               theta_;         // time discretization parameter
   double               dt_;            // time step size
@@ -56,7 +57,7 @@ public:
 
   AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy, 
 		     AMRsolve_Parameters& parameters,
-		     int precflag);
+		     int bin, int precflag);
   ~AMRsolve_Hypre_FLD();
 
   void init_hierarchy();

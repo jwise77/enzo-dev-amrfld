@@ -61,11 +61,11 @@ typedef int int3[3];
 /// AMRsolve_Hypre_FLD constructor
 AMRsolve_Hypre_FLD::AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy, 
 				       AMRsolve_Parameters& parameters,
-				       int precflag)
+				       int bin, int precflag)
   : grid_(0), graph_(0), stencil_(0), A_(0), B_(0), X_(0), Y_(0), solver_(0), 
     Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), 
-    parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), 
-    iter_(-1), citer_(-1), r_factor_(const_r_factor), Nchem_(-1), theta_(-1.0), 
+    parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), iter_(-1), 
+    citer_(-1), r_factor_(const_r_factor), bin_(bin), Nchem_(-1), theta_(-1.0), 
     dt_(-1.0), aval_(-1.0), aval0_(-1.0), adot_(-1.0), adot0_(-1.0), 
     nUn_(-1.0), nUn0_(-1.0), lUn_(-1.0), lUn0_(-1.0), rUn_(-1.0), rUn0_(-1.0)
 {
@@ -478,16 +478,23 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
 
 
   // Optionally write the matrices and RHS vector to files for debugging
+  char fname[80];
   if (parameters_->value("dump_a") == "true") {
-    ierr = HYPRE_SStructMatrixPrint("A-hypre",A_,0);
+    //    ierr = HYPRE_SStructMatrixPrint("A-hypre",A_,0);
+    sprintf(fname, "A-hypre-bin%i", bin_);
+    ierr = HYPRE_SStructMatrixPrint(fname,A_,0);
     if (ierr != 0) ERROR("could not print A_\n");
   }
   if (parameters_->value("dump_b") == "true") {
-    ierr = HYPRE_SStructVectorPrint("B-hypre",B_,0);
+    //    ierr = HYPRE_SStructVectorPrint("B-hypre",B_,0);
+    sprintf(fname, "B-hypre-bin%i", bin_);
+    ierr = HYPRE_SStructVectorPrint(fname,B_,0);
     if (ierr != 0) ERROR("could not print B_\n");
   }
   if (parameters_->value("dump_ac") == "true" && use_prec) {
-    ierr = HYPRE_StructMatrixPrint("Ac-hypre",Ac_,0);
+    //    ierr = HYPRE_StructMatrixPrint("Ac-hypre",Ac_,0);
+    sprintf(fname, "Ac-hypre-bin%i", bin_);
+    ierr = HYPRE_StructMatrixPrint(fname,Ac_,0);
     if (ierr != 0) ERROR("could not print Ac_\n");
   }
 
@@ -652,7 +659,7 @@ void AMRsolve_Hypre_FLD::update_enzo()
     if (ierr != 0) ERROR("could not GetBoxValues from X_\n");
 
     // access Enzo radiation field
-    Scalar* E = grid->get_E();
+    Scalar* E = grid->get_E(bin_);
 
     // get buffering information on relating amrsolve grid to Enzo data
     int ghosts[3][2]; 
@@ -884,14 +891,18 @@ Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2,
 {
   Scalar c = 2.99792458e10;
   Scalar Rmin = 1.0e-2 / lUn_;
-  //  Rmin = MIN(Rmin, 1.e-20);   // 1st is astro/cosmo, 2nd is lab frame
+  Rmin = MIN(Rmin, 1.e-20);   // 1st is astro/cosmo, 2nd is lab frame
   Scalar Emin = 1.0e-30;
-  Scalar Dmax = 1.e-2 * c * lUn_;
-  // Scalar Dmax = 2.0539e-3 * c * lUn_;
-  // Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
+  // Scalar Dmax = 2.0539e-3 * c * lUn_;  // original
+  // Scalar Dmax = 10.0 * c * lUn_;   // fails, but is what we're using elsewhere
+  Scalar Dmax = 1.e-2 * c * lUn_; // passes Iliev#2 test, but not as well as original
+  // Scalar Dmax = 5.e-3 * c * lUn_; // improved, but still not as good as original
+  // Scalar Dmax = 2.e-3 * c * lUn_;  // solver failure!!
+  // Scalar Dmax = 1.e-3 * c * lUn_;  // great for Iliev#2 test
+  Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
 
   Scalar Eavg = MAX((E1 + E2)*0.5, Emin);
-  Scalar kap = 2.0*k1*k2/(k1+k2)*nUn_;
+  Scalar kap = 2.0*k1*k2/(k1+k2)*nUn_;   // harmonic mean
   Scalar R = MAX(dxi*ABS(E1 - E2)/Eavg, Rmin);
   return MIN(c/sqrt(9.0*kap*kap + R*R), Dmax);
 
@@ -925,8 +936,8 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
     for (i=0; i<n0*n1*n2; i++)  values[i] = 0.0;
 
     // access relevant arrays from this grid to compute RHS
-    Scalar* E     = grid->get_E();
-    Scalar* eta   = grid->get_eta();
+    Scalar* E     = grid->get_E(bin_);
+    Scalar* eta   = grid->get_eta(bin_);
     Scalar* kappa = grid->get_kap();
 
     // get buffering information on relating amrsolve grid to Enzo data
@@ -1106,7 +1117,7 @@ double AMRsolve_Hypre_FLD::rdiff_norm(double pnorm, double atol)
     values = grid->get_f(&n0,&n1,&n2);
 
     // access relevant arrays from this grid to compute RHS
-    E  = grid->get_E();
+    E  = grid->get_E(bin_);
     E0 = grid->get_E0();
 
     // get buffering information on relating amrsolve grid to Enzo data
@@ -1243,7 +1254,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
   double c = 2.99792458e10;
 
   // access relevant arrays from this grid to compute RHS
-  Scalar* E     = grid.get_E();
+  Scalar* E     = grid.get_E(bin_);
   Scalar* kappa = grid.get_kap();
   
   // get buffering information on relating amrsolve grid to Enzo data
@@ -2182,7 +2193,7 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
     } else if (phase == phase_matrix) {
 
       // access relevant arrays from this grid to compute RHS
-      Scalar* E     = grid_fine.get_E();
+      Scalar* E     = grid_fine.get_E(bin_);
       Scalar* kappa = grid_fine.get_kap();
 
       // fine->coarse off-diagonal scaling
@@ -2347,7 +2358,7 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
     // double c = 2.99792458e10;
     
     // // access relevant arrays from this grid to compute RHS
-    // Scalar* E     = grid_coarse.get_E();
+    // Scalar* E     = grid_coarse.get_E(bin_);
     // Scalar* kappa = grid_coarse.get_kap();
     
     // // get active enzo grid size

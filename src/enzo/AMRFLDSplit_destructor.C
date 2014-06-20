@@ -29,11 +29,12 @@ AMRFLDSplit::~AMRFLDSplit()
 //   if (debug)  printf("Entering AMRFLDSplit::destructor routine\n");
 
   // delete boundary condition arrays
-  int i, j;
-  for (i=0; i<3; i++)
-    for (j=0; j<2; j++) 
-      if (BdryVals[i][j] != NULL)  
-	delete [] BdryVals[i][j];
+  int bin, i, j;
+  for (bin=0; bin<MAX_RADIATION_BINS; bin++)
+    for (i=0; i<3; i++)
+      for (j=0; j<2; j++) 
+	if (BdryVals[bin][i][j] != NULL)  
+	  delete [] BdryVals[bin][i][j];
 
 
 }

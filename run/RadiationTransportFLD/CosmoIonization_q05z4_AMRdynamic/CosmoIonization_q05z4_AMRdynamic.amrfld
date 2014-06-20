@@ -6,6 +6,17 @@
 #
 #############################
 #
+# Specify radiation field(s) to use in solver
+#
+RadHydroNumBins = 1                  // one radiation field
+#   bin 0
+RadHydroESpectrum[0] = -1            // monochromatic
+RadHydroBinFrequency[0] = 13.6       // ionization frequency of HI [eV]
+NGammaDot[0] = 5.0e48                // emissivity source strength
+EtaRadius[0] = 1.0                   // emissivity source radius
+EtaCenter[0] = 0.5 0.5 0.5           // emissivity source location
+RadiationScaling[0] = 1.0e-1         // solver scaling factor 
+#
 # Problem-specific initialization parameters
 # 
 RadHydroVelocity = 0.0 0.0 0.0       // initial velocity [cm/s]
@@ -15,19 +26,15 @@ RadHydroOmegaBaryonNow   = 0.1       // baryonic fraction of total Omega
 RadiationBoundaryX0Faces = 2 2       // neumann
 RadiationBoundaryX1Faces = 2 2       // neumann
 RadiationBoundaryX2Faces = 2 2       // neumann
-NGammaDot = 5.0e48                   // ionization rate [photons/sec]
-EtaRadius = 1.0                      // radius for emissivity source [cells]
-EtaCenter = 0.5 0.5 0.5              // center of emissivity source
 #
 # General module and solver parameters
 # 
-RadHydroESpectrum       = -1         // monochromatic spectrum at nu_HI
 RadHydroModel           = 4          // isothermal, case-B HII recomb. coeff
-RadiationScaling        = 1.0e-1  
 RadHydroMaxDt           = 1.0e-2
 RadHydroMinDt           = 1.0e-6
 RadHydroInitDt          = 1.0e-6
 RadHydroDtRadFac        = 0.0005     // 0.05% desired change/step
+AutomaticScaling        = 0
 RadHydroSolType         = 1          // BiCGStab
 RadHydroMaxMGIters      = 500        // max iterations
 RadHydroMGPreRelax      = 3          // MG pre-relaxation sweeps

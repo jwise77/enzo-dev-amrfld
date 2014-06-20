@@ -214,6 +214,7 @@ int AMRsolve_Hierarchy::enzo_attach_grav(LevelHierarchyEntry *LevelArray[],
 #ifdef AMR_SOLVE
 
 void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
+					 int NumBins,
 					 int level_coarsest,
 					 int level_finest) throw()
 {
@@ -305,24 +306,152 @@ void AMRsolve_Hierarchy::enzo_attach_fld(LevelHierarchyEntry *LevelArray[],
 	// Set pointers to the relevant Enzo data arrays for setting up the 
 	// linear system later on.
 	Scalar *ptr;
-	ptr = enzo_grid->AccessRadiationFrequency0();  
-	if (!ptr) {
-	  printf("grid %i, proc %i: cannot get E from Enzo!\n",grid->id(),grid->ip());
-	  assert(ptr);
+	if (NumBins > 0) {
+	  ptr = enzo_grid->AccessRadiationFrequency0();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 0 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(0,ptr);
+	  ptr = enzo_grid->AccessEmissivity0();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 0 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(0,ptr);
 	}
-	grid->set_E(ptr);
+	if (NumBins > 1) {
+	  ptr = enzo_grid->AccessRadiationFrequency1();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 1 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(1,ptr);
+	  ptr = enzo_grid->AccessEmissivity1();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 1 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(1,ptr);
+	}
+	if (NumBins > 2) {
+	  ptr = enzo_grid->AccessRadiationFrequency2();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 2 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(2,ptr);
+	  ptr = enzo_grid->AccessEmissivity2();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 2 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(2,ptr);
+	}
+	if (NumBins > 3) {
+	  ptr = enzo_grid->AccessRadiationFrequency3();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 3 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(3,ptr);
+	  ptr = enzo_grid->AccessEmissivity3();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 3 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(3,ptr);
+	}
+	if (NumBins > 4) {
+	  ptr = enzo_grid->AccessRadiationFrequency4();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 4 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(4,ptr);
+	  ptr = enzo_grid->AccessEmissivity4();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 4 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(4,ptr);
+	}
+	if (NumBins > 5) {
+	  ptr = enzo_grid->AccessRadiationFrequency5();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 5 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(5,ptr);
+	  ptr = enzo_grid->AccessEmissivity5();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 5 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(5,ptr);
+	}
+	if (NumBins > 6) {
+	  ptr = enzo_grid->AccessRadiationFrequency6();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 6 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(6,ptr);
+	  ptr = enzo_grid->AccessEmissivity6();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 6 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(6,ptr);
+	}
+	if (NumBins > 7) {
+	  ptr = enzo_grid->AccessRadiationFrequency7();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 7 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(7,ptr);
+	  ptr = enzo_grid->AccessEmissivity7();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 7 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(7,ptr);
+	}
+	if (NumBins > 8) {
+	  ptr = enzo_grid->AccessRadiationFrequency8();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 8 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(8,ptr);
+	  ptr = enzo_grid->AccessEmissivity8();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 8 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(8,ptr);
+	}
+	if (NumBins > 9) {
+	  ptr = enzo_grid->AccessRadiationFrequency9();
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get E bin 9 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_E(9,ptr);
+	  ptr = enzo_grid->AccessEmissivity9();  
+	  if (!ptr) {
+	    printf("grid %i, proc %i: cannot get eta bin 9 from Enzo!\n",grid->id(),grid->ip());
+	    assert(ptr);
+	  }
+	  grid->set_eta(9,ptr);
+	}
 	ptr = enzo_grid->AccessKPhHI();       // temporary field for old radiation arrays
 	if (!ptr) {
 	  printf("grid %i, proc %i: cannot get E0 from Enzo!\n",grid->id(),grid->ip());
 	  assert(ptr);
 	}
 	grid->set_E0(ptr);
-	ptr = enzo_grid->AccessEmissivity0();  
-	if (!ptr) {
-	  printf("grid %i, proc %i: cannot get eta from Enzo!\n",grid->id(),grid->ip());
-	  assert(ptr);
-	}
-	grid->set_eta(ptr);
 	ptr = enzo_grid->AccessPhotoGamma();  // temporary field for opacity arrays
 	if (!ptr) {
 	  printf("grid %i, proc %i: cannot get PhotoGamma from Enzo!\n",grid->id(),grid->ip());
