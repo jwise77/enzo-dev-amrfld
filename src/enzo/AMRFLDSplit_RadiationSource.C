@@ -23,18 +23,35 @@
 #include "AMRFLDSplit.h"
  
  
-float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[], 
+float AMRFLDSplit::RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[], 
 				   int level, float time)
 {
 
   // initialize local variables to be reused
   int i, j, k;
-  float SpecConst = (ESpectrum == 1) ? 1.52877652583602 : 1.0;
-  float h_nu0 = 13.6 * 1.60217653e-12;
+  float ev2erg = 1.60217653e-12;
+  float h_nu0 = hnu0_HI   * ev2erg;
+  float h_nu1 = hnu0_HeI  * ev2erg;
+  float h_nu2 = hnu0_HeII * ev2erg;
   float total_eta = 0.0;
-  float etaconst, ECenter[3], ERadius, NGDot;
+  float etaconst, ECenter[3], ERadius, NGDot, SpecConst;
   float cellZl, cellZr, cellYl, cellYr, cellXl, cellXr, cellXc, cellYc, cellZc;
-  
+
+  // set multiplication factor based on radiation spectrum type
+  switch (ESpectrum[Bin]) {
+  case 1:   // T=10^5 blackbody
+  case 3:   // T=10^5 blackbody, bin0
+  case 4:   // T=10^5 blackbody, bin1
+  case 5:   // T=10^5 blackbody, bin2
+    SpecConst = 1.52877652583602;
+    break;
+  case -1:  // monochromatic at nu=BinFrequency[Bin]
+    SpecConst = BinFrequency[Bin] / hnu0_HI;
+    break;
+  default:
+    SpecConst = 1.0;
+  }
+
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
@@ -71,22 +88,27 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	            / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
 	
 	// access emissivity field, initialize to zero
-	float *eta = Temp->GridData->AccessEmissivity0();
+	float *eta = AccessEmissivityBin(Bin, Temp->GridHierarchyEntry);
+	if (eta == NULL)
+	  ENZO_VFAIL("AMRFLDSplit_RadiationSource error: emissivity bin %"ISYM" missing\n",
+		     Bin);
 	for (i=0; i<x0len*x1len*x2len; i++)  eta[i] = 0.0;
 	
 	
 	/////////////
 	// compute emissivity field based on ProblemType, input parameters
 	
-	// source with a fixed location/radius
-	if ( (ProblemType == 410) || (ProblemType == 411) || 
-	     (ProblemType == 413) || (ProblemType == 415) ) {
+	switch (ProblemType) {
+	case 410:  	// source with a fixed location/radius,
+	case 411:       // so iterate through domain, placing
+	case 413:       // emissivity source in desired cell(s)
+	case 415:
 	  
 	  // one-cell source
-	  if (EtaRadius == 0.0) {
+	  if (EtaRadius[Bin] == 0.0) {
 	    
 	    // compute eta factor for given ionization source
-	    etaconst = h_nu0 * NGammaDot * SpecConst / dV;
+	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
 
 	    for (k=ghZl; k<n3[2]+ghZl; k++) {
 	      
@@ -95,7 +117,7 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	      cellZr = cellZl + dx[2];
 	      
 	      // check if we're in the right z-cell
-	      if ((cellZl > EtaCenter[2]) || (cellZr <= EtaCenter[2]))
+	      if ((cellZl > EtaCenter[Bin][2]) || (cellZr <= EtaCenter[Bin][2]))
 		continue; 
 	      
 	      for (j=ghYl; j<n3[1]+ghYl; j++) {
@@ -105,7 +127,7 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 		cellYr = cellYl + dx[1];
 		
 		// check if we're in the right y-cell
-		if ((cellYl > EtaCenter[1]) || (cellYr <= EtaCenter[1]))
+		if ((cellYl > EtaCenter[Bin][1]) || (cellYr <= EtaCenter[Bin][1]))
 		  continue; 
 		
 		for (i=ghXl; i<n3[0]+ghXl; i++) {
@@ -115,7 +137,7 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 		  cellXr = cellXl + dx[0];
 		  
 		  // check if we're in the right x-cell
-		  if ( (cellXl <= EtaCenter[0]) && (cellXr > EtaCenter[0])) { 
+		  if ( (cellXl <= EtaCenter[Bin][0]) && (cellXr > EtaCenter[Bin][0])) { 
 		    eta[(k*x1len + j)*x0len + i] = etaconst;
 		    break;
 		  }
@@ -126,7 +148,7 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	  } else { // multi-celled source
 	    
 	    // compute eta factor for given ionization source
-	    etaconst = h_nu0 * NGammaDot * SpecConst / dV / POW(2.0*EtaRadius, rank);
+	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV / POW(2.0*EtaRadius[Bin], rank);
 
 	    for (k=ghZl; k<n3[2]+ghZl; k++) {
 	      
@@ -144,92 +166,63 @@ float AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 		  cellXc = x0L + (i-ghXl+0.5)*dx[0];
 		  
 		  // see if cell is within source region
-		  if ( (fabs(cellXc-EtaCenter[0]) < EtaRadius*dx[0]) &&
-		       (fabs(cellYc-EtaCenter[1]) < EtaRadius*dx[1]) &&
-		       (fabs(cellZc-EtaCenter[2]) < EtaRadius*dx[2]) )
+		  if ( (fabs(cellXc-EtaCenter[Bin][0]) < EtaRadius[Bin]*dx[0]) &&
+		       (fabs(cellYc-EtaCenter[Bin][1]) < EtaRadius[Bin]*dx[1]) &&
+		       (fabs(cellZc-EtaCenter[Bin][2]) < EtaRadius[Bin]*dx[2]) )
 		    eta[(k*x1len + j)*x0len + i] = etaconst;
 		  
 		} // x-loop
 	      } // y-loop
 	    } // z-loop
 	  } // EtaRadius == 0
-	} // ProblemType in {410, 411, 413, 415}
+	  break;
 	
-	
-	// emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
-	if (ProblemType == 412) {
+	case 412:    // emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
+	  
+	  // place ionization sources along left wall (if on this subdomain)
+	  if (x0L == 0.0) {
 
-	  ECenter[0] = 0.0;
-	  ECenter[1] = 3.30;
-	  ECenter[2] = 3.30;
-	  ERadius = 1.0;
-	  NGDot = 3.0e51;
-	  
-	  // compute eta factor for given ionization source
-	  etaconst = h_nu0 * NGDot * SpecConst / dV / POW(2.0*ERadius, rank);
-	    
-	  for (k=ghZl; k<n3[2]+ghZl; k++) {
-	      
-	    // z-center (comoving) for this cell
-	    cellZc = x2L + (k-ghZl+0.5)*dx[2];
-	      
-	    for (j=ghYl; j<n3[1]+ghYl; j++) {
+	    // compute eta factor for given ionization source
+	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dx[0] / lUn;
+
+	    // place along wall (i=ghXl)
+	    for (k=ghZl; k<n3[2]+ghZl; k++)
+	      for (j=ghYl; j<n3[1]+ghYl; j++)
+		eta[(k*x1len + j)*x0len + ghXl] = etaconst;
+	  }
+	  break;
 		
-	      // y-center (comoving) for this cell
-	      cellYc = x1L + (j-ghYl+0.5)*dx[1];
-		
-	      for (i=ghXl; i<n3[0]+ghXl; i++) {
-		  
-		// x-center (comoving) for this cell
-		cellXc = x0L + (i-ghXl+0.5)*dx[0];
-		  
-		// see if cell is within source region
-		if ( (fabs(cellXc-ECenter[0]) < ERadius*dx[0]) &&
-		     (fabs(cellYc-ECenter[1]) < ERadius*dx[1]) &&
-		     (fabs(cellZc-ECenter[2]) < ERadius*dx[2]) )
-		  eta[(k*x1len + j)*x0len + i] = etaconst;
-		  
-	      } // x-loop
-	    } // y-loop
-	  } // z-loop
-	} // ProblemType == 412
-	
-	
-	  //  point-source emissivity at center of every processor
-	if (ProblemType == 414) {
-	  
+	case 414:    // point-source emissivity at center of every processor
+
 	  // compute eta factor for given ionization source
-	  etaconst = h_nu0 * NGammaDot * SpecConst / dV;
+	  etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
 	  
 	  // place ionization source in center of subdomain
 	  i = x0len / 2;
 	  j = x1len / 2;
 	  k = x2len / 2;
 	  eta[(k*x1len + j)*x0len + ghXl] = etaconst;
-	  
-	} // ProblemType == 414
-	
-	
-	// homogeneous emissivity field w/ strength hnu0*NGammaDot/dV
-	if (ProblemType == 416) {
+	  break;
+		
+	case 416:    // homogeneous emissivity field w/ strength hnu0*NGammaDot/dV
 	  
 	  // compute eta factor for given ionization source
-	  etaconst = h_nu0 * NGammaDot * SpecConst / dV;
+	  etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
 	  for (i=0; i<x0len*x1len*x2len; i++)  eta[i] = etaconst;
+	  break;
 	  
-	} // ProblemType == 416
+	}
 	
-	
-	// L2 norm of total active emissivity on this grid
+	// accumulate L2 norm of total active emissivity on this grid
 	for (k=ghZl; k<n3[2]+ghZl; k++) 
 	  for (j=ghYl; j<n3[1]+ghYl; j++) 
 	    for (i=ghXl; i<n3[0]+ghXl; i++) 
  	      total_eta += eta[(k*x1len+j)*x0len+i]*eta[(k*x1len+j)*x0len+i]*dVscale;
-
+	
       }  // end iteration over grids on this processor
   
   // communicate to obtain overall emissivity
-  float glob_eta;
+  float glob_eta = 0.0;
 #ifdef USE_MPI
   MPI_Datatype DataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
   MPI_Arg ONE = 1;

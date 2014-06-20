@@ -62,15 +62,35 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
   char *Vel2Name  = "z-velocity";
-  char *RadName   = "Grey_Radiation_Energy";
   char *HIName    = "HI_Density";
   char *HIIName   = "HII_Density";
   char *HeIName   = "HeI_Density";
   char *HeIIName  = "HeII_Density";
   char *HeIIIName = "HeIII_Density";
   char *DeName    = "Electron_Density";
-  char *EtaName   = "Emissivity";
   char *GPotName  = "Grav_Potential";
+  char *RadName   = "Grey_Radiation_Energy";
+  char *RadName0  = "Radiation0";
+  char *RadName1  = "Radiation1";
+  char *RadName2  = "Radiation2";
+  char *RadName3  = "Radiation3";
+  char *RadName4  = "Radiation4";
+  char *RadName5  = "Radiation5";
+  char *RadName6  = "Radiation6";
+  char *RadName7  = "Radiation7";
+  char *RadName8  = "Radiation8";
+  char *RadName9  = "Radiation9";
+  char *EtaName   = "Emissivity";
+  char *EtaName0  = "Emissivity0";
+  char *EtaName1  = "Emissivity1";
+  char *EtaName2  = "Emissivity2";
+  char *EtaName3  = "Emissivity3";
+  char *EtaName4  = "Emissivity4";
+  char *EtaName5  = "Emissivity5";
+  char *EtaName6  = "Emissivity6";
+  char *EtaName7  = "Emissivity7";
+  char *EtaName8  = "Emissivity8";
+  char *EtaName9  = "Emissivity9";
 
   // local declarations
   char line[MAX_LINE_LENGTH];
@@ -100,6 +120,7 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroInitialFractionHeII  = 0.0;
   float RadHydroInitialFractionHeIII = 0.0;
   int   RadHydroChemistry            = 1;
+  int   RadHydroNumBins              = 0;    // grey solver
   int   TestGravityNumberOfParticles = 0;    // number of test particles
 
 
@@ -115,6 +136,8 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroX2Velocity);
 	ret += sscanf(line, "RadHydroChemistry = %"ISYM, 
 		      &RadHydroChemistry);
+	ret += sscanf(line, "RadHydroNumBins = %"ISYM, 
+		      &RadHydroNumBins);
 	ret += sscanf(line, "RadHydroDensity = %"FSYM, 
 		      &RadHydroDensity);
 	ret += sscanf(line, "RadHydroTemperature = %"FSYM, 
@@ -200,11 +223,11 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   HierarchyEntry *TempGrid = &TopGrid;
   while (TempGrid != NULL) {
     if (TempGrid->GridData->RHIonizationTestInitializeGrid(
-		        RadHydroChemistry, RadHydroDensity, RadHydroX0Velocity, 
-			RadHydroX1Velocity, RadHydroX2Velocity, RadHydroIEnergy, 
-			RadHydroRadiationEnergy, RadHydroHydrogenMassFraction, 
-			RadHydroInitialFractionHII, RadHydroInitialFractionHeII, 
-			RadHydroInitialFractionHeIII, 
+		        RadHydroChemistry, RadHydroNumBins, RadHydroDensity, 
+			RadHydroX0Velocity, RadHydroX1Velocity, RadHydroX2Velocity, 
+			RadHydroIEnergy, RadHydroRadiationEnergy, 
+			RadHydroHydrogenMassFraction, RadHydroInitialFractionHII, 
+			RadHydroInitialFractionHeII, RadHydroInitialFractionHeIII, 
 			TestGravityNumberOfParticles, local) == FAIL) {
       ENZO_FAIL("Error in RHIonizationTestInitializeGrid!\n");
     }
@@ -221,7 +244,28 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   DataLabel[BaryonField++] = Vel0Name;
   DataLabel[BaryonField++] = Vel1Name;
   DataLabel[BaryonField++] = Vel2Name;
-  DataLabel[BaryonField++] = RadName;
+  if (RadHydroNumBins == 0)
+    DataLabel[BaryonField++] = RadName;
+  if (RadHydroNumBins > 0)
+    DataLabel[BaryonField++] = RadName0;
+  if (RadHydroNumBins > 1)
+    DataLabel[BaryonField++] = RadName1;
+  if (RadHydroNumBins > 2)
+    DataLabel[BaryonField++] = RadName2;
+  if (RadHydroNumBins > 3)
+    DataLabel[BaryonField++] = RadName3;
+  if (RadHydroNumBins > 4)
+    DataLabel[BaryonField++] = RadName4;
+  if (RadHydroNumBins > 5)
+    DataLabel[BaryonField++] = RadName5;
+  if (RadHydroNumBins > 6)
+    DataLabel[BaryonField++] = RadName6;
+  if (RadHydroNumBins > 7)
+    DataLabel[BaryonField++] = RadName7;
+  if (RadHydroNumBins > 8)
+    DataLabel[BaryonField++] = RadName8;
+  if (RadHydroNumBins > 9)
+    DataLabel[BaryonField++] = RadName9;
   if (RadHydroChemistry > 0) {
     DataLabel[BaryonField++] = DeName;
     DataLabel[BaryonField++] = HIName;
@@ -245,9 +289,31 @@ int RHIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
       DataLabel[BaryonField++] = kdissH2IName;
   }
 
-  // if using the AMRFLDSplit solver, set a field for the emissivity
-  if (ImplicitProblem == 6) 
-    DataLabel[BaryonField++] = EtaName;
+  // if using the AMRFLDSplit solver, set fields for the emissivity
+  if (ImplicitProblem == 6) {
+    if (RadHydroNumBins == 0)
+      DataLabel[BaryonField++] = EtaName;
+    if (RadHydroNumBins > 0)
+      DataLabel[BaryonField++] = EtaName0;
+    if (RadHydroNumBins > 1)
+      DataLabel[BaryonField++] = EtaName1;
+    if (RadHydroNumBins > 2)
+      DataLabel[BaryonField++] = EtaName2;
+    if (RadHydroNumBins > 3)
+      DataLabel[BaryonField++] = EtaName3;
+    if (RadHydroNumBins > 4)
+      DataLabel[BaryonField++] = EtaName4;
+    if (RadHydroNumBins > 5)
+      DataLabel[BaryonField++] = EtaName5;
+    if (RadHydroNumBins > 6)
+      DataLabel[BaryonField++] = EtaName6;
+    if (RadHydroNumBins > 7)
+      DataLabel[BaryonField++] = EtaName7;
+    if (RadHydroNumBins > 8)
+      DataLabel[BaryonField++] = EtaName8;
+    if (RadHydroNumBins > 9)
+      DataLabel[BaryonField++] = EtaName9;
+  }
 
   // if using gravity, set a field for the gravitational potential
   if (SelfGravity)

@@ -88,6 +88,8 @@
 
 #define VERSION                             2.0  /* current version number */
 
+#define MAX_RADIATION_BINS                 10
+
 /* Unmodifiable Parameters */
 
 #define MAX_DIMENSION                       3  /* must be 3! */

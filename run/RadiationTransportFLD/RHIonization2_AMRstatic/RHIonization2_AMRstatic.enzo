@@ -34,13 +34,17 @@ RefineBy                   =  2
 #
 StaticHierarchy            = 0
 RefineBy                   = 2
-CellFlaggingMethod         = 22
+#CellFlaggingMethod         = 22
+CellFlaggingMethod         = 12    // MustRefineRegion
+MustRefineRegionMinRefinementLevel = 2
+MustRefineRegionLeftEdge   = -0.5 -0.5 -0.5
+MustRefineRegionRightEdge  =  0.5  0.5  0.5
 MaximumRefinementLevel     = 2
 #
 # runtime and I/O
 #
 StopTime                   = 1.57788e0     // 500 Myr
-StopCycle                  = 99999
+StopCycle                  = 9999
 dtDataDump                 = 3.15576e-2    // 10 Myr
 ParallelRootGridIO         = 0
 # 

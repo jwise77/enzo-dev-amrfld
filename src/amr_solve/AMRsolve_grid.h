@@ -7,6 +7,7 @@
 #define AMRSOLVE_GRID_H
 
 #define MAX_TMP 100  // maximum allowed number of temporary arrays
+#define MAX_BINS 100  // maximum allowed number of radiation bins
 
 class AMRsolve_Grid
 {
@@ -93,9 +94,9 @@ class AMRsolve_Grid
                             /// the value held here.
   
   // optional pointers to Enzo data arrays (if used; set using set_* routines)
-  Scalar* E_;               /// ptr to Radiation energy density array
+  Scalar* E_[MAX_BINS];     /// ptr to Radiation energy density array
   Scalar* E0_;              /// ptr to old Radiation energy density array
-  Scalar* eta_;             /// ptr to emissivity array
+  Scalar* eta_[MAX_BINS];   /// ptr to emissivity array
   Scalar* kap_;             /// ptr to opacity array
   Scalar* phi_;             /// ptr to PotentialField array
   Scalar* gmass_;           /// ptr to GravitatingMassField array
@@ -191,18 +192,18 @@ class AMRsolve_Grid
 
   /// Return a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
-  Scalar* get_E()     throw() { assert(E_);     return E_;     }; 
+  Scalar* get_E(int bin)    throw() { assert(E_[bin]);    return E_[bin];   }; 
+  Scalar* get_eta(int bin)  throw() { assert(eta_[bin]);  return eta_[bin]; };
   Scalar* get_E0()    throw() { assert(E0_);    return E0_;    }; 
-  Scalar* get_eta()   throw() { assert(eta_);   return eta_;   };
   Scalar* get_kap()   throw() { assert(kap_);   return kap_;   };
   Scalar* get_phi()   throw() { assert(phi_);   return phi_;   };
   Scalar* get_gmass() throw() { assert(gmass_); return gmass_; };
 
   /// Set a pointer to the specified Enzo data array associated with the Grid
   /// (does not check for non-NULL value)
-  void set_E(Scalar* E)         throw() { E_     = E;     };
+  void set_E(int bin, Scalar* E)      throw() { E_[bin]   = E;   };
+  void set_eta(int bin, Scalar* eta)  throw() { eta_[bin] = eta; };
   void set_E0(Scalar* E0)       throw() { E0_    = E0;    };
-  void set_eta(Scalar* eta)     throw() { eta_   = eta;   };
   void set_kap(Scalar* kap)     throw() { kap_   = kap;   };
   void set_phi(Scalar* phi)     throw() { phi_   = phi;   };
   void set_gmass(Scalar* gmass) throw() { gmass_ = gmass; };
@@ -481,17 +482,14 @@ class AMRsolve_Grid
     return counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])]; 
   }
 
-  /// Initialize the counters_ array to given value
+  /// Initialize the counters_ array to given value; frees any existing array
   void init_counter(int value)
   {
     counters_init_ = value;
-    /* for (int i2=0; i2<n_[2]; i2++) { */
-    /*   for (int i1=0; i1<n_[1]; i1++) { */
-    /* 	for (int i0=0; i0<n_[0]; i0++) { */
-    /* 	  counters_[index(i0,i1,i2,n_[0],n_[1],n_[2])] = value; */
-    /* 	} */
-    /*   } */
-    /* } */
+    if (counters_ != NULL) {
+      delete[] counters_;
+      counters_ = NULL;
+    }
   }
 
   //--------------------------------------------------------------------

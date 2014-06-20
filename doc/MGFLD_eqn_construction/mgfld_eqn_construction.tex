@@ -203,6 +203,31 @@ simpler reaction-diffusion equation
 \end{align}
 
 
+As previously mentioned, the role of the flux limiter $D$ is one of
+providing a continuous transition between the isotropic and
+free-streaming limits.  To this end, we consider the flux limiter to
+operate independently in each Cartesian direction,
+\[
+   D_{\nu}(\kappa_{\nu},\Enu) = \left[\begin{array}{ccc} 
+       D_{\nu,1}(\kappa_{\nu},\Enu) & 0 & 0 \\
+       0 & D_{\nu,2}(\kappa_{\nu},\Enu) & 0 \\
+       0 & 0 & D_{\nu,3}(\kappa_{\nu},\Enu) 
+     \end{array}\right],
+\]
+where we employ a limiter of the form  \cite{Morel2000}: 
+\begin{align}
+  \label{eq:Morel_limiterD}
+  D_{\nu,i} &= c \left(9\kappa_{\nu}^2 + R_{\nu,i}^2\right)^{-1/2}, \quad i=1,2,3,\\
+  \label{eq:Morel_limiterR}
+  R_{\nu,i} &= \frac{|\partial_{\rvec_i}\Enu|}{\Enu}, \quad i=1,2,3.
+\end{align}
+We elaborate further on the implementation of these formulas in
+Section \ref{subsec:limiter_implementation}.
+
+
+
+
+
 
 
 \subsection{Multi-Chromatic Approximation}
@@ -211,17 +236,27 @@ simpler reaction-diffusion equation
 Our first approximation to the radiation energy density equation
 \eqref{eq:mgfld_simplified2} will be to remove the dependency on
 frequency space by choosing to evolve radiation energy densities at a
-specific set of frequencies.  To this end, let us denote this set of
-frequencies as
+specific set of frequencies.  To this end, let us denote a finite set
+of frequencies as
 \begin{equation}
 \label{eq:monochromatic_frequencies}
   \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
 \end{equation}
-We may then consider only the propagation of monochromatic radiation
-at each of these frequencies, i.e. we may define a set of
-monochromatic radiation energy densities, $E_0, E_1, \ldots, E_{N_f}$,
-where each is defined as the solution to the equation
-\eqref{eq:mgfld_simplified2} at a specific frequency $\nu_k$, i.e.
+We may then consider the full frequency-dependent radiation field to
+be comprised of radiation emitted only at this finite set of
+frequencies.  Under this ``multi-chromatic'' discretization, we may
+consider the overall frequency-dependent radiation energy density
+function to have the form 
+\begin{equation}
+\label{eq:radiation_multichromatic}
+  \Enu(t,\rvec,\nu) = \sum_{k=0}^{N_f} E_{k}(t,\rvec) \delta_{\nu_k}(\nu),
+\end{equation}
+where $\delta_{\nu_k}(\nu)$ is the Dirac delta function, and where we
+have defined a set of monochromatic radiation energy densities, $E_0,
+E_1, \ldots, E_{N_f}$.  Under this approximation, the equation
+\eqref{eq:mgfld_simplified2} is only defined at each of the
+frequencies $\nu_k, k=0,\ldots,N_f$, i.e. at each specific frequency
+$\nu_k$ this equation becomes
 \begin{align}
   \label{eq:mgfld_multichromatic}
   \partial_{t} E_k - \nabla\cdot(D_k\,\nabla E_k) + \frac{3 \adot}{a}
@@ -245,16 +280,8 @@ the associated frequency $\nu_k$, i.e.
   \eta_k(t,\rvec) &= \eta_{\nu}(t,\rvec,\nu_k).
 \end{align}
 
-Under this ``multi-chromatic'' discretization, we may consider the overall
-frequency-dependent radiation energy density function to have the form
-\begin{equation}
-\label{eq:radiation_multichromatic}
-  \Enu(t,\rvec,\nu) = \sum_{k=0}^{N_f} E_{\nu_k}(t,\rvec) \delta_{\nu_k}(\nu),
-\end{equation}
-where $\delta_{\nu_k}(\nu)$ is the Dirac delta function.  With this in
-mind, we may define the photo-heating and photo-ionization terms that
-couple these radiation fields to the matter.  
-
+Additionally, we may define the photo-heating and photo-ionization
+terms that couple these radiation fields to the matter.  
 First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
 for each species $\mn_i$ as
 \begin{equation}
@@ -265,13 +292,14 @@ for each species $\mn_i$ as
 \end{equation}
 where here we denote the ionization threshold frequency for species
 $\mn_i$ as $\bar{\nu}_i$.  Furthermore, in this equation we have
-implicitly assumed that $\sigma_{\mn_i}(\nu) = 0$ for all $\nu <
-\bar{\nu}_i$, which is sufficient to guarantee that monochromatic
-radiation energy densities at frequencies below $\bar{\nu}_i$ do not
-contribute to the photoionization rate $\Gamma_i^{ph}(t,\rvec)$.
+implicitly assumed that the species cross-sections satisfy
+$\sigma_{\mn_i}(\nu) = 0$ for all $\nu < \bar{\nu}_i$, which is
+sufficient to guarantee that monochromatic radiation energy densities
+at frequencies below $\bar{\nu}_i$ do not contribute to the
+photoionization rate $\Gamma_i^{ph}(t,\rvec)$. 
 
 Similarly, we compute the frequency-integrated specific photoheating
-rate, $G$ using our multi-chromatic radiation field
+rate, $G$, using our multi-chromatic radiation field
 \eqref{eq:radiation_multichromatic} as 
 \begin{align}
 \notag
@@ -291,178 +319,244 @@ rate, $G$ using our multi-chromatic radiation field
 \end{align}
 
 
-{\bf [RESUME HERE]}
+
 
 \subsection{Multi-Group Approximation}
 \label{subsec:multi_group}
 
-The radiation energy density equation \eqref{eq:mgfld_simplified2} may
-be discretized in frequency space by integrating the energy density
-(or the flux) between two frequencies, namely $\nu_{g+1}$ and
-$\nu_{g}$.  This forms one radiation energy 'group', which provides an
-average estimate of the moment quantity as:
-\[
-   E_{g}(t,\rvec) = \frac{1}{\nu_{g+1}-\nu_{g}} \int_{\nu_{g}}^{\nu_{g+1}}
-   \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad g=1,\ldots,N_g.
-\]
-We take this approximation further, through going to the limit of a
-single grey radiation energy density $E$ (g cm$^{-1}$ s$^{-2}$), by
-integrating in frequency space from the ionization threshold of
-hydrogen, $\nu_{HI}$, to infinity.  We accomplish this by assuming
-the existence of a given radiation frequency spectrum, $\chi_E(\nu)$,
-such that the frequency-dependent radiation energy density may be
-written in the form $\Enu(t,\rvec,\nu)=\tilde{E}(t,\rvec)\,\chi_E(\nu)$.  
-We note that this is a rather strong assumption, since it requires
-that all radiation throughout the space-time domain has the same
-frequency spectrum.  With this, we define a single ``grey'' radiation
-energy density, 
+Our first approximation to the radiation energy density equation
+\eqref{eq:mgfld_simplified2} will be to remove the dependency on
+frequency space by choosing to evolve radiation energy densities at a
+specific set of frequencies.  To this end, let us denote a finite set
+of frequencies as
+
+As an alternative discretization of the frequency-dependent radiation
+energy density equation \eqref{eq:mgfld_simplified2}, we may choose to
+evolve groups of radiation energy densities defined within frequency
+bands, or bins.  As before, we introduce a finite set of frequencies
 \begin{equation}
-\label{eq:grey_definition}
-  E(t,\rvec) = \int_{\nu_0}^{\infty} \Enu(t,\rvec,\nu) \mathrm d\nu =
-  \tilde{E}(t,\rvec) \int_{\nu_0}^{\infty} \chi_{E}(\nu)\mathrm d\nu.
+\label{eq:bin_bounds}
+  \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
 \end{equation}
-We note that this approximation is valid only when the assumed
-frequency spectrum is integrable, i.e. if it is defined only over a
-limited frequency bandwidth, or if it scales with frequency as
-$E_{\nu} \propto \nu^{-\beta_{q}}$ for some $\beta_{q} > 1$.  The
-latter case holds for quasar and stellar type spectra. 
+These values define frequency {\em groups}, 
+\begin{equation}
+\label{eq:frequency_groups}
+  g_0 = [\nu_0,\nu_1), \qquad   g_1 = [\nu_1,\nu_2), 
+  \qquad \cdots \qquad
+  g_{N_f} = [\nu_{N_f-1},\nu_{N_f}).
+\end{equation}
+We may then consider the full frequency-dependent radiation field to
+be comprised of radiation emitted uniformly {\em within} each group,
+but non-uniformly {\em between} groups.  Under this ``multi-group''
+discretization, we may consider the overall frequency-dependent
+radiation energy density function to have the piecewise constant form  
+\begin{equation}
+\label{eq:radiation_multigroup}
+  \Enu(t,\rvec,\nu) = \begin{cases}
+    E_k(t,\rvec), & \text{if}\quad \nu \in g_k, \; k=0,\ldots,N_f-1\\
+    \qquad 0, & \text{otherwise}.
+  \end{cases}
+\end{equation}
 
-Application of such an integration in equation
-\eqref{eq:mgfld_simplified2} yields the following ``grey'' 
-radiation diffusion equation:
-\begin{align}
-  \label{eq:mgfld_grey}
-  \partial_{t} E - \nabla\cdot\(D\,\nabla E\)
-    + \alpha\frac{\adot}{a} E = \eta - c\kappa E.
-\end{align}
-In the above equation, the term 
-$-\frac{\nu \adot}{a}\partial_{\nu}\Enu$ is replaced (through
-integration by parts) with a contribution to the cosmology expansion
-term by an amount equal to $\frac{\adot}{a} E$.  However, if the
-assumed spectrum $\chi_E(\nu)$ is monochromatic, i.e. $\chi_E(\nu) =
-\delta_{\nu_0}(\nu)$, then integration by parts does not yield this
-contribution.  Hence, we use the parameter $\alpha$ to account for
-this difference, in that for monochromatic radiation spectra we use
-$\alpha=3$, but for all other spectra we use $\alpha=4$.
+Notes:
+\begin{itemize}
+\item[(i)] Under this discretization, the radiation field is no longer
+  continuous as a function of frequency.  For example, in Figure
+  \ref{fig:binned_blackbody} we show both a continuous $T=10^5$
+  blackbody radiation spectrum and its 5 and 10 group approximations.
 
-We note that through using the integrated radiation energy density
-$E$, since it is based on an {\em a-priori} defined function
-$\chi_E(\nu)$, we may compute all frequency-space integrals based on
-$\Enu$ at initialization of the radiation module, and store the
-integrated weights for reuse throughout the simulation.  This pertains
-to the frequency-integrated opacity $\kappa$, in which 
+  \begin{figure}[h]
+    \centerline{\hfill
+      \includegraphics[scale=0.3, trim=1.0cm 0.5cm 1.25cm 0.5cm]{blackbody.pdf}
+      \includegraphics[scale=0.3, trim=1.0cm 0.5cm 1.25cm 0.5cm]{blackbody-5bin.pdf}
+      \includegraphics[scale=0.3, trim=1.0cm 0.5cm 1.25cm 0.5cm]{blackbody-10bin.pdf}
+      \hfill}
+    \caption{Comparison between true $T=10^5$ blackbody radiation
+      spectral energy distribution and its 5 and 10 group counterparts.} 
+    \label{fig:binned_blackbody}
+  \end{figure}
+
+\item[(ii)] This piecewise constant approximation of the underlying
+  frequency dependence of $\Enu$ is only first-order accurate as a
+  function of the bin width.
+
+\item[(iii)] To ensure photon conservation, these bins must be filled
+  with the average value of $\Enu$ within each bin, {\em not} the
+  value at the central frequency, i.e.
+  \[
+     E_k(t,\rvec) = \frac{1}{\nu_{k+1}-\nu_k} \int_{\nu_k}^{\nu_{k+1}}
+     \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad k=1,\ldots,N_f.
+  \]
+  This applies to both initial conditions, and (more importantly) to
+  the emissivity values that source each radiation group.
+
+\end{itemize}
+With this approximation in place, we may consider the implications on
+solving the radiation energy density equation
+\eqref{eq:mgfld_simplified2}.  Due to the piecewise constant
+radiation approximation, we simplify the equation
+\eqref{eq:mgfld_simplified2} by integrating over each frequency group,
+and dividing by the width of that group, $|g_k| = \nu_{k+1}-\nu_k$, to
+compute the average value over the frequency group.  As a result,
+instead of solving a single frequency-dependent equation
+\eqref{eq:mgfld_simplified2}, we now have separate equations for each
+radiation group. We investigate each term separately,
 \begin{align}
-  \notag
-  & c\,\kappa\,E \ = \ c \int_{\nu_0}^{\infty} \kappa_{\nu}\,\Enu\,\mathrm d\nu, \\
-  \Longrightarrow\quad &\notag \\
-  \label{eq:opacity_integrated}
-  &\kappa \ = \ \frac{\int_{\nu_0}^{\infty} \kappa_{\nu}\,\Enu\,\mathrm d\nu}{
-  \int_{\nu_0}^{\infty} \Enu\,\mathrm d\nu} \ = \ 
-  \frac{\sum_{i=1}^{N_\text{chem}} \mn_i \int_{\nu_i}^{\infty}
-    \chi_E\,\sigma_{\mn_i}\,\mathrm d\nu}{
-  \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu}.
+ \label{eq:multigroup_timederivative}
+   \partial_{t} \Enu &\;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \partial_{t} \Enu\,\mathrm d\nu
+   =
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \partial_{t} E_k\,\mathrm d\nu
+   =
+   \partial_{t} E_k, \\
+ \label{eq:multigroup_diffusion}
+   \nabla\cdot(D_{\nu}\,\nabla\Enu) &\;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \nabla\cdot(D_{\nu}\,\nabla\Enu)\,\mathrm d\nu
+   =
+   \nabla\cdot(D_k\,\nabla E_k), \\
+ \label{eq:multigroup_depletion}
+   \frac{3 \adot}{a} \Enu &\;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \frac{3 \adot}{a} \Enu\,\mathrm d\nu
+   =
+   \frac{3 \adot}{a} E_k, \\
+ \label{eq:multigroup_emissivity}
+   \eta_{\nu} &\;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \eta_{\nu}\,\mathrm d\nu
+   \equiv
+   \eta_k, \\
+ \label{eq:multigroup_opacity}
+   c \kappa_{\nu} \Enu &\;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} c \kappa_{\nu} \Enu\,\mathrm d\nu
+   =
+   \frac{c E_k}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \kappa_{\nu}\,\mathrm d\nu
+   \equiv
+   c \kappa_k E_k,
 \end{align}
-Similarly, we may compute the integrated photoionization rate
-$\Gamma_i^{ph}$ as
+where we have defined the multi-group emissivity $\eta_k, k=1,\ldots,N_f$ and
+multi-group opacity $\kappa_k, k=1,\ldots,N_f$ above in the equations
+\eqref{eq:multigroup_emissivity} and \eqref{eq:multigroup_opacity}.
+The remaining frequency coupling term is less trivial,
+\begin{align}
+\notag
+   \frac{\nu \adot}{a}\partial_{\nu}\Enu \;\rightarrow\;
+   \frac{1}{|g_k|} \int_{\nu_k}^{\nu_{k+1}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   &=
+   \frac{\adot}{a|g_k|} \int_{\nu_k}^{\nu_{k+1}} \nu\,\partial_{\nu}\Enu\,\mathrm d\nu \\
+\label{eq:multigroup_redshifting}
+   &=
+   \frac{\adot}{a|g_k|}
+   \left[(\nu\,\Enu)\bigg\vert_{\nu_k}^{\nu_{k+1}} - \int_{\nu_k}^{\nu_{k+1}} \Enu\,\mathrm d\nu\right]\\
+\notag
+   &\approx
+   \frac{\adot\, \nu_{k+1} (E_k+E_{k+1})}{2a|g_k|} -
+   \frac{\adot\, \nu_{k} (E_{k-1}+E_{k})}{2a|g_k|} - \frac{\adot}{a}E_k.
+\end{align}
+We note that derivation of the above term required integration by
+parts, as well as definition of the radiation energy density at the
+bin frequency boundaries, 
 \[
-   \Gamma_i^{ph} 
-   \ = \ 
-   c \int_{\nu_i}^{\infty} \frac{\sigma_{\mn_i}\Enu}{h\nu}\,\mathrm d\nu
-   \ = \ 
-   \frac{cE \int_{\nu_i}^{\infty}
-     \frac{\chi_E\,\sigma_{\mn_i}}{\nu}\,\mathrm d\nu}{
-   h \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu}.
+   \Enu(\nu_k) \approx \frac{E_{k-1}+E_k}{2}, \qquad
+   \Enu(\nu_{k+1}) \approx \frac{E_{k}+E_{k+1}}{2}.
 \]
-We note that the above two quantities, and in fact all quantities
-involving the frequency integrated radiation energy density, may be
-written in terms of 
+Furthermore, this term accounts for redshifting
+effects due to cosmological expansion, that pull radiation from higher
+frequencies downward.  Although our multi-group radiation approximation
+is no longer continuous as a function of frequency, rendering the
+partial derivative $\partial_\nu\Enu$ undefined, we have used
+integration by parts to instead consider this term as a radiation flux
+from higher-frequency groups downward.  Furthermore, the first and
+last radiation groups deserve special attention, since they do not
+have left and right neighbors, respectively.  For these two groups, we
+instead approximate
+\begin{align}
+ \label{eq:multigroup_redshifting_left}
+   \frac{1}{|g_0|} \int_{\nu_0}^{\nu_1} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   &\approx
+   \frac{\adot\, \nu_1 (E_0+E_1)}{2a|g_0|} -
+   \frac{\adot\, \nu_0 E_0}{a|g_0|} - \frac{\adot}{a}E_0,
+\\
+ \label{eq:multigroup_redshifting_right}
+   \frac{1}{|g_{N_f-1}|} \int_{\nu_{N_f-1}}^{\nu_{N_f}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   &\approx
+   \frac{\adot\, \nu_{N_f} E_{N_f-1}}{a|g_{N_f-1}|} -
+   \frac{\adot\, \nu_{N_f-1} (E_{N_f-2}+E_{N_f-1})}{2a|g_{N_f-1}|} - \frac{\adot}{a}E_{N_f-1}.
+\end{align}
+Combining all of the above terms,
+\eqref{eq:multigroup_timederivative}-\eqref{eq:multigroup_redshifting_right},
+our multi-group radiation energy density equations may be written as
+\begin{align}
+  \label{eq:mgfld_multigroup}
+  &\partial_{t} E_k - \nabla\cdot(D_k\,\nabla E_k) 
+      + \frac{3 \adot}{a} E_k - (\Diamond)
+    = \eta_k - c \kappa_k E_k,\quad k=0,\ldots,N_f-1,
+\end{align}
+where $(\Diamond)$ corresponds to one of
+\eqref{eq:multigroup_redshifting}-\eqref{eq:multigroup_redshifting_right},
+depending on the value of $k$.
+
+To complete the model, we must determine the photo-heating and
+photo-ionization terms that couple the radiation to the matter.  As
+before, we utilize the integral form of their definitions, along with
+the piecewise-constant definition of our radiation energy density
+\eqref{eq:radiation_multigroup}.  
+% However, due to the various
+% ionization thresholds of each chemical species, we must take care in
+% computing these integrals.  To this end, for each chemical species 
+% $\mn_i$ we again denote the ionization threshold frequency as
+% $\bar{\nu}_i$, and we define the left-most radiation frequency group
+% containing $\bar{\nu}_i$ as $g_i$, i.e. $g_i$ is the
+% smallest integer such that $\nu_{g_i} \le \bar{\nu}_i < \nu_{g_i+1}$.
+
+First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
+for each species $\mn_i$ as 
+\begin{align}
+\label{eq:multigroup_photoionization}
+   \Gamma_i^{ph}(t,\rvec)  &= 
+   c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
+   c \sum_{k=0}^{N_f-1} \int_{\nu_k}^{\nu_{k+1}} \frac{\sigma_{\mn_i}(\nu) E_k(t,\rvec)}{h\nu}\,\mathrm d\nu \\
+\notag
+   &= \sum_{k=0}^{N_f-1} \frac{c E_k(t,\rvec)}{h}\,
+   \int_{\nu_k}^{\nu_{k+1}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm
+   d\nu, \qquad i=1,\ldots,N_\text{chem},
+\end{align}
+where as with the multi-chromatic model, we assume that the species
+cross sections satisfy $\sigma_{\mn_i}(\nu) = 0$ for all $\nu <
+\bar{\nu}_i$.
+
+Similarly, we compute the specific photoheating rate as 
+\begin{align}
+\notag
+   G(t,\rvec) &= 
+   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
+     \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
+     \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
+\label{eq:multigroup_photoheating}
+     &= 
+   \sum_{i=1}^{N_\text{chem}} \sum_{k=0}^{N_f-1} \frac{c\,\mn_i\, E_k(t,\rvec)}{\rhob} 
+     \int_{\nu_k}^{\nu_{k+1}} \sigma_{\mn_i}(\nu) 
+     \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu.
+\end{align}
+
+We note that in both \eqref{eq:multigroup_photoionization} and
+\eqref{eq:multigroup_photoheating}, we have the integrals 
 \begin{align}
   \label{eq:integrals} 
-    \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu,  \qquad
-    \int_{\nu_i}^{\infty} \chi_E\,\sigma_{\mn_i}\,\mathrm d\nu,  \quad\text{and}\quad
-    \int_{\nu_i}^{\infty} \frac{\chi_E\,\sigma_{\mn_i}}{\nu}\,\mathrm d\nu.
+    \int_{\nu_k}^{\nu_{k+1}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm d\nu
+    \qquad\text{and}\qquad
+    \int_{\nu_k}^{\nu_{k+1}} \sigma_{\mn_i} \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu.
 \end{align}
 Since these integrals depend only on the {\em a-priori} defined
-functions $\chi_E$ and $\sigma_{\mn_i}$, we may compute these once at
-initialization and reuse them throughout any grey FLD-based
-simulation.  To this end, we consider the integral change of variables
-defined through introduction of $\omega = \nu^{-1}$:
-\begin{equation}
-\label{eq:integral_transform}
-\begin{split}
-  \int_{\nu_0}^{\infty} f({\nu})\, \mathrm d{\nu} &\ = \ 
-      \nu_0 \int_0^1 \frac{1}{\omega^2}\,f\left(\frac{{\nu}_0}{\omega}\right)\,\mathrm d\omega \ = \ 
-      \nu_0\sum_{i=1}^s \int_{\omega_{i-1}}^{\omega_i} \frac{1}{\omega^2}\,
-      f\left(\frac{{\nu}_0}{\omega}\right)\,\mathrm d\omega \\
-    &\ \approx \ \nu_0\sum_{i=1}^s \frac{\omega_i-\omega_{i-1}}{6} \left[
-      \frac{1}{\omega_{i-1}^2}\,f\left(\frac{{\nu}_0}{\omega_{i-1}}\right) +
-      \frac{1}{(\omega_{i-1}+\omega_i)^2}\,f\left(\frac{2{\nu}_0}{\omega_{i-1}+\omega_i}\right) +
-      \frac{1}{\omega_i^2}\,f\left(\frac{{\nu}_0}{\omega_i}\right) \right],
-\end{split}
-\end{equation}
-where we have partitioned the interval $(0,1)$ into $s$
-subintervals, $\omega_0<\omega_1<\ldots<\omega_s$.  Since the integrand does not
-exist at either of the points 0 or 1, we choose $\omega_0=\varepsilon$ and
-$\omega_s = 1-\varepsilon$, pick a regular spacing $\omega_i-\omega_{i-1}=1/s$, and
-choose $s=10000$ in order to reduce the error in the numerical
-integration to $\mathcal O(\varepsilon + 1/s^4)$. 
-
-Moreover, in the case of a grey radiation energy field, we may
-consider a ``grey'' emissivity through integrating $\eta_{\nu}(t,\rvec,\nu)$ 
-over $\nu\in(\nu_0,\infty)$ to determine its single-group
-approximation
-\begin{equation}
-\label{eq:eta_T}
-  \eta(t,\rvec) =\int_{\nu_0}^{\infty} \eta_{\nu}(t,\rvec,\nu)\,\mathrm d\nu.
-\end{equation}
-We note that this approach implicitly assumes that the spectrum of
-$\eta_{\nu}$ matches that of $\Enu$.
+radiation groups $g_k=[\nu_k,\nu_{k+1})$ and species cross-sections
+$\sigma_{\mn_i}$, we may compute these once at problem initialization
+and reuse them throughout the simulation.  For each of these
+integrals, we use an adaptive, high-order Gaussian quadrature
+method for numerically approximating each integral, manually adjusting
+any interval bounds to account for regions where $\sigma_i(\nu)=0$.
 
 
 
 
-\subsection{Flux Limiter}
-
-In the grey flux-limited diffusion approximation
-\eqref{eq:mgfld_grey}, the role of the flux limiter
-$D$ is one of providing a continuous transition between the isotropic
-and free-streaming limits.  To this end, we consider the flux limiter
-to be of the form,
-\[
-   D(\kappa,E) = \left[\begin{array}{ccc} 
-       D_1(\kappa,E) & 0 & 0 \\
-       0 & D_2(\kappa,E) & 0 \\
-       0 & 0 & D_3(\kappa,E) 
-     \end{array}\right],
-\]
-where we employ a limiter of the form  \cite{Morel2000}: 
-\begin{align}
-  \label{eq:Morel_limiterD}
-  D_i(\kappa,E) &= \min\left\{ c \left(9\kappa_f^2 + R_i^2\right)^{-1/2},
-    D_\text{max} \right\}, \quad i=1,2,3,\\
-  \label{eq:Morel_limiterR}
-  R_i &= \max\left\{ \frac{|\partial_{\rvec_i}E|}{E_f}, R_\text{min} \right\}.
-\end{align}
-Here, the spatial derivative within $R$ is computed at the
-computational face adjoining two neighboring finite-volume cells, as
-will be elaborated on further in section \ref{sec:fv_approximation}.
-We enforce bounds on $D_i$ and $R_i$ to ensure numerical stability due
-to floating-point arithmetic error, given by 
-%$D_\text{max} = 0.006\,c\,\Lunit$ 
-$D_\text{max} = \infty$ 
-and 
-$R_\text{min} = 10^{-20} \Lunit^{-1}$, 
-with $\Lunit$ the length non-dimensionalization factor in the simulation
-(see the next section).  Moreover, the face-centered radiation energy
-density and opacity are computed using the arithmetic and harmonic
-means, respectively,
-\[
-  E_f = \frac{E_1 + E_2}{2}, \qquad \kappa_f =
-  \frac{2\kappa_1\kappa_2}{\kappa_1+\kappa_2}, 
-\]
-where here $E_1$ and $E_2$ are the two values of $E$ in the cells
-adjacent to the face, with $\kappa_1$ and $\kappa_2$ defined
-similarly. 
+{\bf [RESUME HERE]}
 
 
 
@@ -776,6 +870,53 @@ We note that in many of the above factors, the unit values change
 as a function of time.  As a result, all quantities are converted
 using the unit evaluated at the appropriate time step, $t_{n+1}$ or
 $t_n$.
+
+
+
+\subsection{Implemented Flux Limiter}
+\label{subsec:limiter_implementation}
+
+In the grey flux-limited diffusion approximation
+\eqref{eq:mgfld_grey}, the role of the flux limiter
+$D$ is one of providing a continuous transition between the isotropic
+and free-streaming limits.  To this end, we consider the flux limiter
+to be of the form,
+\[
+   D(\kappa,E) = \left[\begin{array}{ccc} 
+       D_1(\kappa,E) & 0 & 0 \\
+       0 & D_2(\kappa,E) & 0 \\
+       0 & 0 & D_3(\kappa,E) 
+     \end{array}\right],
+\]
+where we employ a limiter of the form  \cite{Morel2000}: 
+\begin{align}
+  \label{eq:Morel_limiterD}
+  D_i(\kappa,E) &= \min\left\{ c \left(9\kappa_f^2 + R_i^2\right)^{-1/2},
+    D_\text{max} \right\}, \quad i=1,2,3,\\
+  \label{eq:Morel_limiterR}
+  R_i &= \max\left\{ \frac{|\partial_{\rvec_i}E|}{E_f}, R_\text{min} \right\}.
+\end{align}
+Here, the spatial derivative within $R$ is computed at the
+computational face adjoining two neighboring finite-volume cells, as
+will be elaborated on further in Section \ref{sec:fv_approximation}.
+We enforce bounds on $D_i$ and $R_i$ to ensure numerical stability due
+to floating-point arithmetic error, given by 
+%$D_\text{max} = 0.006\,c\,\Lunit$ 
+$D_\text{max} = \infty$ 
+and 
+$R_\text{min} = 10^{-20} \Lunit^{-1}$, 
+with $\Lunit$ the length non-dimensionalization factor in the simulation
+(see the next section).  Moreover, the face-centered radiation energy
+density and opacity are computed using the arithmetic and harmonic
+means, respectively,
+\[
+  E_f = \frac{E_1 + E_2}{2}, \qquad \kappa_f =
+  \frac{2\kappa_1\kappa_2}{\kappa_1+\kappa_2}, 
+\]
+where here $E_1$ and $E_2$ are the two values of $E$ in the cells
+adjacent to the face, with $\kappa_1$ and $\kappa_2$ defined
+similarly. 
+
 
 
 

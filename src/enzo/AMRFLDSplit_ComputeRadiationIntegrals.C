@@ -24,10 +24,11 @@
 /                  int_{nu0_HeII}^{inf} sigma_E(nu)*sigma_HeII(nu) dnu
 /                  int_{nu0_HeII}^{inf} sigma_E(nu)*sigma_HeII(nu)/nu dnu
 /           where nu0_* is the ionization threshold of the relevant 
-/           species, sigma_E(nu) is the spectrum of the grey radiation 
-/           energy density, sigma_HI(nu) is the ionization cross section 
-/           of HI, sigma_HeI(nu) is the ionization cross section of HeI, 
-/           and sigma_HeII(nu) is the ionization cross section of HeII.
+/           species, sigma_E(nu) is the spectrum of the radiation 
+/           energy density for a given bin, sigma_HI(nu) is the ionization 
+/           cross section of HI, sigma_HeI(nu) is the ionization cross 
+/           section of HeI, and sigma_HeII(nu) is the ionization cross 
+/           section of HeII.
 /
 /           These are computed using a simple 4th-order accurate 
 /           numerical quadrature rule (composite Simpson's), on the 
@@ -81,236 +82,259 @@ int AMRFLDSplit::ComputeRadiationIntegrals()
   Ulimit = 1.0-POW(epsilon,0.47); //  errors in calculations.
 
   // initialize integrals
-  intSigE = intSigESigHI = intSigESigHeI = intSigESigHeII = 0.0;
-  intSigESigHInu = intSigESigHeInu = intSigESigHeIInu = 0.0;
+  for (int bin=0; bin<MAX_RADIATION_BINS; bin++) {
+    intSigE[bin] = intSigESigHI[bin] = intSigESigHeI[bin] = 0.0;
+    intSigESigHeII[bin] = intSigESigHInu[bin] = 0.0;
+    intSigESigHeInu[bin] = intSigESigHeIInu[bin] = 0.0;
+  }
 
   // initialize quadrature points and values
   float xl, xm, xr, nu_l, nu_m, nu_r, fl, fm, fr;
   float fl_E, fm_E, fr_E, fl_ni, fm_ni, fr_ni, fl_nu, fm_nu, fr_nu;
 
+  
+  // loop over radiation bins, computing integrals for each
+  for (int bin=0; bin<NumBins; bin++) {
 
-  // for monochromatic problems, integration uses delta function
-  if (ESpectrum == -1) {
-    // evaluation point
-    nu_m = nu0_HI*(1.0 + 2.0*epsilon);
+    // for monochromatic bins, integration uses delta function
+    if (ESpectrum[bin] == -1) {
 
-    // integral( delta_{nu0}(nu) )
-    intSigE = 1.0;
+      // evaluation point in hz, round up very slightly to ensure 
+      // floating-point roundoff is above cutoff values
+      nu_m = BinFrequency[bin]*ev2erg/h*(1.0 + 2.0*epsilon);
 
-    // integral( delta_{nu0}(nu) * sig_{HI}(nu) )
-    intSigESigHI = this->CrossSections(nu_m,0);
+      // integral( delta_{nu0}(nu) )
+      intSigE[bin] = 1.0;
 
-    // integral( delta_{nu0}(nu) * sig_{HI}(nu) / nu )
-    intSigESigHInu = this->CrossSections(nu_m,0) / nu_m;
+      // compute integral contributions based on frequency
+      if (nu_m >= nu0_HI) {
+
+	// integral( delta_{nu0}(nu) * sig_{HI}(nu) )
+	intSigESigHI[bin] = this->CrossSections(nu_m,0);
+	
+	// integral( delta_{nu0}(nu) * sig_{HI}(nu) / nu )
+	intSigESigHInu[bin] = this->CrossSections(nu_m,0) / nu_m;
+
+      }
+
+      if (nu_m >= nu0_HeI) {
+
+	// integral( delta_{nu0}(nu) * sig_{HeI}(nu) )
+	intSigESigHeI[bin] = this->CrossSections(nu_m,1);
+	
+	// integral( delta_{nu0}(nu) * sig_{HeI}(nu) / nu )
+	intSigESigHeInu[bin] = this->CrossSections(nu_m,1) / nu_m;
+
+      }
+
+      if (nu_m >= nu0_HeII) {
+
+	// integral( delta_{nu0}(nu) * sig_{HeII}(nu) )
+	intSigESigHeII[bin] = this->CrossSections(nu_m,2);
+	
+	// integral( delta_{nu0}(nu) * sig_{HeII}(nu) / nu )
+	intSigESigHeIInu[bin] = this->CrossSections(nu_m,2) / nu_m;
+
+      }
+
+    //////////////////////////////////////////////////////////////
+    // for non-monochromatic bins, perform numerical integration
+
+    } else {
+
+      // Compute intSigE, intSigESigHI and intSigESigHInu integrals
+      //   left end of integration
+      //      can't start at 0, shift over a bit
+      xr = Llimit;
+      nu_r = nu0_HI/xr;
+      //      get function values at this location
+      fr_E = this->RadiationSpectrum(bin,nu_r);
+      fr_ni = this->CrossSections(nu_r,0);
+      fr_nu = 1.0/nu_r;
+      if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+    
+      //   iterate over intervals
+      for (int i=1; i<1e9; i++) {
+
+	//      set quadrature points in interval
+	xl = xr;  // cannot start at 0, so shift over a bit
+	xr = min(xl+FreqH,Ulimit);
+	xm = 0.5*(xl+xr);
+
+	//      copy left subinterval function value, location, etc
+	nu_l = nu_r;
+	fl_E = fr_E;
+	fl_ni = fr_ni;
+	fl_nu = fr_nu;
+      
+	//      evaluate sigma_E(), sigma_HI, 1/nu at remapped quad. pts.
+	nu_m = nu0_HI/xm;
+	fm_E = this->RadiationSpectrum(bin,nu_m);
+	fm_ni = this->CrossSections(nu_m,0);
+	fm_nu = 1.0/nu_m;
+	if ((fm_E == -1.0) || (fm_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	nu_r = nu0_HI/xr;
+	fr_E = this->RadiationSpectrum(bin,nu_r);
+	fr_ni = this->CrossSections(nu_r,0);
+	fr_nu = 1.0/nu_r;
+	if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	//      compute integrals using re-scaled function values
+	fl = fl_E/xl/xl;
+	fm = fm_E/xm/xm;
+	fr = fr_E/xr/xr;
+	intSigE[bin] += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+    
+	fl = fl_E*fl_ni/xl/xl;
+	fm = fm_E*fm_ni/xm/xm;
+	fr = fr_E*fr_ni/xr/xr;  
+	intSigESigHI[bin] += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+    
+	fl = fl_E*fl_ni*fl_nu/xl/xl;
+	fm = fm_E*fm_ni*fm_nu/xm/xm;
+	fr = fr_E*fr_ni*fr_nu/xr/xr;
+	intSigESigHInu[bin] += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+
+	//      quit if we have finished interval
+	if (xr >= (Ulimit-10.0*epsilon))  break;
+  
+      }
+  
+
+      // Compute intSigESigHeI and intSigESigHeInu integrals
+    
+      //  left end of integration
+      //      can't start at 0, shift over a bit
+      xr = Llimit;
+      nu_r = nu0_HeI/xr;
+      //      get function values at this location
+      fr_E = this->RadiationSpectrum(bin,nu_r);
+      fr_ni = this->CrossSections(nu_r,1);
+      fr_nu = 1.0/nu_r;
+      if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+    
+      //   iterate over intervals
+      for (int i=1; i<1e9; i++) {
+      
+	//      set quadrature points in interval
+	xl = xr;  // cannot start at 0, so shift over a bit
+	xr = min(xl+FreqH,Ulimit);
+	xm = 0.5*(xl+xr);
+      
+	//      copy left subinterval function value, location, etc
+	nu_l = nu_r;
+	fl_E = fr_E;
+	fl_ni = fr_ni;
+	fl_nu = fr_nu;
+      
+	//      evaluate sigma_E(), sigma_HeI, 1/nu at remapped quad. pts.
+	nu_m = nu0_HeI/xm;
+	fm_E = this->RadiationSpectrum(bin,nu_m);
+	fm_ni = this->CrossSections(nu_m,1);
+	fm_nu = 1.0/nu_m;
+	if ((fm_E == -1.0) || (fm_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	nu_r = nu0_HeI/xr;
+	fr_E = this->RadiationSpectrum(bin,nu_r);
+	fr_ni = this->CrossSections(nu_r,1);
+	fr_nu = 1.0/nu_r;
+	if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	//      compute integrals using re-scaled function values
+	fl = fl_E*fl_ni/xl/xl;
+	fm = fm_E*fm_ni/xm/xm;
+	fr = fr_E*fr_ni/xr/xr;
+	intSigESigHeI[bin] += nu0_HeI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+      
+	fl = fl_E*fl_ni*fl_nu/xl/xl;
+	fm = fm_E*fm_ni*fm_nu/xm/xm;
+	fr = fr_E*fr_ni*fr_nu/xr/xr;
+	intSigESigHeInu[bin] += nu0_HeI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+      
+	//      quit if we have finished interval
+	if (xr >= (Ulimit-10.0*epsilon))  break;
+      
+      }
+  
+      // Compute intSigESigHeII and intSigESigHeIInu integrals
+      //   left end of integration
+      //      can't start at 0, shift over a bit
+      xr = Llimit;
+      nu_r = nu0_HeII/xr;
+      //      get function values at this location
+      fr_E = this->RadiationSpectrum(bin,nu_r);
+      fr_ni = this->CrossSections(nu_r,2);
+      fr_nu = 1.0/nu_r;
+      if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+  
+      //   iterate over intervals
+      for (int i=1; i<1e9; i++) {
+
+	//      set quadrature points in interval
+	xl = xr;  // cannot start at 0, so shift over a bit
+	xr = min(xl+FreqH,Ulimit);
+	xm = 0.5*(xl+xr);
+      
+	//      copy left subinterval function value, location, etc
+	nu_l = nu_r;
+	fl_E = fr_E;
+	fl_ni = fr_ni;
+	fl_nu = fr_nu;
+      
+	//      evaluate sigma_E(), sigma_HeII, 1/nu at remapped quad. pts.
+	nu_m = nu0_HeII/xm;
+	fm_E = this->RadiationSpectrum(bin,nu_m);
+	fm_ni = this->CrossSections(nu_m,2);
+	fm_nu = 1.0/nu_m;
+	if ((fm_E == -1.0) || (fm_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	nu_r = nu0_HeII/xr;
+	fr_E = this->RadiationSpectrum(bin,nu_r);
+	fr_ni = this->CrossSections(nu_r,2);
+	fr_nu = 1.0/nu_r;
+	if ((fr_E == -1.0) || (fr_ni == -1.0)) 
+	  ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+      
+	//      compute integrals using re-scaled function values
+	fl = fl_E*fl_ni/xl/xl;
+	fm = fm_E*fm_ni/xm/xm;
+	fr = fr_E*fr_ni/xr/xr;
+	intSigESigHeII[bin] += nu0_HeII*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+      
+	fl = fl_E*fl_ni*fl_nu/xl/xl;
+	fm = fm_E*fm_ni*fm_nu/xm/xm;
+	fr = fr_E*fr_ni*fr_nu/xr/xr;
+	intSigESigHeIInu[bin] += nu0_HeII*(xr-xl)/6.0*(fl + 4.0*fm + fr);
+      
+	//      quit if we have finished interval
+	if (xr >= (Ulimit-10.0*epsilon))  break;
+      
+      }  // end loop over integration subintervals
+
+    }  // end if/else over bin frequency type
 
     if (debug) {
-      printf("  Computed Radiation Integrals:\n");
-      printf("    intSigE          = %22.16e\n",intSigE);
-      printf("    intSigESigHI     = %22.16e\n",intSigESigHI);
-      printf("    intSigESigHInu   = %22.16e\n",intSigESigHInu);
+      printf("  Computed Radiation Integrals for bin %"ISYM":\n",bin);
+      printf("    intSigE          = %22.16e\n",intSigE[bin]);
+      printf("    intSigESigHI     = %22.16e\n",intSigESigHI[bin]);
+      printf("    intSigESigHInu   = %22.16e\n",intSigESigHInu[bin]);
+      printf("    intSigESigHeI    = %22.16e\n",intSigESigHeI[bin]);
+      printf("    intSigESigHeInu  = %22.16e\n",intSigESigHeInu[bin]);
+      printf("    intSigESigHeII   = %22.16e\n",intSigESigHeII[bin]);
+      printf("    intSigESigHeIInu = %22.16e\n",intSigESigHeIInu[bin]);
     }
 
-    // (integrals using sigHeI and sigHeII are zero at nu0_HI)
-    return SUCCESS;
-  }
-
-
-  //////////////////////////////////////////////////////////////
-  // Compute intSigE, intSigESigHI and intSigESigHInu integrals
-
-  //   left end of integration
-  //      can't start at 0, shift over a bit
-  xr = Llimit;
-  nu_r = nu0_HI/xr;
-  //      get function values at this location
-  fr_E = this->RadiationSpectrum(nu_r);
-  fr_ni = this->CrossSections(nu_r,0);
-  fr_nu = 1.0/nu_r;
-  if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-    ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
+  }  // end loop over bins
   
-  //   iterate over intervals
-  for (int i=1; i<1e9; i++) {
-
-    //      set quadrature points in interval
-    xl = xr;  // cannot start at 0, so shift over a bit
-    xr = min(xl+FreqH,Ulimit);
-    xm = 0.5*(xl+xr);
-
-    //      copy left subinterval function value, location, etc
-    nu_l = nu_r;
-    fl_E = fr_E;
-    fl_ni = fr_ni;
-    fl_nu = fr_nu;
-
-    //      evaluate sigma_E(), sigma_HI, 1/nu at remapped quad. pts.
-    nu_m = nu0_HI/xm;
-    fm_E = this->RadiationSpectrum(nu_m);
-    fm_ni = this->CrossSections(nu_m,0);
-    fm_nu = 1.0/nu_m;
-    if ((fm_E == -1.0) || (fm_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    nu_r = nu0_HI/xr;
-    fr_E = this->RadiationSpectrum(nu_r);
-    fr_ni = this->CrossSections(nu_r,0);
-    fr_nu = 1.0/nu_r;
-    if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    //      compute integrals using re-scaled function values
-    fl = fl_E/xl/xl;
-    fm = fm_E/xm/xm;
-    fr = fr_E/xr/xr;
-    intSigE += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-    
-    fl = fl_E*fl_ni/xl/xl;
-    fm = fm_E*fm_ni/xm/xm;
-    fr = fr_E*fr_ni/xr/xr;  
-    intSigESigHI += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-    
-    fl = fl_E*fl_ni*fl_nu/xl/xl;
-    fm = fm_E*fm_ni*fm_nu/xm/xm;
-    fr = fr_E*fr_ni*fr_nu/xr/xr;
-    intSigESigHInu += nu0_HI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-
-    //      quit if we have finished interval
-    if (xr >= (Ulimit-10.0*epsilon))  break;
-  
-  }
-  
-
-
-  //////////////////////////////////////////////////////////////
-  // Compute intSigESigHeI and intSigESigHeInu integrals
-
-  //   left end of integration
-  //      can't start at 0, shift over a bit
-  xr = Llimit;
-  nu_r = nu0_HeI/xr;
-  //      get function values at this location
-  fr_E = this->RadiationSpectrum(nu_r);
-  fr_ni = this->CrossSections(nu_r,1);
-  fr_nu = 1.0/nu_r;
-  if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-    ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-  //   iterate over intervals
-  for (int i=1; i<1e9; i++) {
-
-    //      set quadrature points in interval
-    xl = xr;  // cannot start at 0, so shift over a bit
-    xr = min(xl+FreqH,Ulimit);
-    xm = 0.5*(xl+xr);
-
-    //      copy left subinterval function value, location, etc
-    nu_l = nu_r;
-    fl_E = fr_E;
-    fl_ni = fr_ni;
-    fl_nu = fr_nu;
-
-    //      evaluate sigma_E(), sigma_HeI, 1/nu at remapped quad. pts.
-    nu_m = nu0_HeI/xm;
-    fm_E = this->RadiationSpectrum(nu_m);
-    fm_ni = this->CrossSections(nu_m,1);
-    fm_nu = 1.0/nu_m;
-    if ((fm_E == -1.0) || (fm_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    nu_r = nu0_HeI/xr;
-    fr_E = this->RadiationSpectrum(nu_r);
-    fr_ni = this->CrossSections(nu_r,1);
-    fr_nu = 1.0/nu_r;
-    if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    //      compute integrals using re-scaled function values
-    fl = fl_E*fl_ni/xl/xl;
-    fm = fm_E*fm_ni/xm/xm;
-    fr = fr_E*fr_ni/xr/xr;
-    intSigESigHeI += nu0_HeI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-    
-    fl = fl_E*fl_ni*fl_nu/xl/xl;
-    fm = fm_E*fm_ni*fm_nu/xm/xm;
-    fr = fr_E*fr_ni*fr_nu/xr/xr;
-    intSigESigHeInu += nu0_HeI*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-
-    //      quit if we have finished interval
-    if (xr >= (Ulimit-10.0*epsilon))  break;
-  
-  }
-  
-
-  //////////////////////////////////////////////////////////////
-  // Compute intSigESigHeII and intSigESigHeIInu integrals
-
-  //   left end of integration
-  //      can't start at 0, shift over a bit
-  xr = Llimit;
-  nu_r = nu0_HeII/xr;
-  //      get function values at this location
-  fr_E = this->RadiationSpectrum(nu_r);
-  fr_ni = this->CrossSections(nu_r,2);
-  fr_nu = 1.0/nu_r;
-  if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-    ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-  //   iterate over intervals
-  for (int i=1; i<1e9; i++) {
-
-    //      set quadrature points in interval
-    xl = xr;  // cannot start at 0, so shift over a bit
-    xr = min(xl+FreqH,Ulimit);
-    xm = 0.5*(xl+xr);
-
-    //      copy left subinterval function value, location, etc
-    nu_l = nu_r;
-    fl_E = fr_E;
-    fl_ni = fr_ni;
-    fl_nu = fr_nu;
-
-    //      evaluate sigma_E(), sigma_HeII, 1/nu at remapped quad. pts.
-    nu_m = nu0_HeII/xm;
-    fm_E = this->RadiationSpectrum(nu_m);
-    fm_ni = this->CrossSections(nu_m,2);
-    fm_nu = 1.0/nu_m;
-    if ((fm_E == -1.0) || (fm_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    nu_r = nu0_HeII/xr;
-    fr_E = this->RadiationSpectrum(nu_r);
-    fr_ni = this->CrossSections(nu_r,2);
-    fr_nu = 1.0/nu_r;
-    if ((fr_E == -1.0) || (fr_ni == -1.0)) 
-      ENZO_FAIL("ComputeRadiationIntegrals Error in evaluating spectrum");
-  
-    //      compute integrals using re-scaled function values
-    fl = fl_E*fl_ni/xl/xl;
-    fm = fm_E*fm_ni/xm/xm;
-    fr = fr_E*fr_ni/xr/xr;
-    intSigESigHeII += nu0_HeII*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-    
-    fl = fl_E*fl_ni*fl_nu/xl/xl;
-    fm = fm_E*fm_ni*fm_nu/xm/xm;
-    fr = fr_E*fr_ni*fr_nu/xr/xr;
-    intSigESigHeIInu += nu0_HeII*(xr-xl)/6.0*(fl + 4.0*fm + fr);
-
-    //      quit if we have finished interval
-    if (xr >= (Ulimit-10.0*epsilon))  break;
-  
-  }
-  
-
-  if (debug) {
-    printf("  Computed Radiation Integrals:\n");
-    printf("    intSigE          = %22.16e\n",intSigE);
-    printf("    intSigESigHI     = %22.16e\n",intSigESigHI);
-    printf("    intSigESigHInu   = %22.16e\n",intSigESigHInu);
-    printf("    intSigESigHeI    = %22.16e\n",intSigESigHeI);
-    printf("    intSigESigHeInu  = %22.16e\n",intSigESigHeInu);
-    printf("    intSigESigHeII   = %22.16e\n",intSigESigHeII);
-    printf("    intSigESigHeIInu = %22.16e\n",intSigESigHeIInu);
-  }
 
   return SUCCESS;
 }

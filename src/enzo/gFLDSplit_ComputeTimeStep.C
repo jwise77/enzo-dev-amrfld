@@ -247,16 +247,16 @@ float gFLDSplit::ComputeTimeStep(EnzoVector *uold, EnzoVector *unew, int flag)
     dt_est = max(dt_est, mindt);
     dt_est = min(dt_est, maxdt);
 
-//     if (debug) {
-//       printf("  gFLDSplit_ComputeTimestep: (E, e, ni) dt_est = (");
-//       for (l=0; l<Nvar; l++) {
-// 	if (dt_est_var[l] == huge_number/TimeUnits)
-// 	  printf(" -------- ");
-// 	else  
-// 	  printf(" %8.2e ",dt_est_var[l]);
-//       }
-//       printf(")\n");
-//     }
+    // if (debug) {
+    //   printf("  gFLDSplit_ComputeTimestep: (E, e, ni) dt_est = (");
+    //   for (l=0; l<Nvar; l++) {
+    // 	if (dt_est_var[l] == huge_number/TimeUnits)
+    // 	  printf(" -------- ");
+    // 	else  
+    // 	  printf(" %8.2e ",dt_est_var[l]);
+    //   }
+    //   printf(")\n");
+    // }
   }
 
   // account for min/max time step size (according to user)

@@ -82,13 +82,13 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   Eint32 sol_npost;              // num. post-relaxation sweeps
 
   // amrsolve diagnostics
-  int totIters;                  // cumulative iterations for solves
+  int totIters[MAX_RADIATION_BINS];   // cumulative iterations for solves
 
   // General problem grid information
   bool OnBdry[3][2];       // denotes if proc owns piece of boundary
   int rank;                // Rank of problem
   int LocDims[3];          // top grid local dims (no ghost or bdry cells)
-  float *BdryVals[3][2];   // boundary values for radiation BCs
+  float *BdryVals[MAX_RADIATION_BINS][3][2];   // boundary values for radiation BCs
   int WeakScaling;         // flag denoting we're doing a weak-scaling problem
 
   // time-stepping related data
@@ -107,6 +107,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float dtnorm;        // norm choice for computing relative change (default=2.0):
                        //    0 -> max pointwise norm
                        //   >0 -> rms p-norm over entire domain
+  float dtgrowth;      // maximum time step growth factor between steps
   float tnew;          // new time
   float told;          // old time
   float dt;            // time step size
@@ -114,11 +115,12 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float theta;         // implicitness parameter (1->BE, 0.5->CN, 0->FE)
   
   // problem defining data
+  int NumBins;         // number of radiation bins to use
   int Nchem;           // number of chemical species (non-negative integer)
   int Model;           // choices are 1 (standard) or 4 (isothermal)
-  float NGammaDot;     // ionization strength (photons/sec)
-  float EtaRadius;     // ionization source radius
-  float EtaCenter[3];  // ionization source location
+  float NGammaDot[MAX_RADIATION_BINS];     // ionization strength (photons/sec)
+  float EtaRadius[MAX_RADIATION_BINS];     // ionization source radius
+  float EtaCenter[MAX_RADIATION_BINS][3];  // ionization source location
 
   // cosmology and scaling constants
   FLOAT a;             // cosmology expansion coefficient
@@ -126,9 +128,11 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   FLOAT adot;          // time-derivative of a
   FLOAT adot0;         // time-derivative of a (old time)
   float aUnits;        // expansion parameter scaling
-  float ErScale;       // radiation energy density scaling factor
-  float ErUnits;       // radiation energy density unit conversion factor
-  float ErUnits0;      // radiation energy density unit conversion factor
+  bool  autoScale;     // flag to enable/disable automatic scaling factors
+  bool  StartAutoScale;  // flag to turn begin automatic scaling in a run
+  float ErScale[MAX_RADIATION_BINS];     // radiation energy density scaling factors
+  float ErUnits[MAX_RADIATION_BINS];     // radiation energy density unit conversion factor
+  float ErUnits0[MAX_RADIATION_BINS];    // radiation energy density unit conversion factor
   float NiUnits;       // species density unit conversion factor
   float NiUnits0;      // species density unit conversion factor
 
@@ -143,28 +147,31 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float hnu0_HI;            // HI ionization threshold (eV)
   float hnu0_HeI;           // HeI ionization threshold (eV)
   float hnu0_HeII;          // HeII ionization threshold (eV)
-  int ESpectrum;            // integer flag determining spectrum choice
+  int ESpectrum[MAX_RADIATION_BINS];  // integer flag determining spectrum choice
+                            //   2 -> SED with photons above 4 Ryd truncated
                             //   1 -> 1e5 black body spectrum
                             //   0 -> simple power law spectrum
                             //  -1 -> monochromatic spectrum
-  float intSigE;            // int_{nu0}^{inf} sigma_E(nu) d nu
-  float intSigESigHI;       // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu) d nu
-  float intSigESigHeI;      // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu) d nu
-  float intSigESigHeII;     // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu) d nu
-  float intSigESigHInu;     // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu)/nu d nu
-  float intSigESigHeInu;    // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu)/nu d nu
-  float intSigESigHeIInu;   // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu)/nu d nu
+                            //  other positive -> power law spectrum with power -1.5
+  float BinFrequency[MAX_RADIATION_BINS];       // frequency for each bin [eV] (if monochromatic)
+  float intSigE[MAX_RADIATION_BINS];            // int_{nu0}^{inf} sigma_E(nu) d nu
+  float intSigESigHI[MAX_RADIATION_BINS];       // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu) d nu
+  float intSigESigHeI[MAX_RADIATION_BINS];      // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu) d nu
+  float intSigESigHeII[MAX_RADIATION_BINS];     // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu) d nu
+  float intSigESigHInu[MAX_RADIATION_BINS];     // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu)/nu d nu
+  float intSigESigHeInu[MAX_RADIATION_BINS];    // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu)/nu d nu
+  float intSigESigHeIInu[MAX_RADIATION_BINS];   // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu)/nu d nu
 
   // private computation routines
-  int EnforceBoundary(LevelHierarchyEntry *LevelArray[]);
-  float RadiationSource(LevelHierarchyEntry *LevelArray[], int level, float time);
-  int Opacity(LevelHierarchyEntry *LevelArray[], int level, float time);
-  float RadiationSpectrum(float nu);
+  int EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
+  float RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
+  int Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
+  float RadiationSpectrum(int Bin, float nu);
   float CrossSections(float nu, int species);
   int ComputeRadiationIntegrals();
   int FillRates(LevelHierarchyEntry *LevelArray[], int level);
 #ifdef AMR_SOLVE
-  int RadStep(LevelHierarchyEntry *LevelArray[], int level, 
+  int RadStep(int Bin, LevelHierarchyEntry *LevelArray[], int level, 
 	      AMRsolve_Hierarchy *hierarchy, float Etyp, 
 	      float Emax, Eflt64 *Echange);
 #endif
@@ -204,10 +211,15 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
 
   // Problem Boundary Condition setup (called once or at each time step, 
   //    must be called for each locally-owned external face separately)
-  int SetupBoundary(int Dimension, int Face, int BdryConst, float *BdryData);
+  int SetupBoundary(int Bin, int Dimension, int Face, int BdryConst, float *BdryData);
 
   // Return the maximum rad-hydro time step size
   float ComputeTimeStep(Eflt64 CurError);
+
+ private:
+
+  float* AccessRadiationBin(int Bin, HierarchyEntry *ThisGrid);
+  float* AccessEmissivityBin(int Bin, HierarchyEntry *ThisGrid);
 
 };
 

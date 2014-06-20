@@ -43,17 +43,13 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
   float hp = 6.6260693e-27;       // Planck's constant [ergs*s]
   float mp = 1.67262171e-24;      // mass of a proton [g]
   float ev2erg = 1.60217653e-12;  // conversion constant from eV to ergs
-  float dom = DenUnits*POW(a,3.0)/mp;
+  float dom = DenUnits*a*a*a/mp;
   float tbase1 = TimeUnits;
   float xbase1 = LenUnits/a/aUnits;
   float dbase1 = DenUnits*POW(a*aUnits,3.0);
   float coolunit = POW(aUnits,5.0) * POW(xbase1,2.0) * POW(mp,2.0) 
     / POW(tbase1,3.0) / dbase1;
   float rtunits = ev2erg/TimeUnits/coolunit/dom;
-  // float ErUn = ErUnits;  // original
-  float ErUn = (ErUnits+ErUnits0)*0.5;   // arithmetic mean
-  // float ErUn = sqrt(ErUnits*ErUnits0);   // geometric mean
-  // float ErUn = 2.0*ErUnits*ErUnits0/(ErUnits+ErUnits0);  // harmonic mean
   
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -76,8 +72,7 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	int size = x0len*x1len*x2len;
 	
 
-	// access Enzo fields 
-	float *Enew       = Temp->GridHierarchyEntry->GridData->AccessRadiationFrequency0();
+	// access general Enzo fields 
 	float *phHI       = Temp->GridHierarchyEntry->GridData->AccessKPhHI();
 	float *phHeI      = Temp->GridHierarchyEntry->GridData->AccessKPhHeI();
 	float *phHeII     = Temp->GridHierarchyEntry->GridData->AccessKPhHeII();
@@ -85,14 +80,12 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	float *dissH2I    = Temp->GridHierarchyEntry->GridData->AccessKDissH2I();
 	float *HI         = Temp->GridHierarchyEntry->GridData->AccessHIDensity();
 	float *HeI=NULL, *HeII=NULL;
-	if (Nchem == 3) {
+	if (RadiativeTransferHydrogenOnly == FALSE) {
 	  HeI  = Temp->GridHierarchyEntry->GridData->AccessHeIDensity();
 	  HeII = Temp->GridHierarchyEntry->GridData->AccessHeIIDensity();
 	}
 
 	// check that field data exists
-	if (Enew == NULL)
-	  ENZO_FAIL("AMRFLDSplit_FillRates ERROR: no radiation array!");
 	if (phHI == NULL)
 	  ENZO_FAIL("AMRFLDSplit_FillRates ERROR: no radiation array!");
 	if (photogamma == NULL)
@@ -107,33 +100,60 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	  if (dissH2I == NULL)
 	    ENZO_FAIL("AMRFLDSplit_FillRates ERROR: no radiation array!");
 
-	// fill HI photo-ionization rate
-	float pHIconst = c*TimeUnits*intSigESigHInu/hp/intSigE;
-	for (i=0; i<size; i++)  phHI[i] = Enew[i]*ErUn*pHIconst;
 
-	// fill HeI and HeII photo-ionization rates
-	float pHeIconst  = c*TimeUnits*intSigESigHeInu/hp/intSigE;
-	float pHeIIconst = c*TimeUnits*intSigESigHeIInu/hp/intSigE;
+	// initialize rates
+	for (i=0; i<size; i++)  phHI[i] = 0.0;
+	for (i=0; i<size; i++)  photogamma[i] = 0.0;
 	if (RadiativeTransferHydrogenOnly == FALSE) {
-	  for (i=0; i<size; i++)  phHeI[i]  = Enew[i]*ErUn*pHeIconst;
-	  for (i=0; i<size; i++)  phHeII[i] = Enew[i]*ErUn*pHeIIconst;
+	  for (i=0; i<size; i++)  phHeI[i]  = 0.0;
+	  for (i=0; i<size; i++)  phHeII[i] = 0.0;
 	}
-   
-	// fill photo-heating rate
-	float phScale    = c*TimeUnits/intSigE/VelUnits/VelUnits/mp/rtunits;
-	float GHIconst   = phScale*(intSigESigHI   - 13.6*ev2erg/hp*intSigESigHInu);
-	float GHeIconst  = phScale*(intSigESigHeI  - 24.6*ev2erg/hp*intSigESigHeInu);
-	float GHeIIconst = phScale*(intSigESigHeII - 54.4*ev2erg/hp*intSigESigHeIInu);
-	if (Nchem == 1)
-	  for (i=0; i<size; i++)  photogamma[i] = Enew[i]*ErUn*GHIconst;
-	if (Nchem == 3)
-	  for (i=0; i<size; i++)  
-	    photogamma[i] = Enew[i]*ErUn *
-	      (GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
-
-	// fill H2 dissociation rate (none for grey FLD problems)
 	if (MultiSpecies > 1) 
 	  for (i=0; i<size; i++)  dissH2I[i] = 0.0;
+
+
+	// loop over frequency bins, contributing to rates
+	for (int ibin=0; ibin<NumBins; ibin++) {
+
+	  // float ErUn = ErUnits[ibin];                        // original
+	  float ErUn = (ErUnits[ibin]+ErUnits0[ibin])*0.5;      // arithmetic mean
+	  // float ErUn = sqrt(ErUnits[ibin]*ErUnits0[ibin]);   // geometric mean
+	  // float ErUn = 2.0*ErUnits[ibin]*ErUnits0[ibin] 
+	  //            / (ErUnits[ibin]+ErUnits0[ibin]);       // harmonic mean
+
+	  float *Enew = AccessRadiationBin(ibin, Temp->GridHierarchyEntry);
+	  if (Enew == NULL)
+	    ENZO_FAIL("AMRFLDSplit_FillRates ERROR: missing radiation array!");
+
+	  // fill HI photo-ionization rate
+	  float pHIconst = c*TimeUnits*intSigESigHInu[ibin]/hp/intSigE[ibin];
+	  for (i=0; i<size; i++)  phHI[i] += Enew[i]*ErUn*pHIconst;
+
+	  // fill HeI and HeII photo-ionization rates
+	  float pHeIconst  = c*TimeUnits*intSigESigHeInu[ibin]/hp/intSigE[ibin];
+	  float pHeIIconst = c*TimeUnits*intSigESigHeIInu[ibin]/hp/intSigE[ibin];
+	  if (RadiativeTransferHydrogenOnly == FALSE) {
+	    for (i=0; i<size; i++)  phHeI[i]  += Enew[i]*ErUn*pHeIconst;
+	    for (i=0; i<size; i++)  phHeII[i] += Enew[i]*ErUn*pHeIIconst;
+	  }
+   
+	  // fill photo-heating rate
+	  float phScale    = c*TimeUnits/intSigE[ibin]/VelUnits/VelUnits/mp/rtunits;
+	  float GHIconst   = phScale*(intSigESigHI[ibin]   
+				      - hnu0_HI*ev2erg/hp*intSigESigHInu[ibin]);
+	  float GHeIconst  = phScale*(intSigESigHeI[ibin]  
+				      - hnu0_HeI*ev2erg/hp*intSigESigHeInu[ibin]);
+	  float GHeIIconst = phScale*(intSigESigHeII[ibin] 
+				      - hnu0_HeII*ev2erg/hp*intSigESigHeIInu[ibin]);
+	  if (RadiativeTransferHydrogenOnly) {
+	    for (i=0; i<size; i++)  photogamma[i] += Enew[i]*ErUn*GHIconst;
+	  } else {
+	    for (i=0; i<size; i++)  
+	      photogamma[i] += Enew[i]*ErUn *
+		(GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
+	  }
+
+	}  // end loop over bins
 
       }  // end iteration over grids on this processor
 

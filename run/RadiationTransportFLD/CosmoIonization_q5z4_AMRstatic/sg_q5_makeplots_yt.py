@@ -36,7 +36,7 @@ add_field("xHII", take_log=True, function=_xHII,
 
 #   Radiation energy density (log plot)
 def _logE(field, data):
-    return (data["Grey_Radiation_Energy"])
+    return (data["Radiation0"])
 add_field("logE", take_log=True, function=_logE, 
           display_name="Radiation\; Energy\; Density")
 

@@ -35,6 +35,65 @@ cd ../
 echo "    "
 
 echo "    "
+echo "Running Cosmological Ionization q0=0.5 z0=4 static AMRFLDSplit Test"
+cd CosmoIonization_q5z4_AMRstatic
+ln -fs ../../../src/enzo/enzo.exe enzo
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
+grep Wallclock output.txt
+grep "Successful run" output.txt
+python ./*makeplots_yt.py &> /dev/null
+python ./*check_yt.py &> PASS_FAIL.txt
+echo "error checking result:"
+cat PASS_FAIL.txt
+cd ../
+echo "    "
+
+echo "    "
+echo "Running Cosmological Ionization q0=0.05 z0=4 static AMRFLDSplit Test"
+cd CosmoIonization_q05z4_AMRstatic
+ln -fs ../../../src/enzo/enzo.exe enzo
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
+grep Wallclock output.txt
+grep "Successful run" output.txt
+python ./*makeplots_yt.py &> /dev/null
+python ./*check_yt.py &> PASS_FAIL.txt
+echo "error checking result:"
+cat PASS_FAIL.txt
+cd ../
+echo "    "
+
+echo "    "
+echo "Running Cosmological Ionization q0=0.5 z0=10 static AMRFLDSplit Test"
+cd CosmoIonization_q5z10_AMRstatic
+ln -fs ../../../src/enzo/enzo.exe enzo
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
+grep Wallclock output.txt
+grep "Successful run" output.txt
+python ./*makeplots_yt.py &> /dev/null
+python ./*check_yt.py &> PASS_FAIL.txt
+echo "error checking result:"
+cat PASS_FAIL.txt
+cd ../
+echo "    "
+
+echo "    "
+echo "Running Cosmological Ionization q0=0.05 z0=10 static AMRFLDSplit Test"
+cd CosmoIonization_q05z10_AMRstatic
+ln -fs ../../../src/enzo/enzo.exe enzo
+mpiexec -n 4 ./enzo -d *.enzo &> output.txt 
+grep Wallclock output.txt
+grep "Successful run" output.txt
+python ./*makeplots_yt.py &> /dev/null
+python ./*check_yt.py &> PASS_FAIL.txt
+echo "error checking result:"
+cat PASS_FAIL.txt
+cd ../
+echo "    "
+
+echo "    "
+echo "    "
+
+echo "    "
 echo "Running Ionization dynamic AMRFLDSplit Test 1"
 cd RHIonization1_AMRdynamic
 ln -fs ../../../src/enzo/enzo.exe enzo

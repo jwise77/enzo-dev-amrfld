@@ -58,7 +58,7 @@
 
 
 
-int AMRFLDSplit::SetupBoundary(int Dim, int Face, 
+int AMRFLDSplit::SetupBoundary(int Bin, int Dim, int Face, 
 			       int BdryConst, float *BdryData) 
 {
 //   if (debug)
@@ -83,22 +83,22 @@ int AMRFLDSplit::SetupBoundary(int Dim, int Face,
   facesize = size/LocDims[Dim];
 
   // delete previous boundary values arrays
-  if (BdryVals[Dim][Face] != NULL)
-    delete[] BdryVals[Dim][Face];
+  if (BdryVals[Bin][Dim][Face] != NULL)
+    delete[] BdryVals[Bin][Dim][Face];
   
   // initialize and set boundary conditions
-  BdryVals[Dim][Face] = new float[facesize];
+  BdryVals[Bin][Dim][Face] = new float[facesize];
   
   // set constant face conditions
   if (BdryConst) {
     for (index=0; index<facesize; index++) 
-      BdryVals[Dim][Face][index] = *BdryData;
+      BdryVals[Bin][Dim][Face][index] = *BdryData;
   }
   
   // set spatially-varying face conditions
   else {
     for (index=0; index<facesize; index++) 
-      BdryVals[Dim][Face][index] = BdryData[index];
+      BdryVals[Bin][Dim][Face][index] = BdryData[index];
   }
 
   return SUCCESS;
