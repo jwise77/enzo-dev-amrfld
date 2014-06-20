@@ -1,0 +1,836 @@
+\documentclass[10pt]{article}
+\usepackage{geometry}   % See geometry.pdf to learn the layout
+                        % options.  There are lots.
+\geometry{letterpaper}
+\usepackage[latin1]{inputenc}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{color}
+\usepackage{amsmath,amsfonts,amssymb}
+
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\author{Daniel R. Reynolds}
+\title{Constructing the finite-volume equations for cosmological MGFLD}
+
+\renewcommand{\(}{\left(}
+\renewcommand{\)}{\right)}
+\newcommand{\vb}{{\bf v}_b}
+\newcommand{\xvec}{{\bf x}}
+\newcommand{\rvec}{{\bf r}}
+\newcommand{\Omegabar}{\bar{\Omega}}
+\newcommand{\adot}{\dot{a}}
+\newcommand{\rhob}{\rho_b}
+\newcommand{\dt}{\Delta t}
+\newcommand{\Enu}{E_{\nu}}
+\newcommand{\Fnu}{{\bf F}_{\nu}}
+\newcommand{\Pnu}{\overline{\bf P}_{\nu}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rthree}{\R^3}
+\newcommand{\eh}{e_h}
+\newcommand{\ec}{e_c}
+\newcommand{\Edd}{\mathcal F}
+\newcommand{\Eddnu}{\Edd_{\nu}}
+\newcommand{\mn}{{\tt n}}
+\newcommand{\mB}{\mathcal B}
+\newcommand{\mC}{{\mathcal C}}
+\newcommand{\mL}{{\mathcal L}}
+\newcommand{\mD}{{\mathcal D}}
+\newcommand{\mDnu}{\mD_{\nu}}
+\newcommand{\mCnu}{\mC_{\nu}}
+\newcommand{\mLnu}{{\mathcal L}_{\nu}}
+\newcommand{\mCe}{\mC_e}
+\newcommand{\mLe}{\mL_e}
+\newcommand{\mCn}{\mC_{\mn}}
+\newcommand{\mLn}{\mL_{\mn}}
+\newcommand{\Aunit}{a_{\text{unit}}}
+\newcommand{\Lunit}{l_{\text{unit}}}
+\newcommand{\Dunit}{\rho_{\text{unit}}}
+\newcommand{\Tunit}{t_{\text{unit}}}
+\newcommand{\Vunit}{v_{\text{unit}}}
+\newcommand{\Eunit}{E_{\text{unit}}}
+\newcommand{\Kunit}{\kappa_{\text{unit}}}
+\newcommand{\tK}{\tilde{\kappa}}
+\newcommand{\tT}{\tilde{t}}
+\newcommand{\tX}{\tilde{x}}
+\newcommand{\tY}{\tilde{y}}
+\newcommand{\tZ}{\tilde{z}}
+\newcommand{\tE}{\tilde{E}}
+\newcommand{\tRho}{\tilde{\rhob}}
+\newcommand{\tV}{\tilde{\vb}}
+\newcommand{\tA}{\tilde{a}}
+\newcommand{\tAdot}{\tilde{\adot}}
+\newcommand{\tD}{\tilde{D}}
+\newcommand{\tmD}{\tilde{\mD}}
+\newcommand{\talpha}{\tilde{\alpha}}
+\newcommand{\tnabla}{\tilde{\nabla}}
+
+
+\textheight 9truein
+\textwidth 6.5truein
+\addtolength{\oddsidemargin}{-0.25in}
+\addtolength{\evensidemargin}{-0.25in}
+\addtolength{\topmargin}{-0.5in}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{2ex}
+
+
+\begin{document}
+\maketitle
+
+
+\section{Base cosmological FLD equation}
+\label{sec:PDE}
+
+The radiation energy density, flux, and pressure tensor are related
+to the specific intensity moments via the relations
+\begin{align}
+  \label{eq:density_wrt_intensity}
+  \Enu &= \frac{4\pi}{c} J_{\nu} = \frac1c \oint I_{\nu} \,d\Omega, \\
+  \label{eq:flux_wrt_intensity}
+  \Fnu^i &= 4 \pi H^i_{\nu} = \oint \vec{n}^i I_{\nu} \,d\Omega, \\
+  \label{eq:pressure_wrt_intensity}
+  \Pnu^{ij} &= \frac{4\pi}{c} K^{ij}_\nu = \frac1c \oint \vec{n}^i
+    \vec{n}^j I_{\nu} \,d\Omega,
+\end{align}
+where each of these are defined in proper, CGS units.  
+For frequencies $\nu\in\R^+$, times $t\in\R$ and spatial locations
+$\rvec\in\R^3$, we denote the domain of these functions as $\Omegabar
+= \R^+\times\R\times\R^3$. Then $I_{\nu}:\Omegabar\rightarrow\R$ is
+the specific radiation intensity,$\Enu:\Omegabar\rightarrow\R$ is the
+radiation energy density, $\Fnu:\Omegabar\rightarrow\Rthree$ is the
+radiation energy flux, and $\Pnu:\Omegabar\rightarrow\R^{3\times 3}$
+is the radiation pressure tensor. 
+
+The moment equations for a generalized fluid coupled with a radiation
+fluid for a cosmological medium are as follows
+(c.f.~\cite{HayesNorman2003,Paschos2005}).  The zeroth moment of the 
+Boltzmann equation provides an evolution equation for the radiation
+energy density,
+\begin{equation}
+\label{eq:zero_mom}
+  \partial_{t} E_{\nu} + \nabla\cdot(\Enu\vb) 
+    + \nabla\cdot\Fnu + \Pnu:(\nabla\vb) + \frac{3\adot}{a}\Enu -
+    \frac{\nu\adot}{a}\partial_{\nu} \Enu
+  = \eta_{\nu} -c \kappa_{\nu} \Enu.
+\end{equation}
+Here, $\eta_{\nu}:\Omegabar\rightarrow\R$ is the emissivity source
+(g cm$^{-1}$ s$^{-2}$).  $\kappa_{\nu}:\Omegabar\rightarrow\R$ is the
+combined opacity (cm$^{-1}$) due to the elemental species, and is
+computed as 
+\begin{equation}
+\label{eq:opacity_def}
+  \kappa_{\nu} = \sum_{i=1}^{N_\text{chem}} \sigma_{i}(\nu)\,\mn_i,
+\end{equation}
+where $\sigma_i(\nu)$ is the cross-section of the elemental species
+$\mn_i$.  We note that in the above equation (and the remainder of
+this document), the spatial derivatives denoted by $\nabla$ are taken
+with respect to the proper position, $\rvec$.
+
+Similarly, the first moment of the Boltzmann equation provides an
+evolution equation for the radiation energy flux,
+\begin{equation}
+\label{eq:first_mom}
+  \partial_{t} \Fnu + \nabla\(\Fnu\cdot\vb\) 
+    + c^2 \nabla\cdot\Pnu + \(\Fnu\cdot\nabla\)\vb
+    + \frac{3 \adot}{a} \Fnu - \frac{\nu \adot}{a}\partial_{\nu} \Fnu
+  = -c \kappa_{\nu} \Fnu.
+\end{equation}
+
+
+
+\subsection{Flux Limited Diffusion approximation}
+\label{subsec:fld_approx}
+
+For a flux limited diffusion (FLD) approximation, the radiative flux
+vector is computed as a function of the energy density gradient through
+a parameterization, 
+\begin{equation}
+\label{eq:fld_approx}
+  \Fnu = -D\,\nabla\Enu,
+\end{equation}
+where $D:\Omegabar\rightarrow\R^{3\times3}$ is the {\em flux limiter}
+(cm$^2$ s$^{-1}$) that depends on both the opacity $\kappa_\nu$, and
+the radiation energy density $\Enu$.
+
+Using the FLD approximation, the equation \eqref{eq:first_mom} may be
+ignored, and the zeroth moment equation \eqref{eq:zero_mom} becomes
+\begin{equation}
+\label{eq:mgfld}
+\begin{split}
+   \partial_{t} \Enu &+ \nabla\cdot(\Enu\vb) 
+     - \nabla\cdot(D\,\nabla\Enu)
+     - \frac{1}{c}\(\nabla(D\,\nabla\Enu)\):(\nabla\vb) 
+     + \frac{3 \adot}{a} \Enu - \frac{\nu \adot}{a}\partial_{\nu}\Enu \\
+   &= \eta_{\nu} - c \kappa_{\nu} \Enu,
+\end{split}
+\end{equation}
+where we have used the FLD-based approximation of the radiation
+pressure as $\Pnu = \frac{1}{c}\nabla\Fnu =
+\frac{1}{c}\nabla\(D\,\nabla\Enu\)$.  Note that in general, $\Pnu$ is  
+non-symmetric, due to the spatial dependence of the flux-limiter $D$.
+The equation \eqref{eq:mgfld} is an equation defining the
+scalar-valued variable $\Enu$, that may either be solved
+independently, or coupled with the elemental densities $\mn_i$ and
+hydrodynamic quantities of the the fluid energy $e$, velocity
+$\vb$ and density $\rhob$.
+
+For conditions that allow omission of the radiation pressure term, the
+zeroth moment equations corresponding to \eqref{eq:zero_mom} can be
+simplified to
+\begin{align}
+  \label{eq:mgfld_simplified}
+  &\partial_{t} \Enu + \nabla\cdot(\Enu\vb) 
+    - \nabla\cdot(D\,\nabla\Enu) 
+     + \frac{3 \adot}{a} \Enu - \frac{\nu \adot}{a}\partial_{\nu}\Enu
+    = \eta_{\nu} - c \kappa_{\nu} \Enu.
+\end{align}
+The equation \eqref{eq:mgfld_simplified} is a
+reaction-advection-diffusion equation, that is again a function of the
+energy density $\Enu$, though here is parabolic in nature, in that it
+describes a diffusion-like radiation transport.  
+
+Lastly, since Enzo performs a second-order-accurate piecewise
+parabolic algorithm for hydrodynamic advection, with passive advection
+of other density-like quantities (including $\Enu$), in considering a
+new solver for evolving only the radiation field, we may consider the
+simpler reaction-diffusion equation
+\begin{align}
+  \label{eq:mgfld_simplified2}
+  &\partial_{t} \Enu - \nabla\cdot(D_{\nu}\,\nabla\Enu) 
+      + \frac{3 \adot}{a} \Enu - \frac{\nu \adot}{a}\partial_{\nu}\Enu
+    = \eta_{\nu} - c \kappa_{\nu} \Enu.
+\end{align}
+
+
+
+
+\subsection{Multi-Chromatic Approximation}
+\label{subsec:multi_chromatic}
+
+Our first approximation to the radiation energy density equation
+\eqref{eq:mgfld_simplified2} will be to remove the dependency on
+frequency space by choosing to evolve radiation energy densities at a
+specific set of frequencies.  To this end, let us denote this set of
+frequencies as
+\begin{equation}
+\label{eq:monochromatic_frequencies}
+  \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
+\end{equation}
+We may then consider only the propagation of monochromatic radiation
+at each of these frequencies, i.e. we may define a set of
+monochromatic radiation energy densities, $E_0, E_1, \ldots, E_{N_f}$,
+where each is defined as the solution to the equation
+\eqref{eq:mgfld_simplified2} at a specific frequency $\nu_k$, i.e.
+\begin{align}
+  \label{eq:mgfld_multichromatic}
+  \partial_{t} E_k - \nabla\cdot(D_k\,\nabla E_k) + \frac{3 \adot}{a}
+  E_k = \eta_k - c \kappa_k E_k, \qquad k=0,\ldots,N_f.
+\end{align}
+We note that since each of these frequencies solves the equation at a
+different $\nu_k$, the frequency-space coupling term 
+$\frac{\nu \adot}{a}\partial_{\nu}\Enu$ from equation
+\eqref{eq:mgfld_simplified2} has been omitted.
+We note that each of these monochromatic radiation energy densities is
+only a function of space and time, i.e. $E_k = E_k(t,\rvec)$, and
+has units of ergs cm$^{-3}$.
+
+We define both the opacity and emissivity for each of these radiation
+fields through evaluating the corresponding multi-frequency values at
+the associated frequency $\nu_k$, i.e.
+\begin{align}
+\label{eq:opacity_multichromatic}
+  \kappa_k(t,\rvec) &= \kappa_{\nu}(t,\rvec,\nu_k) = \sum_{i=1}^{N_\text{chem}} \mn_i(t,\rvec)\, \sigma_{\mn_i} (\nu_k), \\
+\label{eq:emissivity_multichromatic}
+  \eta_k(t,\rvec) &= \eta_{\nu}(t,\rvec,\nu_k).
+\end{align}
+
+Under this ``multi-chromatic'' discretization, we may consider the overall
+frequency-dependent radiation energy density function to have the form
+\begin{equation}
+\label{eq:radiation_multichromatic}
+  \Enu(t,\rvec,\nu) = \sum_{k=0}^{N_f} E_{\nu_k}(t,\rvec) \delta_{\nu_k}(\nu),
+\end{equation}
+where $\delta_{\nu_k}(\nu)$ is the Dirac delta function.  With this in
+mind, we may define the photo-heating and photo-ionization terms that
+couple these radiation fields to the matter.  
+
+First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
+for each species $\mn_i$ as
+\begin{equation}
+\label{eq:multichromatic_photoionization}
+   \Gamma_i^{ph}(t,\rvec)  = 
+   c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
+   \sum_{k=0}^{N_f} \frac{c\, E_k\, \sigma_{\mn_i}(\nu_k)}{\nu_k}, \qquad i=1,\ldots,N_\text{chem},
+\end{equation}
+where here we denote the ionization threshold frequency for species
+$\mn_i$ as $\bar{\nu}_i$.  Furthermore, in this equation we have
+implicitly assumed that $\sigma_{\mn_i}(\nu) = 0$ for all $\nu <
+\bar{\nu}_i$, which is sufficient to guarantee that monochromatic
+radiation energy densities at frequencies below $\bar{\nu}_i$ do not
+contribute to the photoionization rate $\Gamma_i^{ph}(t,\rvec)$.
+
+Similarly, we compute the frequency-integrated specific photoheating
+rate, $G$ using our multi-chromatic radiation field
+\eqref{eq:radiation_multichromatic} as 
+\begin{align}
+\notag
+   G(t,\rvec) &= 
+   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
+     \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
+     \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
+\label{eq:multichromatic_photoheating}
+   &= 
+   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
+     \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
+     \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu \\
+\notag
+   &= 
+   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \sum_{k=0}^{N_f}\, \mn_i(t,\rvec)\,
+     \sigma_{\mn_i}(\nu_k) E_k(t,\rvec) \left(1 - \frac{\bar{\nu}_i}{\nu_k}\right).
+\end{align}
+
+
+{\bf [RESUME HERE]}
+
+\subsection{Multi-Group Approximation}
+\label{subsec:multi_group}
+
+The radiation energy density equation \eqref{eq:mgfld_simplified2} may
+be discretized in frequency space by integrating the energy density
+(or the flux) between two frequencies, namely $\nu_{g+1}$ and
+$\nu_{g}$.  This forms one radiation energy 'group', which provides an
+average estimate of the moment quantity as:
+\[
+   E_{g}(t,\rvec) = \frac{1}{\nu_{g+1}-\nu_{g}} \int_{\nu_{g}}^{\nu_{g+1}}
+   \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad g=1,\ldots,N_g.
+\]
+We take this approximation further, through going to the limit of a
+single grey radiation energy density $E$ (g cm$^{-1}$ s$^{-2}$), by
+integrating in frequency space from the ionization threshold of
+hydrogen, $\nu_{HI}$, to infinity.  We accomplish this by assuming
+the existence of a given radiation frequency spectrum, $\chi_E(\nu)$,
+such that the frequency-dependent radiation energy density may be
+written in the form $\Enu(t,\rvec,\nu)=\tilde{E}(t,\rvec)\,\chi_E(\nu)$.  
+We note that this is a rather strong assumption, since it requires
+that all radiation throughout the space-time domain has the same
+frequency spectrum.  With this, we define a single ``grey'' radiation
+energy density, 
+\begin{equation}
+\label{eq:grey_definition}
+  E(t,\rvec) = \int_{\nu_0}^{\infty} \Enu(t,\rvec,\nu) \mathrm d\nu =
+  \tilde{E}(t,\rvec) \int_{\nu_0}^{\infty} \chi_{E}(\nu)\mathrm d\nu.
+\end{equation}
+We note that this approximation is valid only when the assumed
+frequency spectrum is integrable, i.e. if it is defined only over a
+limited frequency bandwidth, or if it scales with frequency as
+$E_{\nu} \propto \nu^{-\beta_{q}}$ for some $\beta_{q} > 1$.  The
+latter case holds for quasar and stellar type spectra. 
+
+Application of such an integration in equation
+\eqref{eq:mgfld_simplified2} yields the following ``grey'' 
+radiation diffusion equation:
+\begin{align}
+  \label{eq:mgfld_grey}
+  \partial_{t} E - \nabla\cdot\(D\,\nabla E\)
+    + \alpha\frac{\adot}{a} E = \eta - c\kappa E.
+\end{align}
+In the above equation, the term 
+$-\frac{\nu \adot}{a}\partial_{\nu}\Enu$ is replaced (through
+integration by parts) with a contribution to the cosmology expansion
+term by an amount equal to $\frac{\adot}{a} E$.  However, if the
+assumed spectrum $\chi_E(\nu)$ is monochromatic, i.e. $\chi_E(\nu) =
+\delta_{\nu_0}(\nu)$, then integration by parts does not yield this
+contribution.  Hence, we use the parameter $\alpha$ to account for
+this difference, in that for monochromatic radiation spectra we use
+$\alpha=3$, but for all other spectra we use $\alpha=4$.
+
+We note that through using the integrated radiation energy density
+$E$, since it is based on an {\em a-priori} defined function
+$\chi_E(\nu)$, we may compute all frequency-space integrals based on
+$\Enu$ at initialization of the radiation module, and store the
+integrated weights for reuse throughout the simulation.  This pertains
+to the frequency-integrated opacity $\kappa$, in which 
+\begin{align}
+  \notag
+  & c\,\kappa\,E \ = \ c \int_{\nu_0}^{\infty} \kappa_{\nu}\,\Enu\,\mathrm d\nu, \\
+  \Longrightarrow\quad &\notag \\
+  \label{eq:opacity_integrated}
+  &\kappa \ = \ \frac{\int_{\nu_0}^{\infty} \kappa_{\nu}\,\Enu\,\mathrm d\nu}{
+  \int_{\nu_0}^{\infty} \Enu\,\mathrm d\nu} \ = \ 
+  \frac{\sum_{i=1}^{N_\text{chem}} \mn_i \int_{\nu_i}^{\infty}
+    \chi_E\,\sigma_{\mn_i}\,\mathrm d\nu}{
+  \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu}.
+\end{align}
+Similarly, we may compute the integrated photoionization rate
+$\Gamma_i^{ph}$ as
+\[
+   \Gamma_i^{ph} 
+   \ = \ 
+   c \int_{\nu_i}^{\infty} \frac{\sigma_{\mn_i}\Enu}{h\nu}\,\mathrm d\nu
+   \ = \ 
+   \frac{cE \int_{\nu_i}^{\infty}
+     \frac{\chi_E\,\sigma_{\mn_i}}{\nu}\,\mathrm d\nu}{
+   h \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu}.
+\]
+We note that the above two quantities, and in fact all quantities
+involving the frequency integrated radiation energy density, may be
+written in terms of 
+\begin{align}
+  \label{eq:integrals} 
+    \int_{\nu_0}^{\infty} \chi_E\,\mathrm d\nu,  \qquad
+    \int_{\nu_i}^{\infty} \chi_E\,\sigma_{\mn_i}\,\mathrm d\nu,  \quad\text{and}\quad
+    \int_{\nu_i}^{\infty} \frac{\chi_E\,\sigma_{\mn_i}}{\nu}\,\mathrm d\nu.
+\end{align}
+Since these integrals depend only on the {\em a-priori} defined
+functions $\chi_E$ and $\sigma_{\mn_i}$, we may compute these once at
+initialization and reuse them throughout any grey FLD-based
+simulation.  To this end, we consider the integral change of variables
+defined through introduction of $\omega = \nu^{-1}$:
+\begin{equation}
+\label{eq:integral_transform}
+\begin{split}
+  \int_{\nu_0}^{\infty} f({\nu})\, \mathrm d{\nu} &\ = \ 
+      \nu_0 \int_0^1 \frac{1}{\omega^2}\,f\left(\frac{{\nu}_0}{\omega}\right)\,\mathrm d\omega \ = \ 
+      \nu_0\sum_{i=1}^s \int_{\omega_{i-1}}^{\omega_i} \frac{1}{\omega^2}\,
+      f\left(\frac{{\nu}_0}{\omega}\right)\,\mathrm d\omega \\
+    &\ \approx \ \nu_0\sum_{i=1}^s \frac{\omega_i-\omega_{i-1}}{6} \left[
+      \frac{1}{\omega_{i-1}^2}\,f\left(\frac{{\nu}_0}{\omega_{i-1}}\right) +
+      \frac{1}{(\omega_{i-1}+\omega_i)^2}\,f\left(\frac{2{\nu}_0}{\omega_{i-1}+\omega_i}\right) +
+      \frac{1}{\omega_i^2}\,f\left(\frac{{\nu}_0}{\omega_i}\right) \right],
+\end{split}
+\end{equation}
+where we have partitioned the interval $(0,1)$ into $s$
+subintervals, $\omega_0<\omega_1<\ldots<\omega_s$.  Since the integrand does not
+exist at either of the points 0 or 1, we choose $\omega_0=\varepsilon$ and
+$\omega_s = 1-\varepsilon$, pick a regular spacing $\omega_i-\omega_{i-1}=1/s$, and
+choose $s=10000$ in order to reduce the error in the numerical
+integration to $\mathcal O(\varepsilon + 1/s^4)$. 
+
+Moreover, in the case of a grey radiation energy field, we may
+consider a ``grey'' emissivity through integrating $\eta_{\nu}(t,\rvec,\nu)$ 
+over $\nu\in(\nu_0,\infty)$ to determine its single-group
+approximation
+\begin{equation}
+\label{eq:eta_T}
+  \eta(t,\rvec) =\int_{\nu_0}^{\infty} \eta_{\nu}(t,\rvec,\nu)\,\mathrm d\nu.
+\end{equation}
+We note that this approach implicitly assumes that the spectrum of
+$\eta_{\nu}$ matches that of $\Enu$.
+
+
+
+
+\subsection{Flux Limiter}
+
+In the grey flux-limited diffusion approximation
+\eqref{eq:mgfld_grey}, the role of the flux limiter
+$D$ is one of providing a continuous transition between the isotropic
+and free-streaming limits.  To this end, we consider the flux limiter
+to be of the form,
+\[
+   D(\kappa,E) = \left[\begin{array}{ccc} 
+       D_1(\kappa,E) & 0 & 0 \\
+       0 & D_2(\kappa,E) & 0 \\
+       0 & 0 & D_3(\kappa,E) 
+     \end{array}\right],
+\]
+where we employ a limiter of the form  \cite{Morel2000}: 
+\begin{align}
+  \label{eq:Morel_limiterD}
+  D_i(\kappa,E) &= \min\left\{ c \left(9\kappa_f^2 + R_i^2\right)^{-1/2},
+    D_\text{max} \right\}, \quad i=1,2,3,\\
+  \label{eq:Morel_limiterR}
+  R_i &= \max\left\{ \frac{|\partial_{\rvec_i}E|}{E_f}, R_\text{min} \right\}.
+\end{align}
+Here, the spatial derivative within $R$ is computed at the
+computational face adjoining two neighboring finite-volume cells, as
+will be elaborated on further in section \ref{sec:fv_approximation}.
+We enforce bounds on $D_i$ and $R_i$ to ensure numerical stability due
+to floating-point arithmetic error, given by 
+%$D_\text{max} = 0.006\,c\,\Lunit$ 
+$D_\text{max} = \infty$ 
+and 
+$R_\text{min} = 10^{-20} \Lunit^{-1}$, 
+with $\Lunit$ the length non-dimensionalization factor in the simulation
+(see the next section).  Moreover, the face-centered radiation energy
+density and opacity are computed using the arithmetic and harmonic
+means, respectively,
+\[
+  E_f = \frac{E_1 + E_2}{2}, \qquad \kappa_f =
+  \frac{2\kappa_1\kappa_2}{\kappa_1+\kappa_2}, 
+\]
+where here $E_1$ and $E_2$ are the two values of $E$ in the cells
+adjacent to the face, with $\kappa_1$ and $\kappa_2$ defined
+similarly. 
+
+
+
+
+\section{Units in Enzo cosmology}
+\label{sec:units}
+
+When run with cosmological expansion enabled, Enzo modifies the
+units of each internal field throughout the simulation to account for
+cosmological expansion.  We define the comoving position $\xvec$
+through the relationship $\rvec = \Lunit\xvec \propto a \xvec$
+(specific details are below in equation \eqref{eq:Lunit}), where $a$
+is the cosmological expansion factor.  This is a time-dependent
+(equivalently, redshift-dependent) factor, satisfying the relationship
+\begin{align}
+  \label{eq:CurrentRedshift}
+  z &= \frac{1}{a} - 1,
+\end{align}
+where $z$ is the current (time-dependent) redshift.  We note that
+since $z$ decreases as time proceeds, $a$ increases as a function of
+time, since 
+\begin{align}
+  \label{eq:expansion_factor}
+  a = \frac{1}{1+z}.
+\end{align}
+
+Enzo then defines the non-dimensionalization factors:
+\begin{align}
+  \label{eq:Dunit}
+  \Dunit &= (1.88\times10^{-29}) \Omega_{mn} H_{cn}^2 (1 + z)^3, \\
+  \label{eq:Lunit}
+  \Lunit &= \frac{(3.086\times10^{24}) L_c}{H_{cn} (1 + z)}
+          \qquad \left(\text{i.e.}\quad \Lunit = \frac{(3.086\times10^{24}) L_c}{H_{cn}}a\right), \\
+  \label{eq:Tunit}
+  \Tunit &= \frac{2.52\times10^{17}}{\Omega_{mn}^{1/2} H_{cn} (1 + z_I)^{3/2}}, \\
+  \label{eq:Vunit}
+  \Vunit &= (1.225\times10^{7}) L_c \sqrt{\Omega_{mn}(1 + z_I)}, \\
+  \label{eq:Aunit}
+  \Aunit &= (1+z_I)^{-1}.
+\end{align}
+Here $a = \Aunit \tA$, where $\tA$ is Enzo's normalized value,  
+$\Omega_{mn}$ is Enzo's {\tt OmegaMatterNow} parameter, 
+$H_{cn}$ is Enzo's {\tt HubbleConstantNow} parameter, 
+$z_I$ is Enzo's {\tt InitialRedshift} parameter, and
+$L_c$ is Enzo's {\tt ComovingBoxSize} parameter.
+As a result, Enzo actually computes the current redshift via the
+formula 
+\begin{align}
+  \label{eq:CurrentRedshiftFormula}
+  z &= \frac{1 + z_I}{\tA} - 1.
+\end{align}
+We note that under these definitions, $\Vunit \ne \Lunit / \Tunit$, since
+\begin{align*}
+   \frac{\Lunit}{\Tunit} &= 
+   \frac{(3.086\times10^{24}) L_c \left(\Omega_{mn}^{1/2} H_{cn} (1 + z_I)^{3/2}\right)}
+         {H_{cn} (1 + z)\left(2.52\times10^{17}\right)} \\
+   &= 
+   (1.2246\times10^{7}) L_c \sqrt{\Omega_{mn}(1 + z_I)} \frac{(1 + z_I)}{(1 + z)},
+\end{align*}
+which differs from $\Vunit$ both in the precision of the leading
+constant (minor difference) and also by a factor of $(1+z_I)/(1+z)$, that grows
+in magnitude as time proceeds, especially for simulations having large
+initial redshift (major difference).
+
+With these units defined, we may also consider a unit normalization
+factor for radiation energy density, that can be defined as either
+\[
+  \Dunit \Vunit^2, \quad\text{or}\quad 
+  \Dunit \frac{\Lunit^2}{\Tunit^2},
+\]
+since both constitute the correct CGS units.  However, since in
+cosmological simulations $\Vunit \ne \Lunit / \Tunit$, these two
+definitions are not the same.  We choose the first of these,
+\begin{equation}
+  \label{eq:Eunit}
+  \Eunit = \Dunit \Vunit^2.
+\end{equation}
+
+
+
+
+\section{Recasting to comoving, normalized form}
+\label{sec:comoving_eqn}
+
+Our equations \eqref{eq:mgfld_grey} and
+\eqref{eq:Morel_limiterD}-\eqref{eq:Morel_limiterR}  
+are valid in proper CGS units, whereas Enzo's fields are stored in
+comoving, normalized form.  Specifically, the terms in our equations
+relate to Enzo's comoving, normalized terms in the following manner:
+\begin{itemize}
+\item $\rhob = \Dunit \tRho$, where $\rhob$ is the proper, CGS
+  density, and $\tRho$ is Enzo's comoving, normalized
+  density value,
+\item $\vb = \Vunit \tilde{\vb}$, where $\vb$ is the proper peculiar
+  baryonic CGS velocity, and $\tilde{\vb}$ is Enzo's comoving,
+  normalized velocity value,
+\item $e = \Vunit^2 \tilde{e}$, where $e$ is the proper
+  baryonic energy per unit mass, and $\tilde{e}$ is Enzo's comoving,
+  normalized energy value,
+\item $E = \Eunit \tE$, where $E$ is the proper, CGS radiation
+  energy, and $\tE$ is Enzo's comoving, normalized
+  radiation energy value,
+\item $a = \Aunit \tA$, as described above in equation
+  \eqref{eq:Aunit},
+\item $\adot = \left(\Aunit/\Tunit\right) \dot{\tA}$, where $\adot$ is
+  the true cosmological expansion rate, and $\dot{\tA}$ is Enzo's
+  normalized value,
+\item $\rvec = \Lunit \xvec$, where $\rvec$ is the
+  proper, CGS position, and $\xvec$ is Enzo's comoving normalized position,
+\item $t = \Tunit \tT$, where $t$ is the CGS time, and $\tT$ is Enzo's
+  normalized time,
+\item $\kappa = \tK \Kunit$, where $\kappa$ is the proper, CGS
+  opacity, $\tK$ is Enzo's normalized value, and $\Kunit \propto
+  \Lunit^{-1}$.
+\end{itemize}
+
+We also note that in order for us to convert our equations
+for the proper CGS radiation energy ($E$) to the normalized,
+comoving radiation energy density ($\tE$) we must consider how our
+time derivative must be modified.  Specifically, since $E = \Eunit
+\tE$, then by the product rule,
+\[
+   \partial_t E = \partial_t \left(\Eunit \tE\right) = 
+   \Eunit\, \partial_t \tE + \tE\, \partial_t \Eunit.
+\]
+Due to our choice of $\Eunit = \Dunit \Vunit^2 \propto (1+z)^3$, we then have 
+\[
+   \partial_t \Eunit = \frac{3\, \Eunit\, \partial_t z}{1+z}.
+\]
+Moreover, because $z = \frac{1}{a}-1$ we have $\partial_t z =
+-\frac{\adot}{a^2}$, and since $a = \frac{1}{1+z}$, this becomes 
+\[
+   \partial_t \Eunit = -3\Eunit\frac{\adot}{a}.
+\]
+As a result, we have 
+\begin{align*}
+   \partial_t E &= \Eunit\, \partial_t \tE - 3\Eunit \frac{\adot}{a} \tE \\
+   &= \Eunit\, \partial_t \tE - 3\frac{\adot}{a} E,
+\end{align*}
+which will cancel a portion of the term $\alpha\frac{\adot}{a} E$ in
+the equation \eqref{eq:mgfld_grey}.  Specifically, after dividing
+through by $\Eunit$ and canceling like terms, the equation
+\eqref{eq:mgfld_grey} may instead be written in terms of the comoving,
+normalized radiation energy density: 
+\begin{align}
+  \label{eq:mgfld_grey_Ecomoving}
+  \partial_{t} \tE - \nabla\cdot\(D\,\nabla \tE\)
+    + \talpha\frac{\adot}{a} \tE = \frac{\eta}{\Eunit} - c\kappa \tE,
+\end{align}
+where now for monochromatic radiation spectra $\talpha=0$ and
+otherwise $\talpha=1$.
+
+Similarly, since the proper position changes as a function of time,
+then we may consider spatial differentiation with respect to the
+normalized comoving position $\xvec$.  Since 
+\[
+   \rvec = \Lunit \xvec \quad\Longleftrightarrow\quad
+   \xvec = \frac{\rvec}{\Lunit},
+\]
+then the chain rule dictates that
+\[
+   \frac{\partial}{\partial \rvec} \ = \
+   \frac{\partial \xvec}{\partial \rvec}
+   \frac{\partial}{\partial \xvec} \ = \
+   \frac{1}{\Lunit}\frac{\partial}{\partial \xvec}.
+\]
+We therefore denote the comoving, normalized differentiation operator
+as $\tnabla$, such that 
+\[
+   \nabla = \frac{1}{\Lunit}\tnabla.
+\]
+Resultingly, upon converting to comoving, normalized units, we have
+the equation
+\begin{align}
+  \label{eq:mgfld_grey_comoving}
+  \partial_{t} \tE - \frac{1}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
+    + \talpha\frac{\adot}{a} \tE = \frac{\eta}{\Eunit} - c\kappa \tE.
+\end{align}
+
+Similarly, we may consider time differentiation with respect to our
+normalized time value, $\tT$:
+\[
+   \frac{\partial}{\partial t} \ = \
+   \frac{\partial \tT}{\partial t} \frac{\partial}{\partial \tT} \ = \
+   \frac{1}{\Tunit}\frac{\partial}{\partial \tT},
+\]
+resulting in the equation
+\begin{align}
+  \label{eq:mgfld_grey_comoving_tnormalized}
+  \partial_{\tT} \tE - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
+    + \talpha\frac{\Tunit \adot}{a} \tE = \frac{\Tunit\eta}{\Eunit} -
+    \Tunit c\kappa \tE.
+\end{align}
+
+Lastly, we will convert the equation \eqref{eq:mgfld_grey_comoving} so
+that it depends only on Enzo's normalized variables, $\tT$, $\tE$,
+$\tA$, $\dot{\tA}$ and $\tK$.  To this end, we expand each
+variable in terms of its normalized value and unit factor, 
+\begin{align}
+  \notag
+  &\partial_{\tT} \tE - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
+    + \talpha\frac{\Tunit \Aunit\tAdot}{\Tunit \Aunit\tA} \tE = 
+    \frac{\Tunit\eta}{\Eunit} - \Tunit \Kunit c \tK \tE \\
+  \Leftrightarrow \quad & \\
+  \label{eq:mgfld_grey_comoving_normalized}
+  &\partial_{\tT} \tE - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
+    + \talpha\frac{\tAdot}{\tA} \tE = 
+    \frac{\Tunit\eta}{\Eunit} - \Tunit \Kunit\, c\, \tK \tE,
+\end{align}
+where we compute the limiter as
+\begin{align}
+  \label{eq:Morel_limiterD_normalized}
+  D_i(\tK,\tE) &= \min\left\{ c \left(9\kappa_f^2 + R_i^2\right)^{-1/2},
+    D_\text{max} \right\}, \quad i=1,2,3,\\
+  \label{eq:Morel_limiterR_normalized}
+  R_i &= \max\left\{ \frac{|\partial_{\xvec_i}\tE|}{\Lunit \tE_f}, R_\text{min} \right\},
+\end{align}
+with
+\begin{align}
+  \label{eq:face_values_normalized}
+  \tE_f = \frac{\tE_1 + \tE_2}{2}, \qquad 
+  \kappa_f = \frac{2\tK_1\tK_2}{\tK_1+\tK_2}\Kunit,
+\end{align}
+where again $\tE_1$ and $\tE_2$ are the two values of $\tE$ in the
+cells adjacent to the face, as elaborated on in the next section. 
+
+
+
+
+
+
+\section{Finite volume PDE approximation}
+\label{sec:fv_approximation}
+
+On a uniform (i.e.~non-AMR) mesh with comoving grid spacings $\Delta x$,
+$\Delta y$ and $\Delta z$, we define the finite volume cell centers at
+the grid points in comoving, normalized units as:
+\begin{align*}
+   \xvec_{i,j,k} &= \left[\,x_i,\,  y_j,\, z_k\,\right], \\
+   x_i &= \left(i + \tfrac12\right) \Delta x, \\
+   y_j &= \left(j + \tfrac12\right) \Delta y, \\
+   z_k &= \left(k + \tfrac12\right) \Delta z.
+\end{align*}
+Enzo's data arrays contain the discrete values of each field over the
+simulation volume at each of these grid points.  More specifically,
+Enzo uses three-dimensional data arrays to store these discretized
+solution values at specific points in time.  We denote $\tE^n_{i,j,k}$
+as our approximation to the comoving and normalized solution at the
+normalized time $\tT_{n}$ and at the comoving normalized spatial
+location $\xvec_{i,j,k}$ (and do similarly for the other field data).
+We must therefore consider how to discretize the space and time
+derivatives of our equation \eqref{eq:mgfld_grey_comoving_normalized}
+so that it depends on only these discrete data values.
+
+We first separate the space and time discretizations.  First, we
+discretize in time using a one-step $\theta$-method.  Introducing the
+notation
+\[
+   \mD(\tE,\tK,\eta,\tA,\tAdot) = 
+   \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D\,\tnabla \tE\)
+    - \talpha\frac{\tAdot}{\tA} \tE 
+    + \frac{\Tunit\eta}{\Eunit} 
+    - \Tunit \Kunit\, c\, \tK \tE,
+\]
+and denoting $\tE^n$ as our approximation to the spatially continuous
+solution at time $\tT_{n}$, the $\theta$-method may be written as
+\begin{align}
+  \label{eq:mgfld_theta}
+  \tE^{n+1} - \tE^n &= 
+    \theta\Delta \tT \mD(\tE^{n+1},\tK^{n+1},\eta^{n+1},\tA^{n+1},\tAdot^{n+1}) 
+    + (1-\theta)\Delta \tT \mD(\tE^n,\tK^n,\eta^n,\tA^n,\tAdot^n),
+\end{align}
+where in the first $\mD$ term we lag the implicit dependence of the
+solution on the flux limiter $D^{n+1}$ to the previous time, $D^n$ to
+result in a linearly implicit system of equations.  
+
+We must similarly apply our finite-volume spatial discretization of
+the operator $\mD$.  For the discretized equation centered at the
+comoving normalized position $\xvec_{i,j,k}$, we have 
+\begin{align}
+  \label{eq:mgfld_discrete}
+  \tE_{i,j,k}^{n+1} - \tE_{i,j,k}^n &= \theta\Delta \tT \mD_{i,j,k}^{n+1} 
+    + (1-\theta)\Delta \tT \mD_{i,j,k}^{n},
+\end{align}
+where
+\begin{align}
+  \label{eq:discrete_operator}
+  \mD_{i,j,k} &= 
+       \frac{\Tunit}{\Lunit^2 \Delta x^2}\(D_{i+1/2,j,k}\(\tE_{i+1,j,k} - \tE_{i,j,k}\) - D_{i-1/2,j,k}\(\tE_{i,j,k} - \tE_{i-1,j,k}\)\) \\
+ \notag
+    &+ \frac{\Tunit}{\Lunit^2 \Delta y^2}\(D_{i,j+1/2,k}\(\tE_{i,j+1,k} - \tE_{i,j,k}\) - D_{i,j-1/2,k}\(\tE_{i,j,k} - \tE_{i,j-1,k}\)\) \\
+  \notag
+    &+ \frac{\Tunit}{\Lunit^2 \Delta z^2}\(D_{i,j,k+1/2}\(\tE_{i,j,k+1} - \tE_{i,j,k}\) - D_{i,j,k-1/2}\(\tE_{i,j,k} - \tE_{i,j,k-1}\)\) \\
+  \notag
+    &- \talpha\frac{\tAdot}{\tA} \tE_{i,j,k} + \frac{\Tunit \eta_{i,j,k}}{\Eunit} 
+     - \Tunit \Kunit\, c\, \tK_{i,j,k} \tE_{i,j,k},
+\end{align}
+and where, following equations
+\eqref{eq:Morel_limiterD_normalized}-\eqref{eq:face_values_normalized},
+we similarly discretize the limiter as, e.g.
+\begin{align}
+  \label{eq:discrete_limiter}
+  D_{i+1/2,j,k}(\tE,\kappa) &= \min\left\{ c \left(9\kappa_{i+1/2,j,k}^2 + R_{i+1/2,j,k}^2\right)^{-1/2},
+    D_\text{max} \right\},\\
+  \notag
+  R_{i+1/2,j,k} &= \max\left\{\frac{2}{\Lunit \Delta x} \frac{|\tE_{i+1,j,k}-\tE_{i,j,k}|}{\tE_{i+1,j,k}+\tE_{i,j,k}}, R_\text{min} \right\}, \\
+  \notag
+  \kappa_{i+1/2,j,k} &= \frac{2 \tK_{i+1,j,k} \tK_{i,j,k}}{\tK_{i+1,j,k} + \tK_{i,j,k}}\Kunit.
+\end{align}
+We note that in many of the above factors, the unit values change
+as a function of time.  As a result, all quantities are converted
+using the unit evaluated at the appropriate time step, $t_{n+1}$ or
+$t_n$.
+
+
+
+\subsection{Implemented equation}
+\label{sec:fv_implementation}
+
+Although the equations above represent what should be a
+self-consistent implementation of the finite-volume discretized
+version of our model, they are not exactly the same as those
+implemented in Enzo.  I could not find the notes from my discussions
+with Pascal on trying to get this model to work for our cosmological
+I-front expansion tests, so I'm not sure how we got from the above
+equations to the ones that follow.  Perhaps the derivation above
+starts from equations with incorrect assumptions, or perhaps the
+modifications we made just got lucky in reproducing those test
+problems.  I will note, however, that those tests never began with a
+large initial redshift, as we always tested $z_I = 4$ or $z_I = 10$.
+As a result, the discrepancy between $\Vunit$ and $\Lunit/\Tunit$ may
+be involved.
+
+In any case, here are our implemented formulas akin to equations 
+\eqref{eq:mgfld_discrete}-\eqref{eq:discrete_limiter}.  Terms that
+differ from the above model are highlighted in {\color{red} red}:
+\begin{align}
+  \label{eq:mgfld_implemented}
+    \tE_{i,j,k}^{n+1} - \tE_{i,j,k}^n &= \theta \Delta \tT
+    \tmD_{i,j,k}^{n+1} + (1-\theta) \Delta \tT \tmD_{i,j,k}^n, \\
+  \notag
+  \tmD_{i,j,k} &= 
+       \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta x^2}\(D_{i+1/2,j,k}\(\tE_{i+1,j,k} - \tE_{i,j,k}\) - D_{i-1/2,j,k}\(\tE_{i,j,k} - \tE_{i-1,j,k}\)\) \\
+  \notag
+    &+ \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta y^2}\(D_{i,j+1/2,k}\(\tE_{i,j+1,k} - \tE_{i,j,k}\) - D_{i,j-1/2,k}\(\tE_{i,j,k} - \tE_{i,j-1,k}\)\) \\
+  \notag
+    &+ \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta z^2}\(D_{i,j,k+1/2}\(\tE_{i,j,k+1} - \tE_{i,j,k}\) - D_{i,j,k-1/2}\(\tE_{i,j,k} - \tE_{i,j,k-1}\)\) \\
+  \notag
+    &- \talpha\frac{\dot{\tA}}{\tA} \tE_{i,j,k} + \frac{\Tunit \eta_{i,j,k}}{\Eunit}
+     - \Tunit \Kunit\, c\, \tK_{i,j,k} \tE_{i,j,k},
+\end{align}
+where the face-centered quantities are computed from the normalized
+values as
+\begin{align}
+  \label{eq:limiter_implemented}
+  D_{i+1/2,j,k}(\tE,\kappa) &= \min\left\{ c \left(9\kappa_{i+1/2,j,k}^2 + R_{i+1/2,j,k}^2\right)^{-1/2},
+    D_\text{max} \right\},\\
+  \notag
+  R_{i+1/2,j,k} &= \max\left\{\frac{2{\color{red}\tA}}{\Lunit \Delta x} \frac{|\tE_{i+1,j,k}-\tE_{i,j,k}|}{\tE_{i+1,j,k}+\tE_{i,j,k}}, R_\text{min} \right\}, \\
+  \notag
+  \kappa_{i+1/2,j,k} &= \frac{2 \tK_{i+1,j,k} \tK_{i,j,k}}{
+    \tK_{i+1,j,k} + \tK_{i,j,k}} \Kunit.
+\end{align}
+
+
+
+
+
+\bibliography{sources}
+\bibliographystyle{siam}
+\end{document}
