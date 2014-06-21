@@ -691,57 +691,6 @@ $t_n$.
 
 
 
-\subsection{Implemented equation}
-\label{sec:fv_implementation}
-
-Although the equations above represent what should be a
-self-consistent implementation of the finite-volume discretized
-version of our model, they are not exactly the same as those
-implemented in Enzo.  I could not find the notes from my discussions
-with Pascal on trying to get this model to work for our cosmological
-I-front expansion tests, so I'm not sure how we got from the above
-equations to the ones that follow.  Perhaps the derivation above
-starts from equations with incorrect assumptions, or perhaps the
-modifications we made just got lucky in reproducing those test
-problems.  I will note, however, that those tests never began with a
-large initial redshift, as we always tested $z_I = 4$ or $z_I = 10$.
-As a result, the discrepancy between $\Vunit$ and $\Lunit/\Tunit$ may
-be involved.
-
-In any case, here are our implemented formulas akin to equations 
-\eqref{eq:mgfld_discrete}-\eqref{eq:discrete_limiter}.  Terms that
-differ from the above model are highlighted in {\color{red} red}:
-\begin{align}
-  \label{eq:mgfld_implemented}
-    \tE_{i,j,k}^{n+1} - \tE_{i,j,k}^n &= \theta \Delta \tT
-    \tmD_{i,j,k}^{n+1} + (1-\theta) \Delta \tT \tmD_{i,j,k}^n, \\
-  \notag
-  \tmD_{i,j,k} &= 
-       \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta x^2}\(D_{i+1/2,j,k}\(\tE_{i+1,j,k} - \tE_{i,j,k}\) - D_{i-1/2,j,k}\(\tE_{i,j,k} - \tE_{i-1,j,k}\)\) \\
-  \notag
-    &+ \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta y^2}\(D_{i,j+1/2,k}\(\tE_{i,j+1,k} - \tE_{i,j,k}\) - D_{i,j-1/2,k}\(\tE_{i,j,k} - \tE_{i,j-1,k}\)\) \\
-  \notag
-    &+ \frac{\Tunit {\color{red}\tA^2}}{\Lunit^2 \Delta z^2}\(D_{i,j,k+1/2}\(\tE_{i,j,k+1} - \tE_{i,j,k}\) - D_{i,j,k-1/2}\(\tE_{i,j,k} - \tE_{i,j,k-1}\)\) \\
-  \notag
-    &- \talpha\frac{\dot{\tA}}{\tA} \tE_{i,j,k} + \frac{\Tunit \eta_{i,j,k}}{\Eunit}
-     - \Tunit \Kunit\, c\, \tK_{i,j,k} \tE_{i,j,k},
-\end{align}
-where the face-centered quantities are computed from the normalized
-values as
-\begin{align}
-  \label{eq:limiter_implemented}
-  D_{i+1/2,j,k}(\tE,\kappa) &= \min\left\{ c \left(9\kappa_{i+1/2,j,k}^2 + R_{i+1/2,j,k}^2\right)^{-1/2},
-    D_\text{max} \right\},\\
-  \notag
-  R_{i+1/2,j,k} &= \max\left\{\frac{2{\color{red}\tA}}{\Lunit \Delta x} \frac{|\tE_{i+1,j,k}-\tE_{i,j,k}|}{\tE_{i+1,j,k}+\tE_{i,j,k}}, R_\text{min} \right\}, \\
-  \notag
-  \kappa_{i+1/2,j,k} &= \frac{2 \tK_{i+1,j,k} \tK_{i,j,k}}{
-    \tK_{i+1,j,k} + \tK_{i,j,k}} \Kunit.
-\end{align}
-
-
-
-
 
 \bibliography{sources}
 \bibliographystyle{siam}
