@@ -239,7 +239,7 @@ frequency space by choosing to evolve radiation energy densities at a
 specific set of frequencies.  To this end, let us denote a finite set
 of frequencies as
 \begin{equation}
-\label{eq:monochromatic_frequencies}
+\label{eq:multichromatic_frequencies}
   \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
 \end{equation}
 We may then consider the full frequency-dependent radiation field to
@@ -248,7 +248,7 @@ frequencies.  Under this ``multi-chromatic'' discretization, we may
 consider the overall frequency-dependent radiation energy density
 function to have the form 
 \begin{equation}
-\label{eq:radiation_multichromatic}
+\label{eq:multichromatic_radiation}
   \Enu(t,\rvec,\nu) = \sum_{\omega=0}^{N_f} E_{\omega}(t,\rvec) \delta_{\nu_{\omega}}(\nu),
 \end{equation}
 where $\delta_{\nu_{\omega}}(\nu)$ is the Dirac delta function, and where we
@@ -274,9 +274,9 @@ We define both the opacity and emissivity for each of these radiation
 fields through evaluating the corresponding multi-frequency values at
 the associated frequency $\nu_{\omega}$, i.e.
 \begin{align}
-\label{eq:opacity_multichromatic}
+\label{eq:multichromatic_opacity}
   \kappa_{\omega}(t,\rvec) &= \kappa_{\nu}(t,\rvec,\nu_{\omega}) = \sum_{i=1}^{N_\text{chem}} \mn_i(t,\rvec)\, \sigma_{\mn_i} (\nu_{\omega}), \\
-\label{eq:emissivity_multichromatic}
+\label{eq:multichromatic_emissivity}
   \eta_{\omega}(t,\rvec) &= \eta_{\nu}(t,\rvec,\nu_{\omega}).
 \end{align}
 
@@ -300,7 +300,7 @@ photoionization rate $\Gamma_i^{ph}(t,\rvec)$.
 
 Similarly, we compute the frequency-integrated specific photoheating
 rate, $G$, using our multi-chromatic radiation field
-\eqref{eq:radiation_multichromatic} as 
+\eqref{eq:multichromatic_radiation} as 
 \begin{align}
 \notag
    G(t,\rvec) &= 
@@ -351,7 +351,7 @@ but non-uniformly {\em between} groups.  Under this ``multi-group''
 discretization, we may consider the overall frequency-dependent
 radiation energy density function to have the piecewise constant form  
 \begin{equation}
-\label{eq:radiation_multigroup}
+\label{eq:multigroup_radiation}
   \Enu(t,\rvec,\nu) = \begin{cases}
     E_{\omega}(t,\rvec), & \text{if}\quad \nu \in g_{\omega}, \; \omega=0,\ldots,N_f-1\\
     \qquad 0, & \text{otherwise}.
@@ -384,7 +384,7 @@ Notes:
   with the average value of $\Enu$ within each bin, {\em not} the
   value at the central frequency, i.e.
   \[
-     E_{\omega}(t,\rvec) = \frac{1}{\nu_{\omega+1}-\nu_{\omega}} \int_{\nu_{\omega}}^{\nu_{\omega+1}}
+     E_{\omega}(t,\rvec) = \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}}
      \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad \omega=1,\ldots,N_f-1.
   \]
   This applies to both initial conditions, and (more importantly) to
@@ -432,9 +432,11 @@ radiation group. We investigate each term separately,
    \equiv
    c\, \kappa_{\omega}\, E_{\omega},
 \end{align}
-where we have defined the multi-group emissivity $\eta_{\omega}, \omega=1,\ldots,N_f-1$ and
-multi-group opacity $\kappa_{\omega}, \omega=1,\ldots,N_f-1$ above in the equations
-\eqref{eq:multigroup_emissivity} and \eqref{eq:multigroup_opacity}.
+where the equations \eqref{eq:multigroup_emissivity} and
+\eqref{eq:multigroup_opacity} above define the multi-group emissivities
+and opacities, $\eta_{\omega}$ and $\kappa_{\omega}$,
+$\omega=1,\ldots,N_f-1$, respectively.
+
 The remaining frequency coupling term is less trivial,
 \begin{align}
 \notag
@@ -452,7 +454,7 @@ The remaining frequency coupling term is less trivial,
    \frac{\adot\, \nu_{\omega} (E_{\omega-1}+E_{\omega})}{2a|g_{\omega}|} - \frac{\adot}{a}E_{\omega}.
 \end{align}
 We note that derivation of the above term required integration by
-parts, as well as definition of the radiation energy density at the
+parts, as well as approximation of the radiation energy density at the
 bin frequency boundaries, 
 \[
    \Enu(\nu_{\omega}) \approx \frac{E_{\omega-1}+E_{\omega}}{2}, \qquad
@@ -498,7 +500,7 @@ To complete the model, we must determine the photo-heating and
 photo-ionization terms that couple the radiation to the matter.  As
 before, we utilize the integral form of their definitions, along with
 the piecewise-constant definition of our radiation energy density
-\eqref{eq:radiation_multigroup}.  
+\eqref{eq:multigroup_radiation}.  
 % However, due to the various
 % ionization thresholds of each chemical species, we must take care in
 % computing these integrals.  To this end, for each chemical species 
@@ -1005,6 +1007,66 @@ values may change as a function of time due to cosmological expansion.
 As a result, all quantities are converted using the unit evaluated at
 the appropriate time step, $t_{n+1}$ or $t_n$.
 
+
+
+
+\section{Enzo User Interface}
+\label{sec:user_interface}
+
+We anticipate to offer the following user interface for control over
+the AMR-FLD solver for Enzo simulations.
+
+Physics input parameters:
+\begin{itemize}
+\item {\em AMRFLDMonochromatic} -- Boolean flag denoting whether to
+  use the multi-chromatic solver (1) or the multi-group solver (0).
+  Default: 0
+\item {\em AMRFLDNumRadiationFields} -- integer denoting the number of
+  radiation fields, $E_{\omega}$.  Default: 1
+\item {\em AMRFLDFrequencies[:]} -- floating-point values for each
+  frequency, $\nu_i$.  For the multi-chromatic solver the user must
+  provide {\em AMRFLDNumRadiationFields} of these; for the multi-group
+  solver the user must provide {\em AMRFLDNumRadiationFields + 1} of
+  these.  These must be given in increasing order, and must all be
+  strictly positive, i.e.
+  \[
+     0 < \text{\em AMRFLDFrequencies[0]} < \text{\em
+       AMRFLDFrequencies[1]} < \cdots
+  \]
+\end{itemize}
+
+
+User requirements:
+\begin{itemize}
+\item Fields -- the problem initializer or provided restart file must
+  allocate radiation and emissivity fields for each frequency or
+  group.  These are expected to reside in the Enzo baryon fields 
+  {\em RadiationFreq0} $\to$ {\em RadiationFreq9} and 
+  {\em Emissivity0} $\to$ {\em Emissivity9}.  Of course, in actuality
+  only {\em 2*AMRFLDNumRadiationFields} of these fields needs to be
+  allocated, so simulations with fewer frequencies/groups can allocate
+  only what they will need.
+
+  In addition, the user must allocate the baryon fields {\em kphHI,
+  kphHeI, kphHeII, PhotoGamma} and {\em kdissH2I} to enable communication 
+  of photo-ionization and photo-heating rates from the AMR-FLD solver and 
+  Enzo's chemistry and cooling routines.
+
+\item Emissivities -- while some emissivity formulas will be provided
+  in order to simplify testing, in ``science'' runs the user is
+  responsible for filling the emissivity fields {\em Emissivity0}
+  $\to$ {\em Emissivity9}.  These should be filled in accordance with
+  formulas \eqref{eq:multichromatic_emissivity} for multi-chromatic
+  simulations, or \eqref{eq:multigroup_emissivity} for multi-group
+  simulations.  These fields should be filled using standard CGS units
+  of ergs cm$^{-3}$ s$^{-1}$.
+\end{itemize}
+
+
+Solver input parameters:
+\begin{itemize}
+\item to be added
+\end{itemize}
 
 
 
