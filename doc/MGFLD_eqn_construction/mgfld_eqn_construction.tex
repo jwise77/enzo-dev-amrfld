@@ -97,10 +97,11 @@ where each of these are defined in proper, CGS units.
 For frequencies $\nu\in\R^+$, times $t\in\R$ and spatial locations
 $\rvec\in\R^3$, we denote the domain of these functions as $\Omegabar
 = \R^+\times\R\times\R^3$. Then $I_{\nu}:\Omegabar\rightarrow\R$ is
-the specific radiation intensity,$\Enu:\Omegabar\rightarrow\R$ is the
-radiation energy density, $\Fnu:\Omegabar\rightarrow\Rthree$ is the
-radiation energy flux, and $\Pnu:\Omegabar\rightarrow\R^{3\times 3}$
-is the radiation pressure tensor. 
+the specific radiation intensity, $\Enu:\Omegabar\rightarrow\R$ is the
+radiation energy density (erg cm$^{-3}$ Hz$^{-1}$),
+$\Fnu:\Omegabar\rightarrow\Rthree$ is the radiation energy flux, and
+$\Pnu:\Omegabar\rightarrow\R^{3\times 3}$ is the radiation pressure
+tensor.
 
 The moment equations for a generalized fluid coupled with a radiation
 fluid for a cosmological medium are as follows
@@ -222,7 +223,7 @@ where we employ a limiter of the form  \cite{Morel2000}:
   R_{\nu,i} &= \frac{|\partial_{\rvec_i}\Enu|}{\Enu}, \quad i=1,2,3.
 \end{align}
 We elaborate further on the implementation of these formulas in
-Section \ref{subsec:limiter_implementation}.
+Section \ref{sec:fv_approximation}.
 
 
 
@@ -230,8 +231,8 @@ Section \ref{subsec:limiter_implementation}.
 
 
 
-\subsection{Multi-Chromatic Approximation}
-\label{subsec:multi_chromatic}
+\subsection{Multi-Frequency Approximation}
+\label{subsec:multi_frequency}
 
 Our first approximation to the radiation energy density equation
 \eqref{eq:mgfld_simplified2} will be to remove the dependency on
@@ -239,16 +240,16 @@ frequency space by choosing to evolve radiation energy densities at a
 specific set of frequencies.  To this end, let us denote a finite set
 of frequencies as
 \begin{equation}
-\label{eq:multichromatic_frequencies}
+\label{eq:multifrequency_frequencies}
   \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
 \end{equation}
 We may then consider the full frequency-dependent radiation field to
 be comprised of radiation emitted only at this finite set of
-frequencies.  Under this ``multi-chromatic'' discretization, we may
+frequencies.  Under this ``multi-frequency'' discretization, we may
 consider the overall frequency-dependent radiation energy density
 function to have the form 
 \begin{equation}
-\label{eq:multichromatic_radiation}
+\label{eq:multifrequency_radiation}
   \Enu(t,\rvec,\nu) = \sum_{\omega=0}^{N_f} E_{\omega}(t,\rvec) \delta_{\nu_{\omega}}(\nu),
 \end{equation}
 where $\delta_{\nu_{\omega}}(\nu)$ is the Dirac delta function, and where we
@@ -258,7 +259,7 @@ E_1, \ldots, E_{N_f}$.  Under this approximation, the equation
 frequencies $\nu_{\omega}, \omega=0,\ldots,N_f$, i.e. at each specific frequency
 $\nu_{\omega}$ this equation becomes
 \begin{align}
-  \label{eq:mgfld_multichromatic}
+  \label{eq:mgfld_multifrequency}
   \partial_{t} E_{\omega} - \nabla\cdot(D_{\omega}\,\nabla E_{\omega}) + \frac{3 \adot}{a}
   E_{\omega} = \eta_{\omega} - c \kappa_{\omega} E_{\omega}, \qquad \omega=0,\ldots,N_f.
 \end{align}
@@ -274,9 +275,9 @@ We define both the opacity and emissivity for each of these radiation
 fields through evaluating the corresponding multi-frequency values at
 the associated frequency $\nu_{\omega}$, i.e.
 \begin{align}
-\label{eq:multichromatic_opacity}
+\label{eq:multifrequency_opacity}
   \kappa_{\omega}(t,\rvec) &= \kappa_{\nu}(t,\rvec,\nu_{\omega}) = \sum_{i=1}^{N_\text{chem}} \mn_i(t,\rvec)\, \sigma_{\mn_i} (\nu_{\omega}), \\
-\label{eq:multichromatic_emissivity}
+\label{eq:multifrequency_emissivity}
   \eta_{\omega}(t,\rvec) &= \eta_{\nu}(t,\rvec,\nu_{\omega}).
 \end{align}
 
@@ -285,7 +286,7 @@ terms that couple these radiation fields to the matter.
 First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
 for each species $\mn_i$ as
 \begin{equation}
-\label{eq:multichromatic_photoionization}
+\label{eq:multifrequency_photoionization}
    \Gamma_i^{ph}(t,\rvec)  = 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
    \sum_{\omega=0}^{N_f} \frac{c\, E_{\omega}\, \sigma_{\mn_i}(\nu_{\omega})}{h\nu_{\omega}}, \qquad i=1,\ldots,N_\text{chem},
@@ -299,15 +300,15 @@ at frequencies below $\bar{\nu}_i$ do not contribute to the
 photoionization rate $\Gamma_i^{ph}(t,\rvec)$. 
 
 Similarly, we compute the frequency-integrated specific photoheating
-rate, $G$, using our multi-chromatic radiation field
-\eqref{eq:multichromatic_radiation} as 
+rate, $G$, using our multi-frequency radiation field
+\eqref{eq:multifrequency_radiation} as 
 \begin{align}
 \notag
    G(t,\rvec) &= 
    \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
      \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
-\label{eq:multichromatic_photoheating}
+\label{eq:multifrequency_photoheating}
    &= 
    \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
@@ -333,17 +334,19 @@ of frequencies as
 As an alternative discretization of the frequency-dependent radiation
 energy density equation \eqref{eq:mgfld_simplified2}, we may choose to
 evolve groups of radiation energy densities defined within frequency
-bands, or bins.  As before, we introduce a finite set of frequencies
+bands, or bins.  We again consider the derivation of $N_f$ radiation
+fields, each of which is now defined over a frequency band.  To this
+end, we define the set of frequency bands
 \begin{equation}
 \label{eq:bin_bounds}
-  \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
+  \nu_{\omega,L} < \nu_{\omega,R},\quad \omega=1,\ldots,N_f.
 \end{equation}
 These values define frequency {\em groups}, 
 \begin{equation}
 \label{eq:frequency_groups}
-  g_0 = [\nu_0,\nu_1), \qquad   g_1 = [\nu_1,\nu_2), 
+  g_1 = [\nu_{1,L},\nu_{1,R}), \qquad   g_2 = [\nu_{2,L},\nu_{2,R}), 
   \qquad \cdots \qquad
-  g_{N_f-1} = [\nu_{N_f-1},\nu_{N_f}).
+  g_{N_f} = [\nu_{N_f,L},\nu_{N_f,R}).
 \end{equation}
 We may then consider the full frequency-dependent radiation field to
 be comprised of radiation emitted uniformly {\em within} each group,
@@ -353,17 +356,32 @@ radiation energy density function to have the piecewise constant form
 \begin{equation}
 \label{eq:multigroup_radiation}
   \Enu(t,\rvec,\nu) = \begin{cases}
-    E_{\omega}(t,\rvec), & \text{if}\quad \nu \in g_{\omega}, \; \omega=0,\ldots,N_f-1\\
-    \qquad 0, & \text{otherwise}.
+    \frac{1}{|g_{\omega}|}E_{\omega}(t,\rvec), & 
+    \text{if}\quad \nu \in g_{\omega}, \; \omega=1,\ldots,N_f\\
+    \qquad 0, & \text{otherwise},
   \end{cases}
 \end{equation}
+where $|g_{\omega}| = \nu_{\omega,R}-\nu_{\omega,L}$ is the width of
+the frequency group.
 
 Notes:
 \begin{itemize}
-\item[(i)] Under this discretization, the radiation field is no longer
+\item[(i)] Each radiation energy group, $E_{\omega}$ has units of
+  energy density (ergs cm$^{-3}$), unlike the original
+  frequency-dependent radiation energy $\Enu$ that had units ergs cm$^{-3}$
+  Hz$^{-1}$.
+
+\item[(ii)] Under this discretization, the ``standard'' multi-group
+  definition has contiguous frequency bands, i.e. neighboring bands
+  satisfy $\nu_{\omega,R} = \nu_{\omega+1,L}$.
+
+\item[(iii)] Under this discretization, the radiation field is no longer
   continuous as a function of frequency.  For example, in Figure
-  \ref{fig:binned_blackbody} we show both a continuous $T=10^5$
-  blackbody radiation spectrum and its 5 and 10 group approximations.
+  \ref{fig:binned_blackbody} we show a continuous $T=10^5$
+  blackbody radiation spectrum (left), along with its contiguous 5 and
+  10 group approximations (center and right).  We note that these
+  approximation plots show the values of
+  $\frac{1}{|g_{\omega}|}E_{\omega}$, that approximate the values of $\Enu$.
 
   \begin{figure}[h]
     \centerline{\hfill
@@ -372,20 +390,27 @@ Notes:
       \includegraphics[scale=0.3, trim=1.0cm 0.5cm 1.25cm 0.5cm]{blackbody-10bin.pdf}
       \hfill}
     \caption{Comparison between true $T=10^5$ blackbody radiation
-      spectral energy distribution and its 5 and 10 group counterparts.} 
+      spectral energy distribution and its contiguous 5 and 10 group
+      counterparts.}  
     \label{fig:binned_blackbody}
   \end{figure}
 
-\item[(ii)] This piecewise constant approximation of the underlying
+\item[(iv)] This piecewise constant approximation of the underlying
   frequency dependence of $\Enu$ is only first-order accurate as a
   function of the bin width.
 
-\item[(iii)] To ensure photon conservation, these bins must be filled
-  with the average value of $\Enu$ within each bin, {\em not} the
+\item[(v)] Under this discretization, we also allow for gaps in the
+  radiation spectrum (i.e. non-contiguous frequency bands).  For
+  example, if one wanted a crude approximation to separately
+  transporting both UV and X-ray radiation, a two-bin approach with
+  $g_1 = [13.6,100)$ and $g_2 = [500,10000)$ could be used.
+
+\item[(vi)] To ensure photon conservation, these bins must be filled
+  with the total amount of $\Enu$ within each bin, {\em not} the
   value at the central frequency, i.e.
   \[
-     E_{\omega}(t,\rvec) = \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}}
-     \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad \omega=1,\ldots,N_f-1.
+     E_{\omega}(t,\rvec) = \int_{\nu_{\omega,L}}^{\nu_{\omega,R}}
+     \Enu(t,\rvec,\nu)\,\mathrm d\nu, \quad \omega=1,\ldots,N_f.
   \]
   This applies to both initial conditions, and (more importantly) to
   the emissivity values that source each radiation group.
@@ -395,96 +420,118 @@ With this approximation in place, we may consider the implications on
 solving the radiation energy density equation
 \eqref{eq:mgfld_simplified2}.  Due to the piecewise constant
 radiation approximation, we simplify the equation
-\eqref{eq:mgfld_simplified2} by integrating over each frequency group,
-and dividing by the width of that group, $|g_{\omega}| = \nu_{\omega+1}-\nu_{\omega}$, to
-compute the average value over the frequency group.  As a result,
-instead of solving a single frequency-dependent equation
+\eqref{eq:mgfld_simplified2} by integrating over each frequency
+group.  As a result, instead of solving a single frequency-dependent equation
 \eqref{eq:mgfld_simplified2}, we now have separate equations for each
 radiation group. We investigate each term separately,
 \begin{align}
  \label{eq:multigroup_timederivative}
    \partial_{t} \Enu &\;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \partial_{t} \Enu\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \partial_{t} \Enu\,\mathrm d\nu
    =
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \partial_{t} E_{\omega}\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \partial_{t} E_{\omega}\,\mathrm d\nu
    =
    \partial_{t} E_{\omega}, \\
  \label{eq:multigroup_diffusion}
    \nabla\cdot(D_{\nu}\,\nabla\Enu) &\;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \nabla\cdot(D_{\nu}\,\nabla\Enu)\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \nabla\cdot(D_{\nu}\,\nabla\Enu)\,\mathrm d\nu
    =
    \nabla\cdot(D_{\omega}\,\nabla E_{\omega}), \\
  \label{eq:multigroup_depletion}
    \frac{3 \adot}{a} \Enu &\;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{3 \adot}{a} \Enu\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \frac{3 \adot}{a} \Enu\,\mathrm d\nu
    =
    \frac{3 \adot}{a} E_{\omega}, \\
  \label{eq:multigroup_emissivity}
    \eta_{\nu} &\;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \eta_{\nu}\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \eta_{\nu}\,\mathrm d\nu
    \equiv
    \eta_{\omega}, \\
  \label{eq:multigroup_opacity}
    c \kappa_{\nu} \Enu &\;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} c \kappa_{\nu} \Enu\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} c \kappa_{\nu} \Enu\,\mathrm d\nu
    =
-   \frac{c E_{\omega}}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \kappa_{\nu}\,\mathrm d\nu
+   c E_{\omega}\left(\frac{1}{|g_{\omega}|} \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \kappa_{\nu}\,\mathrm d\nu\right)
    \equiv
-   c\, \kappa_{\omega}\, E_{\omega},
+   c E_{\omega} \kappa_{\omega},
 \end{align}
 where the equations \eqref{eq:multigroup_emissivity} and
 \eqref{eq:multigroup_opacity} above define the multi-group emissivities
 and opacities, $\eta_{\omega}$ and $\kappa_{\omega}$,
-$\omega=1,\ldots,N_f-1$, respectively.
+$\omega=1,\ldots,N_f$, respectively.
 
 The remaining frequency coupling term is less trivial,
 \begin{align}
 \notag
    \frac{\nu \adot}{a}\partial_{\nu}\Enu \;\rightarrow\;
-   \frac{1}{|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
    &=
-   \frac{\adot}{a|g_{\omega}|} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \nu\,\partial_{\nu}\Enu\,\mathrm d\nu \\
+   \frac{\adot}{a} \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \nu\,\partial_{\nu}\Enu\,\mathrm d\nu \\
 \label{eq:multigroup_redshifting}
    &=
-   \frac{\adot}{a|g_{\omega}|}
-   \left[(\nu\,\Enu)\bigg\vert_{\nu_{\omega}}^{\nu_{\omega+1}} - \int_{\nu_{\omega}}^{\nu_{\omega+1}} \Enu\,\mathrm d\nu\right]\\
+   \frac{\adot}{a}
+   \left[(\nu\,\Enu)\bigg\vert_{\nu_{\omega,L}}^{\nu_{\omega,R}} - \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \Enu\,\mathrm d\nu\right]\\
 \notag
    &\approx
-   \frac{\adot\, \nu_{\omega+1} (E_{\omega}+E_{\omega+1})}{2a|g_{\omega}|} -
-   \frac{\adot\, \nu_{\omega} (E_{\omega-1}+E_{\omega})}{2a|g_{\omega}|} - \frac{\adot}{a}E_{\omega}.
+   \frac{\adot\, \nu_{\omega,R}}{2a}\left(\frac{E_{\omega}}{|g_{\omega}|} + \frac{E_{\omega+1}}{|g_{\omega+1}|}\right) -
+   \frac{\adot\, \nu_{\omega,L}}{2a}\left(\frac{E_{\omega-1}}{|g_{\omega-1}|}+\frac{E_{\omega}}{|g_{\omega}|}\right) - 
+   \frac{\adot}{a}E_{\omega}.
 \end{align}
 We note that derivation of the above term required integration by
 parts, as well as approximation of the radiation energy density at the
 bin frequency boundaries, 
 \[
-   \Enu(\nu_{\omega}) \approx \frac{E_{\omega-1}+E_{\omega}}{2}, \qquad
-   \Enu(\nu_{\omega+1}) \approx \frac{E_{\omega}+E_{\omega+1}}{2}.
+   \Enu(\nu_{\omega}) \approx \frac12\left(\frac{E_{\omega-1}}{|g_{\omega-1}|}+\frac{E_{\omega}}{|g_{\omega}|}\right), \qquad
+   \Enu(\nu_{\omega+1}) \approx \frac12\left(\frac{E_{\omega}}{|g_{\omega}|} + \frac{E_{\omega+1}}{|g_{\omega+1}|}\right),
 \]
-Furthermore, this term accounts for redshifting
-effects due to cosmological expansion, that pull radiation from higher
-frequencies downward.  Although our multi-group radiation approximation
-is no longer continuous as a function of frequency, rendering the
-partial derivative $\partial_\nu\Enu$ undefined, we have used
-integration by parts to instead consider this term as a radiation flux
-from higher-frequency groups downward.  Furthermore, the first and
-last radiation groups deserve special attention, since they do not
-have left and right neighbors, respectively.  For these two groups, we
-instead approximate
+which is only valid if the radiation groups $E_{\omega-1}$,
+$E_{\omega}$ and $E_{\omega+1}$ are defined over contiguous bands,
+i.e. if
+\begin{equation}
+\label{eq:contiguous_bands}
+   \nu_{\omega-1,R} = \nu_{\omega,L} \quad\text{and}\quad
+   \nu_{\omega,R} = \nu_{\omega+1,L}.
+\end{equation}
+Furthermore, this term accounts for redshifting effects due to
+cosmological expansion, that pull radiation from higher frequencies
+downward.  Although our multi-group radiation approximation is no
+longer continuous as a function of frequency, rendering the partial
+derivative $\partial_\nu\Enu$ undefined, we have used integration by
+parts to instead consider this term as a radiation flux from
+higher-frequency groups downward.  Furthermore, the first and last
+radiation groups deserve special attention since they cannot have
+left and right neighbors, respectively (as well as any other groups
+that have a non-contiguous frequency band with a lower/higher group).
+For these two groups, we instead approximate 
 \begin{align}
  \label{eq:multigroup_redshifting_left}
-   \frac{1}{|g_0|} \int_{\nu_0}^{\nu_1} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   \int_{\nu_{1,L}}^{\nu_{1,R}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
    &\approx
-   \frac{\adot\, \nu_1 (E_0+E_1)}{2a|g_0|} -
-   \frac{\adot\, \nu_0 E_0}{a|g_0|} - \frac{\adot}{a}E_0,
+   \frac{\adot\, \nu_{1,R}}{2a}\left(\frac{E_1}{|g_1|} + \frac{E_2}{|g_2|}\right) -
+   \frac{\adot\, \nu_{1,L} E_1}{a|g_1|} - \frac{\adot}{a}E_1,
 \\
  \label{eq:multigroup_redshifting_right}
-   \frac{1}{|g_{N_f-1}|} \int_{\nu_{N_f-1}}^{\nu_{N_f}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   \int_{\nu_{N_f,L}}^{\nu_{N_f,R}} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
    &\approx
-   \frac{\adot\, \nu_{N_f} E_{N_f-1}}{a|g_{N_f-1}|} -
-   \frac{\adot\, \nu_{N_f-1} (E_{N_f-2}+E_{N_f-1})}{2a|g_{N_f-1}|} - \frac{\adot}{a}E_{N_f-1}.
+   \frac{\adot\, \nu_{N_f,R} E_{N_f}}{a|g_{N_f}|} -
+   \frac{\adot\, \nu_{N_f,L}}{2a}\left(\frac{E_{N_f-1}}{|g_{N_f-1}|}+\frac{E_{N_f}}{|g_{N_f}|}\right) - 
+   \frac{\adot}{a}E_{N_f}.
+\end{align}
+We note that for intermediate radiation groups whose frequency bands
+do not touch their ``neighbor'', we use similar formulas.  Similarly,
+for isolated radiation groups that have no ``neighbors'', we instead
+approximate this term as 
+\begin{align}
+ \label{eq:multigroup_redshifting_alone}
+   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}}
+   \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu 
+   &\approx
+   \frac{\adot\, \nu_{\omega,R}\, E_{\omega}}{a|g_{\omega}|} -
+   \frac{\adot\, \nu_{\omega,L}\, E_{\omega}}{a|g_{\omega}|} - 
+   \frac{\adot}{a}E_{\omega}.
 \end{align}
 Combining all of the above terms,
-\eqref{eq:multigroup_timederivative}-\eqref{eq:multigroup_redshifting_right},
+\eqref{eq:multigroup_timederivative}-\eqref{eq:multigroup_redshifting_alone},
 our multi-group radiation energy density equations may be written as
 \begin{align}
   \label{eq:mgfld_multigroup}
@@ -493,21 +540,17 @@ our multi-group radiation energy density equations may be written as
     = \eta_{\omega} - c \kappa_{\omega} E_{\omega},\quad \omega=0,\ldots,N_f-1,
 \end{align}
 where $(\Diamond)$ corresponds to one of
-\eqref{eq:multigroup_redshifting}-\eqref{eq:multigroup_redshifting_right},
-depending on the value of $\omega$.
+\eqref{eq:multigroup_redshifting},
+\eqref{eq:multigroup_redshifting_left},
+\eqref{eq:multigroup_redshifting_right} or
+\eqref{eq:multigroup_redshifting_alone}, depending on the contiguity
+of the frequency bands surround $g_\omega$. 
 
 To complete the model, we must determine the photo-heating and
 photo-ionization terms that couple the radiation to the matter.  As
 before, we utilize the integral form of their definitions, along with
 the piecewise-constant definition of our radiation energy density
 \eqref{eq:multigroup_radiation}.  
-% However, due to the various
-% ionization thresholds of each chemical species, we must take care in
-% computing these integrals.  To this end, for each chemical species 
-% $\mn_i$ we again denote the ionization threshold frequency as
-% $\bar{\nu}_i$, and we define the left-most radiation frequency group
-% containing $\bar{\nu}_i$ as $g_i$, i.e. $g_i$ is the
-% smallest integer such that $\nu_{g_i} \le \bar{\nu}_i < \nu_{g_i+1}$.
 
 First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
 for each species $\mn_i$ as 
@@ -515,13 +558,14 @@ for each species $\mn_i$ as
 \label{eq:multigroup_photoionization}
    \Gamma_i^{ph}(t,\rvec)  &= 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
-   c \sum_{\omega=0}^{N_f-1} \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{\sigma_{\mn_i}(\nu) E_{\omega}(t,\rvec)}{h\nu}\,\mathrm d\nu \\
+   c \sum_{\omega=1}^{N_f} \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \frac{\sigma_{\mn_i}(\nu) E_{\omega}(t,\rvec)}{h\nu|g_{\omega}|}\,\mathrm d\nu \\
 \notag
-   &= \sum_{\omega=0}^{N_f-1} \frac{c E_{\omega}(t,\rvec)}{h}\,
-   \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm
-   d\nu, \qquad i=1,\ldots,N_\text{chem},
+   &= \sum_{\omega=1}^{N_f} \frac{c E_{\omega}(t,\rvec)}{h}\,
+   \left(\frac{1}{|g_{\omega}|} 
+     \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm d\nu\right), 
+   \qquad i=1,\ldots,N_\text{chem},
 \end{align}
-where as with the multi-chromatic model, we assume that the species
+where as with the multi-frequency model, we assume that the species
 cross sections satisfy $\sigma_{\mn_i}(\nu) = 0$ for all $\nu <
 \bar{\nu}_i$.
 
@@ -534,21 +578,21 @@ Similarly, we compute the specific photoheating rate as
      \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
 \label{eq:multigroup_photoheating}
      &= 
-   \sum_{i=1}^{N_\text{chem}} \sum_{\omega=0}^{N_f-1} \frac{c\,\mn_i\, E_{\omega}(t,\rvec)}{\rhob} 
-     \int_{\nu_{\omega}}^{\nu_{\omega+1}} \sigma_{\mn_i}(\nu) 
-     \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu.
+   \sum_{i=1}^{N_\text{chem}} \sum_{\omega=1}^{N_f} \frac{c\,\mn_i\, E_{\omega}(t,\rvec)}{\rhob} 
+     \left(\frac{1}{|g_{\omega}|}\int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \sigma_{\mn_i}(\nu) 
+     \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu\right).
 \end{align}
 
 We note that in both \eqref{eq:multigroup_photoionization} and
 \eqref{eq:multigroup_photoheating}, we have the integrals 
 \begin{align}
   \label{eq:integrals} 
-    \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm d\nu
+    \frac{1}{|g_{\omega}|}\int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm d\nu
     \qquad\text{and}\qquad
-    \int_{\nu_{\omega}}^{\nu_{\omega+1}} \sigma_{\mn_i} \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu.
+    \frac{1}{|g_{\omega}|}\int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \sigma_{\mn_i} \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu.
 \end{align}
 Since these integrals depend only on the {\em a-priori} defined
-radiation groups $g_{\omega}=[\nu_{\omega},\nu_{\omega+1})$ and species cross-sections
+radiation groups $g_{\omega}=[\nu_{\omega,L},\nu_{\omega,R})$ and species cross-sections
 $\sigma_{\mn_i}$, we may compute these once at problem initialization
 and reuse them throughout the simulation.  For each of these
 integrals, we use an adaptive, high-order Gaussian quadrature
@@ -645,7 +689,7 @@ radiation unit scaling factor, $\Eunit$.
 \section{Recasting to comoving, normalized form}
 \label{sec:comoving_eqn}
 
-Our equations \eqref{eq:mgfld_multichromatic},
+Our equations \eqref{eq:mgfld_multifrequency},
 \eqref{eq:mgfld_multigroup} and
 \eqref{eq:Morel_limiterD}-\eqref{eq:Morel_limiterR} are valid in
 proper CGS units, whereas Enzo's fields are stored in comoving,
@@ -703,13 +747,13 @@ As a result, we have
    &= \Eunit\, \partial_t \tE_{\omega} - 3\frac{\adot}{a} E_{\omega},
 \end{align*}
 which will cancel the term $3 \frac{\adot}{a} E_{\omega}$ in either of the
-equations \eqref{eq:mgfld_multichromatic} or
+equations \eqref{eq:mgfld_multifrequency} or
 \eqref{eq:mgfld_multigroup}.  Specifically, after dividing through by 
-$\Eunit$ and canceling like terms, the multi-chromatic equation
-\eqref{eq:mgfld_multichromatic} may instead be written in terms of the
+$\Eunit$ and canceling like terms, the multi-frequency equation
+\eqref{eq:mgfld_multifrequency} may instead be written in terms of the
 comoving, normalized radiation energy density: 
 \begin{align}
-  \label{eq:mgfld_multichromatic_Ecomoving}
+  \label{eq:mgfld_multifrequency_Ecomoving}
   \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla \tE_{\omega}) 
     = \frac{\eta_{\omega}}{\Eunit} - c \kappa_{\omega} \tE_{\omega}, \qquad \omega=0,\ldots,N_f.
 \end{align}
@@ -757,10 +801,10 @@ as $\tnabla$, such that
 \[
    \nabla = \frac{1}{\Lunit}\tnabla.
 \]
-Resultingly, upon converting \eqref{eq:mgfld_multichromatic_Ecomoving}
-to comoving, normalized units, we have the multi-chromatic equation
+Resultingly, upon converting \eqref{eq:mgfld_multifrequency_Ecomoving}
+to comoving, normalized units, we have the multi-frequency equation
 \begin{align}
-  \label{eq:mgfld_multichromatic_comoving}
+  \label{eq:mgfld_multifrequency_comoving}
   \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\eta_{\omega}}{\Eunit} - c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
@@ -780,10 +824,10 @@ normalized time value, $\tT$:
    \frac{\partial \tT}{\partial t} \frac{\partial}{\partial \tT} \ = \
    \frac{1}{\Tunit}\frac{\partial}{\partial \tT}.
 \]
-Inserting this into \eqref{eq:mgfld_multichromatic_comoving} we have
-the multi-chromatic equations
+Inserting this into \eqref{eq:mgfld_multifrequency_comoving} we have
+the multi-frequency equations
 \begin{align}
-  \label{eq:mgfld_multichromatic_tnormalized}
+  \label{eq:mgfld_multifrequency_tnormalized}
   \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
@@ -800,10 +844,10 @@ corresponding multi-group version,
 Lastly, we will convert these equations so that they depend only on
 Enzo's normalized variables, $\tT$, $\tE_{\omega}$, $\tA$, $\dot{\tA}$ and
 $\tK_{\omega}$.  To this end, we expand each variable in terms of its
-normalized value and unit factor.  We begin with the multi-chromatic
+normalized value and unit factor.  We begin with the multi-frequency
 equations: 
 \begin{align}
-  \label{eq:mgfld_multichromatic_comoving_normalized}
+  \label{eq:mgfld_multifrequency_comoving_normalized}
   &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\Tunit\,\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}, \quad
     \omega=0,\ldots,N_f,
@@ -877,7 +921,7 @@ normalized time $\tT_{n}$ and at the comoving normalized spatial
 location $\xvec_{i,j,k}$ (and do similarly for the other field data).
 We must therefore consider how to discretize the space and time
 derivatives of our equations
-\eqref{eq:mgfld_multichromatic_comoving_normalized} and 
+\eqref{eq:mgfld_multifrequency_comoving_normalized} and 
 \eqref{eq:mgfld_multigroup_comoving_normalized}
 so that they depend on only these discrete data values.
 
@@ -890,8 +934,8 @@ notation
     + \frac{\Tunit\eta_{\omega}}{\Eunit} 
     - \Tunit \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}
 \]
-for the multi-chromatic equation
-\eqref{eq:mgfld_multichromatic_comoving_normalized}, or 
+for the multi-frequency equation
+\eqref{eq:mgfld_multifrequency_comoving_normalized}, or 
 \[
    \mD_{\omega}(\tE_{\omega},\tK_{\omega},\eta_{\omega},\tA,\tAdot) = 
    \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
@@ -902,7 +946,7 @@ for the multi-chromatic equation
 for the multi-group equation \eqref{eq:mgfld_multigroup_comoving_normalized},
 and denoting $\tE_{\omega}^n$ as our approximation to the spatially continuous
 solution at time $\tT_{n}$, the $\theta$-method for both equations
-\eqref{eq:mgfld_multichromatic_comoving_normalized} and
+\eqref{eq:mgfld_multifrequency_comoving_normalized} and
 \eqref{eq:mgfld_multigroup_comoving_normalized} may be written as
 \begin{align}
   \label{eq:mgfld_theta}
@@ -923,9 +967,9 @@ position $\xvec_{i,j,k}$, we have
   \tE_{\omega,i,j,k}^{n+1} - \tE_{\omega,i,j,k}^n &= \theta\Delta \tT \mD_{\omega,i,j,k}^{n+1} 
     + (1-\theta)\Delta \tT \mD_{\omega,i,j,k}^{n},
 \end{align}
-where for the multi-chromatic equations
+where for the multi-frequency equations
 \begin{align}
-  \label{eq:discrete_multichromatic_operator}
+  \label{eq:discrete_multifrequency_operator}
   \mD_{\omega,i,j,k} &= 
        \frac{\Tunit}{\Lunit^2 \Delta x^2}\(D_{\omega,i+1/2,j,k}\(\tE_{\omega,i+1,j,k} - \tE_{\omega,i,j,k}\) - D_{\omega,i-1/2,j,k}\(\tE_{\omega,i,j,k} - \tE_{\omega,i-1,j,k}\)\) \\
  \notag
@@ -985,14 +1029,16 @@ field, some of these specific implementation details have proven
 difficult to master, which we will point out here.  First, through
 significant trial and error, we have found that the limiter
 bounds $R_\text{min}=10^{-20} \Lunit^{-1}$ and 
-$D_\text{max}=10^{-2}\, c\, \Lunit^{-1}$ provide the most robust results
+$D_\text{max}=10^{-2}\, c\, \Lunit$ provide the most robust results
 in a wide range of simulations, including ``lab-frame''
 radiation-hydrodynamics test problems, ``medium-scale'' astrophysical
 simulations, and ``large-scale'' cosmological reionization
-simulations.  Second, we note that the face-centered radiation field
-($\tE_{\omega,i+1/2,j,k}$) and the face-centered opacity
-($\kappa_{\omega,i+1/2,j,k}$) are computed differently.  In computing
-the face-centered radiation field (denominator of
+simulations.  The user may over-ride the constants $10^{-20}$ and
+$10^{-2}$ in these definitions if desired, as described in Section
+\ref{sec:user_interface}.  Second, we note that the face-centered
+radiation field ($\tE_{\omega,i+1/2,j,k}$) and the face-centered
+opacity ($\kappa_{\omega,i+1/2,j,k}$) are computed differently.  In
+computing the face-centered radiation field (denominator of
 $R_{\omega,i+1/2,j,k}$) we use the arithmetic mean of the neighboring 
 cell-centered quantities, however in computing the face-centered
 opacity we use the harmonic mean of the cell-centered quantities.
@@ -1018,21 +1064,62 @@ the AMR-FLD solver for Enzo simulations.
 
 Physics input parameters:
 \begin{itemize}
-\item {\em AMRFLDMonochromatic} -- Boolean flag denoting whether to
-  use the multi-chromatic solver (1) or the multi-group solver (0).
-  Default: 0
 \item {\em AMRFLDNumRadiationFields} -- integer denoting the number of
   radiation fields, $E_{\omega}$.  Default: 1
-\item {\em AMRFLDFrequencies[:]} -- floating-point values for each
-  frequency, $\nu_i$.  For the multi-chromatic solver the user must
-  provide {\em AMRFLDNumRadiationFields} of these; for the multi-group
-  solver the user must provide {\em AMRFLDNumRadiationFields + 1} of
-  these.  These must be given in increasing order, and must all be
-  strictly positive, i.e.
-  \[
-     0 < \text{\em AMRFLDFrequencies[0]} < \text{\em
-       AMRFLDFrequencies[1]} < \cdots
-  \]
+\item {\em AMRFLDFrequencyBand[:]}  -- pair of floating-point values
+  denoting the frequency band for the specified radiation group.  If
+  the upper limit is less than or equal to the lower limit, then the
+  field is considered monochromatic at the lower bound frequency.  For
+  example,
+  \begin{verbatim}
+     AMRFLDFrequencyBand[0] = 13.6 24.4
+     AMRFLDFrequencyBand[1] = 54.4 54.4
+     AMRFLDFrequencyBand[2] = 100.0 99.0
+  \end{verbatim}
+  specifies three frequency bands:
+  \begin{itemize}
+  \item[0] this radiation field spans the frequencies 13.6 to 24.4 eV,
+  \item[1] this radiation field is monochromatic, at the frequency
+    54.4 eV,
+  \item[2] this radiation field is monochromatic, at the frequency
+    100.0 eV.
+  \end{itemize}
+  A user must supply {\em AMRFLDNumRadiationFields} of these pairs,
+  and they must be ordered by increasing frequencies (i.e we could
+  not reorder the fields in the above example).  Additionally, the
+  fields may not overlap (although neighboring non-monochromatic group
+  bands may share a boundary).  For all fields that are adjacent, the
+  redshifting terms present in equation
+  \eqref{eq:square_omega_normalized_discretized} will be applied.
+\item {\em AMRFLDNumSources} -- integer specifying the number of
+  ionization sources to be specified in the input file (as opposed to
+  on-the-fly by star-maker or other routines).
+\item {\em AMRFLDSourceLocation[:]} -- set of three floating-point
+  values specifying the location of each source (in normalized code
+  units).
+\item {\em AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
+  SED to use for all emissivity from a given source.
+\item {\em AMRFLDSourceEnergy[:]} -- floating-point value specifying
+  the total radiation emitted by a given source.  Must be used in
+  combination with {\em AMRFLDSourceType[:]}.  At solver
+  initialization, the SED will be numerically integrated over each
+  radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
+  group's fraction of the {\em AMRFLDSourceEnergy[:]} for the source.
+\item {\em AMRFLDSourceGroupEnergy[:][:]} -- may be used in lieu of the
+  two previous parameters, {\em AMRFLDSourceType[:]} and {\em 
+    AMRFLDSourceEnergy[:]}.  Specifies a floating-point value
+  for the total energy of a specific source for a specific
+  frequency/group (in physical units of ergs cm$^{-3}$ s$^{-1}$).  The
+  first index is the source index, the second is the frequency/group
+  index.
+\item {\em AMRFLDLimiterRmin} -- floating point value specifying the
+  dimensionless constant in the definition of $R_{\text{min}}$ in
+  equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
+    risk.}  Default: $10^{-20}$.
+\item {\em AMRFLDLimiterDmax} -- floating point value specifying the
+  dimensionless constant in the definition of $D_{\text{max}}$ in
+  equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
+    risk.}  Default: $10^{-2}$.
 \end{itemize}
 
 
@@ -1052,14 +1139,22 @@ User requirements:
   of photo-ionization and photo-heating rates from the AMR-FLD solver and 
   Enzo's chemistry and cooling routines.
 
-\item Emissivities -- while some emissivity formulas will be provided
-  in order to simplify testing, in ``science'' runs the user is
-  responsible for filling the emissivity fields {\em Emissivity0}
-  $\to$ {\em Emissivity9}.  These should be filled in accordance with
-  formulas \eqref{eq:multichromatic_emissivity} for multi-chromatic
+\item Emissivities -- For problems in which the set of emission
+  sources is unknown at run-time and cannot be specified in the input
+  parameter file, the user is responsible for filling the emissivity
+  fields {\em Emissivity0} $\to$ {\em Emissivity9}.  These should be
+  filled in accordance with formulas
+  \eqref{eq:multifrequency_emissivity} for multi-frequency
   simulations, or \eqref{eq:multigroup_emissivity} for multi-group
   simulations.  These fields should be filled using standard CGS units
   of ergs cm$^{-3}$ s$^{-1}$.
+
+  We are considering the possibility of allowing a user-specified SED
+  function, that at solver initialization will be numerically
+  integrated over each radiation frequency band, with the resulting
+  fractional areas of each band returned to the user.  This would
+  allow for simplified on-the-fly decomposition of stellar energy into
+  separate emissivities for each radiation group.
 \end{itemize}
 
 
