@@ -167,7 +167,7 @@ ignored, and the zeroth moment equation \eqref{eq:zero_mom} becomes
 \end{equation}
 where we have used the FLD-based approximation of the radiation
 pressure as $\Pnu = \frac{1}{c}\nabla\Fnu =
-\frac{1}{c}\nabla\(D\,\nabla\Enu\)$.  Note that in general, $\Pnu$ is  
+-\frac{1}{c}\nabla\(D\,\nabla\Enu\)$.  Note that in general, $\Pnu$ is  
 non-symmetric, due to the spatial dependence of the flux-limiter $D$.
 The equation \eqref{eq:mgfld} is an equation defining the
 scalar-valued variable $\Enu$, that may either be solved
@@ -288,7 +288,7 @@ for each species $\mn_i$ as
 \label{eq:multichromatic_photoionization}
    \Gamma_i^{ph}(t,\rvec)  = 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
-   \sum_{\omega=0}^{N_f} \frac{c\, E_{\omega}\, \sigma_{\mn_i}(\nu_{\omega})}{\nu_{\omega}}, \qquad i=1,\ldots,N_\text{chem},
+   \sum_{\omega=0}^{N_f} \frac{c\, E_{\omega}\, \sigma_{\mn_i}(\nu_{\omega})}{h\nu_{\omega}}, \qquad i=1,\ldots,N_\text{chem},
 \end{equation}
 where here we denote the ionization threshold frequency for species
 $\mn_i$ as $\bar{\nu}_i$.  Furthermore, in this equation we have
@@ -826,7 +826,7 @@ Similarly, for the multi-group equations, we have for each $\omega=0,\ldots,N_f-
     \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega},\\
   \Leftrightarrow \quad & \\
   \label{eq:mgfld_multigroup_comoving_normalized}
-  &\partial_{\tT} \tE - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
+  &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     + \frac{\tAdot}{\tA} \tE_{\omega} - (\tilde{\square})_{\omega} = 
     \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit c\, \tK_{\omega}\, \tE_{\omega},
 \end{align}
@@ -985,7 +985,7 @@ field, some of these specific implementation details have proven
 difficult to master, which we will point out here.  First, through
 significant trial and error, we have found that the limiter
 bounds $R_\text{min}=10^{-20} \Lunit^{-1}$ and 
-$D_\text{max}=10^{-2} c \Lunit^{-1}$ provide the most robust results
+$D_\text{max}=10^{-2}\, c\, \Lunit^{-1}$ provide the most robust results
 in a wide range of simulations, including ``lab-frame''
 radiation-hydrodynamics test problems, ``medium-scale'' astrophysical
 simulations, and ``large-scale'' cosmological reionization
