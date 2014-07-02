@@ -230,8 +230,8 @@ Section \ref{subsec:limiter_implementation}.
 
 
 
-\subsection{Multi-Chromatic Approximation}
-\label{subsec:multi_chromatic}
+\subsection{Multi-Frequency Approximation}
+\label{subsec:multi_frequency}
 
 Our first approximation to the radiation energy density equation
 \eqref{eq:mgfld_simplified2} will be to remove the dependency on
@@ -239,16 +239,16 @@ frequency space by choosing to evolve radiation energy densities at a
 specific set of frequencies.  To this end, let us denote a finite set
 of frequencies as
 \begin{equation}
-\label{eq:multichromatic_frequencies}
+\label{eq:multifrequency_frequencies}
   \nu_0 < \nu_1 < \cdots < \nu_{N_f}.
 \end{equation}
 We may then consider the full frequency-dependent radiation field to
 be comprised of radiation emitted only at this finite set of
-frequencies.  Under this ``multi-chromatic'' discretization, we may
+frequencies.  Under this ``multi-frequency'' discretization, we may
 consider the overall frequency-dependent radiation energy density
 function to have the form 
 \begin{equation}
-\label{eq:multichromatic_radiation}
+\label{eq:multifrequency_radiation}
   \Enu(t,\rvec,\nu) = \sum_{\omega=0}^{N_f} E_{\omega}(t,\rvec) \delta_{\nu_{\omega}}(\nu),
 \end{equation}
 where $\delta_{\nu_{\omega}}(\nu)$ is the Dirac delta function, and where we
@@ -258,7 +258,7 @@ E_1, \ldots, E_{N_f}$.  Under this approximation, the equation
 frequencies $\nu_{\omega}, \omega=0,\ldots,N_f$, i.e. at each specific frequency
 $\nu_{\omega}$ this equation becomes
 \begin{align}
-  \label{eq:mgfld_multichromatic}
+  \label{eq:mgfld_multifrequency}
   \partial_{t} E_{\omega} - \nabla\cdot(D_{\omega}\,\nabla E_{\omega}) + \frac{3 \adot}{a}
   E_{\omega} = \eta_{\omega} - c \kappa_{\omega} E_{\omega}, \qquad \omega=0,\ldots,N_f.
 \end{align}
@@ -274,9 +274,9 @@ We define both the opacity and emissivity for each of these radiation
 fields through evaluating the corresponding multi-frequency values at
 the associated frequency $\nu_{\omega}$, i.e.
 \begin{align}
-\label{eq:multichromatic_opacity}
+\label{eq:multifrequency_opacity}
   \kappa_{\omega}(t,\rvec) &= \kappa_{\nu}(t,\rvec,\nu_{\omega}) = \sum_{i=1}^{N_\text{chem}} \mn_i(t,\rvec)\, \sigma_{\mn_i} (\nu_{\omega}), \\
-\label{eq:multichromatic_emissivity}
+\label{eq:multifrequency_emissivity}
   \eta_{\omega}(t,\rvec) &= \eta_{\nu}(t,\rvec,\nu_{\omega}).
 \end{align}
 
@@ -285,7 +285,7 @@ terms that couple these radiation fields to the matter.
 First, we compute the integrated photoionization rate $\Gamma_i^{ph}$
 for each species $\mn_i$ as
 \begin{equation}
-\label{eq:multichromatic_photoionization}
+\label{eq:multifrequency_photoionization}
    \Gamma_i^{ph}(t,\rvec)  = 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
    \sum_{\omega=0}^{N_f} \frac{c\, E_{\omega}\, \sigma_{\mn_i}(\nu_{\omega})}{\nu_{\omega}}, \qquad i=1,\ldots,N_\text{chem},
@@ -299,15 +299,15 @@ at frequencies below $\bar{\nu}_i$ do not contribute to the
 photoionization rate $\Gamma_i^{ph}(t,\rvec)$. 
 
 Similarly, we compute the frequency-integrated specific photoheating
-rate, $G$, using our multi-chromatic radiation field
-\eqref{eq:multichromatic_radiation} as 
+rate, $G$, using our multi-frequency radiation field
+\eqref{eq:multifrequency_radiation} as 
 \begin{align}
 \notag
    G(t,\rvec) &= 
    \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
      \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
-\label{eq:multichromatic_photoheating}
+\label{eq:multifrequency_photoheating}
    &= 
    \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
@@ -521,7 +521,7 @@ for each species $\mn_i$ as
    \int_{\nu_{\omega}}^{\nu_{\omega+1}} \frac{\sigma_{\mn_i}(\nu)}{\nu}\,\mathrm
    d\nu, \qquad i=1,\ldots,N_\text{chem},
 \end{align}
-where as with the multi-chromatic model, we assume that the species
+where as with the multi-frequency model, we assume that the species
 cross sections satisfy $\sigma_{\mn_i}(\nu) = 0$ for all $\nu <
 \bar{\nu}_i$.
 
@@ -645,7 +645,7 @@ radiation unit scaling factor, $\Eunit$.
 \section{Recasting to comoving, normalized form}
 \label{sec:comoving_eqn}
 
-Our equations \eqref{eq:mgfld_multichromatic},
+Our equations \eqref{eq:mgfld_multifrequency},
 \eqref{eq:mgfld_multigroup} and
 \eqref{eq:Morel_limiterD}-\eqref{eq:Morel_limiterR} are valid in
 proper CGS units, whereas Enzo's fields are stored in comoving,
@@ -703,13 +703,13 @@ As a result, we have
    &= \Eunit\, \partial_t \tE_{\omega} - 3\frac{\adot}{a} E_{\omega},
 \end{align*}
 which will cancel the term $3 \frac{\adot}{a} E_{\omega}$ in either of the
-equations \eqref{eq:mgfld_multichromatic} or
+equations \eqref{eq:mgfld_multifrequency} or
 \eqref{eq:mgfld_multigroup}.  Specifically, after dividing through by 
-$\Eunit$ and canceling like terms, the multi-chromatic equation
-\eqref{eq:mgfld_multichromatic} may instead be written in terms of the
+$\Eunit$ and canceling like terms, the multi-frequency equation
+\eqref{eq:mgfld_multifrequency} may instead be written in terms of the
 comoving, normalized radiation energy density: 
 \begin{align}
-  \label{eq:mgfld_multichromatic_Ecomoving}
+  \label{eq:mgfld_multifrequency_Ecomoving}
   \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla \tE_{\omega}) 
     = \frac{\eta_{\omega}}{\Eunit} - c \kappa_{\omega} \tE_{\omega}, \qquad \omega=0,\ldots,N_f.
 \end{align}
@@ -757,10 +757,10 @@ as $\tnabla$, such that
 \[
    \nabla = \frac{1}{\Lunit}\tnabla.
 \]
-Resultingly, upon converting \eqref{eq:mgfld_multichromatic_Ecomoving}
-to comoving, normalized units, we have the multi-chromatic equation
+Resultingly, upon converting \eqref{eq:mgfld_multifrequency_Ecomoving}
+to comoving, normalized units, we have the multi-frequency equation
 \begin{align}
-  \label{eq:mgfld_multichromatic_comoving}
+  \label{eq:mgfld_multifrequency_comoving}
   \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\eta_{\omega}}{\Eunit} - c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
@@ -780,10 +780,10 @@ normalized time value, $\tT$:
    \frac{\partial \tT}{\partial t} \frac{\partial}{\partial \tT} \ = \
    \frac{1}{\Tunit}\frac{\partial}{\partial \tT}.
 \]
-Inserting this into \eqref{eq:mgfld_multichromatic_comoving} we have
-the multi-chromatic equations
+Inserting this into \eqref{eq:mgfld_multifrequency_comoving} we have
+the multi-frequency equations
 \begin{align}
-  \label{eq:mgfld_multichromatic_tnormalized}
+  \label{eq:mgfld_multifrequency_tnormalized}
   \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
@@ -800,10 +800,10 @@ corresponding multi-group version,
 Lastly, we will convert these equations so that they depend only on
 Enzo's normalized variables, $\tT$, $\tE_{\omega}$, $\tA$, $\dot{\tA}$ and
 $\tK_{\omega}$.  To this end, we expand each variable in terms of its
-normalized value and unit factor.  We begin with the multi-chromatic
+normalized value and unit factor.  We begin with the multi-frequency
 equations: 
 \begin{align}
-  \label{eq:mgfld_multichromatic_comoving_normalized}
+  \label{eq:mgfld_multifrequency_comoving_normalized}
   &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
     = \frac{\Tunit\,\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}, \quad
     \omega=0,\ldots,N_f,
@@ -877,7 +877,7 @@ normalized time $\tT_{n}$ and at the comoving normalized spatial
 location $\xvec_{i,j,k}$ (and do similarly for the other field data).
 We must therefore consider how to discretize the space and time
 derivatives of our equations
-\eqref{eq:mgfld_multichromatic_comoving_normalized} and 
+\eqref{eq:mgfld_multifrequency_comoving_normalized} and 
 \eqref{eq:mgfld_multigroup_comoving_normalized}
 so that they depend on only these discrete data values.
 
@@ -890,8 +890,8 @@ notation
     + \frac{\Tunit\eta_{\omega}}{\Eunit} 
     - \Tunit \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}
 \]
-for the multi-chromatic equation
-\eqref{eq:mgfld_multichromatic_comoving_normalized}, or 
+for the multi-frequency equation
+\eqref{eq:mgfld_multifrequency_comoving_normalized}, or 
 \[
    \mD_{\omega}(\tE_{\omega},\tK_{\omega},\eta_{\omega},\tA,\tAdot) = 
    \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
@@ -902,7 +902,7 @@ for the multi-chromatic equation
 for the multi-group equation \eqref{eq:mgfld_multigroup_comoving_normalized},
 and denoting $\tE_{\omega}^n$ as our approximation to the spatially continuous
 solution at time $\tT_{n}$, the $\theta$-method for both equations
-\eqref{eq:mgfld_multichromatic_comoving_normalized} and
+\eqref{eq:mgfld_multifrequency_comoving_normalized} and
 \eqref{eq:mgfld_multigroup_comoving_normalized} may be written as
 \begin{align}
   \label{eq:mgfld_theta}
@@ -923,9 +923,9 @@ position $\xvec_{i,j,k}$, we have
   \tE_{\omega,i,j,k}^{n+1} - \tE_{\omega,i,j,k}^n &= \theta\Delta \tT \mD_{\omega,i,j,k}^{n+1} 
     + (1-\theta)\Delta \tT \mD_{\omega,i,j,k}^{n},
 \end{align}
-where for the multi-chromatic equations
+where for the multi-frequency equations
 \begin{align}
-  \label{eq:discrete_multichromatic_operator}
+  \label{eq:discrete_multifrequency_operator}
   \mD_{\omega,i,j,k} &= 
        \frac{\Tunit}{\Lunit^2 \Delta x^2}\(D_{\omega,i+1/2,j,k}\(\tE_{\omega,i+1,j,k} - \tE_{\omega,i,j,k}\) - D_{\omega,i-1/2,j,k}\(\tE_{\omega,i,j,k} - \tE_{\omega,i-1,j,k}\)\) \\
  \notag
@@ -1018,13 +1018,13 @@ the AMR-FLD solver for Enzo simulations.
 
 Physics input parameters:
 \begin{itemize}
-\item {\em AMRFLDMonochromatic} -- Boolean flag denoting whether to
-  use the multi-chromatic solver (1) or the multi-group solver (0).
+\item {\em AMRFLDMultifrequency} -- Boolean flag denoting whether to
+  use the multi-frequency solver (1) or the multi-group solver (0).
   Default: 0
 \item {\em AMRFLDNumRadiationFields} -- integer denoting the number of
   radiation fields, $E_{\omega}$.  Default: 1
 \item {\em AMRFLDFrequencies[:]} -- floating-point values for each
-  frequency, $\nu_i$.  For the multi-chromatic solver the user must
+  frequency, $\nu_i$.  For the multi-frequency solver the user must
   provide {\em AMRFLDNumRadiationFields} of these; for the multi-group
   solver the user must provide {\em AMRFLDNumRadiationFields + 1} of
   these.  These must be given in increasing order, and must all be
@@ -1033,6 +1033,27 @@ Physics input parameters:
      0 < \text{\em AMRFLDFrequencies[0]} < \text{\em
        AMRFLDFrequencies[1]} < \cdots
   \]
+\item {\em AMRFLDNumSources} -- integer specifying the number of
+  ionization sources to be specified in the input file (as opposed to
+  on-the-fly by star-maker or other routines).
+\item {\em AMRFLDSourceLocation[:]} -- set of three floating-point
+  values specifying the location of each source (in normalized code
+  units).
+\item {\em AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
+  SED to use for all emissivity from a given source.
+\item {\em AMRFLDSourceEnergy[:]} -- floating-point value specifying
+  the total radiation emitted by a given source.  Must be used in
+  combination with {\em AMRFLDSourceType[:]}.  At solver
+  initialization, the SED will be numerically integrated over each
+  radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
+  group's fraction of the {\em AMRFLDSourceEnergy[:]} for the source.
+\item {\em AMRFLDSourceGroupEnergy[:][:]} -- may be used in lieu of the
+  two previous parameters, {\em AMRFLDSourceType[:]} and {\em 
+    AMRFLDSourceEnergy[:]}.  Specifies a floating-point value
+  for the total energy of a specific source for a specific
+  frequency/group (in physical units of ergs cm$^{-3}$ s$^{-1}$).  The
+  first index is the source index, the second is the frequency/group
+  index.
 \end{itemize}
 
 
@@ -1052,14 +1073,22 @@ User requirements:
   of photo-ionization and photo-heating rates from the AMR-FLD solver and 
   Enzo's chemistry and cooling routines.
 
-\item Emissivities -- while some emissivity formulas will be provided
-  in order to simplify testing, in ``science'' runs the user is
-  responsible for filling the emissivity fields {\em Emissivity0}
-  $\to$ {\em Emissivity9}.  These should be filled in accordance with
-  formulas \eqref{eq:multichromatic_emissivity} for multi-chromatic
+\item Emissivities -- For problems in which the set of emission
+  sources is unknown at run-time and cannot be specified in the input
+  parameter file, the user is responsible for filling the emissivity
+  fields {\em Emissivity0} $\to$ {\em Emissivity9}.  These should be
+  filled in accordance with formulas
+  \eqref{eq:multifrequency_emissivity} for multi-frequency
   simulations, or \eqref{eq:multigroup_emissivity} for multi-group
   simulations.  These fields should be filled using standard CGS units
   of ergs cm$^{-3}$ s$^{-1}$.
+
+  We are considering the possibility of allowing a user-specified SED
+  function, that at solver initialization will be numerically
+  integrated over each radiation frequency band, with the resulting
+  fractional areas of each band returned to the user.  This would
+  allow for simplified on-the-fly decomposition of stellar energy into
+  separate emissivities for each radiation group.
 \end{itemize}
 
 
