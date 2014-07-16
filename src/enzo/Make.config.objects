@@ -776,6 +776,7 @@ OBJS_CONFIG_LIB = \
         s90_st1.o \
 	SearchUtilities.o \
         SedovBlastInitialize.o \
+        SED_integral.o \
         select_fft.o \
 	SetBoundaryConditions.o \
         SetDefaultGlobalValues.o \
