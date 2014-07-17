@@ -6,7 +6,6 @@
 #include "BlackbodySED.h"
 #include "MonochromaticSED.h"
 #include "CrossSectionSED.h"
-#include "BlackbodySED.h"
 
 // namespace
 using namespace std;

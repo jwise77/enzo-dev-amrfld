@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Parameter output routine
 /
 /  written by: Daniel Reynolds
@@ -24,78 +24,98 @@
 int AMRFLDSplit::WriteParameters(FILE *fptr)
 {
 
+  // all non-root processors return immediately
+  if (MyProcessorNumber != ROOT_PROCESSOR)  return SUCCESS;
+
 //   if (debug)  printf("Entering AMRFLDSplit::WriteParameters routine\n");
-  
-  fprintf(fptr, "RadHydroNumBins = %"ISYM"\n", NumBins);
-  for (int ibin=0; ibin<NumBins; ibin++)
-    fprintf(fptr, "RadHydroESpectrum[%"ISYM"] = %"ISYM"\n", 
-	    ibin, ESpectrum[ibin]);
-  fprintf(fptr, "RadHydroChemistry = %"ISYM"\n", Nchem);
-  fprintf(fptr, "RadHydroModel = %"ISYM"\n", Model);
+  int ibin, isrc, dim;
 
-  fprintf(fptr, "RadHydroMaxDt = %22.16e\n", maxdt);
-  fprintf(fptr, "RadHydroMinDt = %22.16e\n", mindt);
+  // radiation fields and frequency bands
+  fprintf(fptr, "AMRFLDNumRadiationFields = %"ISYM"\n", NumRadiationFields);
+  for (ibin=0; ibin<NumRadiationFields; ibin++)
+    fprintf(fptr, "AMRFLDFrequencyBand[%"ISYM"] = %22.16e %22.16e\n", 
+   	    ibin, FrequencyBand[ibin][0], FrequencyBand[ibin][1]);
 
-  // set restart initial time step to current time step
-  if (dt == 0.0) {
-    fprintf(fptr, "RadHydroInitDt = %22.16e\n", initdt);
-  } else {
-    fprintf(fptr, "RadHydroInitDt = %22.16e\n", dt);
-  }
-  fprintf(fptr, "RadHydroDtControl = %"ISYM"\n", dt_control);
-  fprintf(fptr, "RadHydroMaxSubcycles = %22.16e\n", maxsubcycles);
-  fprintf(fptr, "RadHydroDtNorm = %22.16e\n", dtnorm);
-  fprintf(fptr, "RadHydroDtGrowth = %22.16e\n", dtgrowth);
-  fprintf(fptr, "RadHydroDtRadFac = %22.16e\n", dtfac);
-  for (int ibin=0; ibin<NumBins; ibin++)
-    fprintf(fptr, "RadiationScaling["ISYM"] = %22.16e\n", 
+  // radiation scaling factors
+  for (ibin=0; ibin<NumRadiationFields; ibin++)
+    fprintf(fptr, "AMRFLDRadiationScaling["ISYM"] = %22.16e\n", 
 	    ibin, ErScale[ibin]);
   if (autoScale) {
-    fprintf(fptr, "AutomaticScaling = 1\n");
+    fprintf(fptr, "AMRFLDAutomaticScaling = 1\n");
   } else {
-    fprintf(fptr, "AutomaticScaling = 0\n");
+    fprintf(fptr, "AMRFLDAutomaticScaling = 0\n");
   }
-  fprintf(fptr, "RadHydroTheta = %22.16e\n", theta);
-  fprintf(fptr, "RadiationBoundaryX0Faces = %i %i\n", 
+
+  // radiation sources
+  fprintf(fptr, "AMRFLDNumSources = %"ISYM"\n", NumSources);
+  if (WeakScaling) {
+    for (isrc=0; isrc<NumSources; isrc++) 
+      fprintf(fptr, "AMRFLDSourceLocation[%"ISYM"] = %22.16e %22.16e %22.16e\n", isrc, 
+	      OriginalSourceLocation[isrc][0], OriginalSourceLocation[isrc][1], 
+	      OriginalSourceLocation[isrc][2]);
+  } else {
+    for (isrc=0; isrc<NumSources; isrc++)
+      fprintf(fptr, "AMRFLDSourceLocation[%"ISYM"] = %22.16e %22.16e %22.16e\n", isrc, 
+	      SourceLocation[isrc][0], SourceLocation[isrc][1], SourceLocation[isrc][2]);
+  }
+  for (isrc=0; isrc<NumSources; isrc++)
+    for (ibin=0; ibin<NumRadiationFields; ibin++)
+      fprintf(fptr, "AMRFLDSourceGroupEnergy[%"ISYM"][%"ISYM"] = %22.16e\n", 
+	      isrc, ibin, SourceGroupEnergy[isrc][ibin]);
+      
+  // limiter parameters
+  fprintf(fptr, "AMRFLDLimiterRmin = %22.16e\n", LimiterRmin);
+  fprintf(fptr, "AMRFLDLimiterDmax = %22.16e\n", LimiterDmax);
+
+  // model parameters
+  fprintf(fptr, "AMRFLDIsothermal = %"ISYM"\n", Isothermal);
+
+  // time-stepping parameters
+  fprintf(fptr, "AMRFLDMaxDt = %22.16e\n", maxdt);
+  fprintf(fptr, "AMRFLDMinDt = %22.16e\n", mindt);
+  if (dt == 0.0) {
+    fprintf(fptr, "AMRFLDInitDt = %22.16e\n", initdt);
+  } else {      // set restart initial time step to current time step
+    fprintf(fptr, "AMRFLDInitDt = %22.16e\n", dt);
+  }
+  fprintf(fptr, "AMRFLDDtControl = %"ISYM"\n", dt_control);
+  fprintf(fptr, "AMRFLDMaxSubcycles = %22.16e\n", maxsubcycles);
+  fprintf(fptr, "AMRFLDDtNorm = %22.16e\n", dtnorm);
+  fprintf(fptr, "AMRFLDDtGrowth = %22.16e\n", dtgrowth);
+  fprintf(fptr, "AMRFLDTimeAccuracy = %22.16e\n", timeAccuracy);
+  fprintf(fptr, "AMRFLDTheta = %22.16e\n", theta);
+
+  // boundary condition types
+  fprintf(fptr, "AMRFLDRadiationBoundaryX0 = %i %i\n", 
 	  BdryType[0][0], BdryType[0][1]);
   if (rank > 1) 
-    fprintf(fptr, "RadiationBoundaryX1Faces = %i %i\n", 
+    fprintf(fptr, "AMRFLDRadiationBoundaryX1 = %i %i\n", 
 	    BdryType[1][0], BdryType[1][1]);
   if (rank > 2) 
-    fprintf(fptr, "RadiationBoundaryX2Faces = %i %i\n", 
+    fprintf(fptr, "AMRFLDRadiationBoundaryX2 = %i %i\n", 
 	    BdryType[2][0], BdryType[2][1]);
-  fprintf(fptr, "RadHydroSolType = %i\n", sol_type);
-  fprintf(fptr, "RadHydroSolTolerance = %22.16e\n", sol_tolerance);
-  fprintf(fptr, "RadHydroMaxMGIters = %i\n", sol_maxit);    
-  fprintf(fptr, "RadHydroMGRelaxType = %i\n", sol_rlxtype);    
-  fprintf(fptr, "RadHydroMGPreRelax = %i\n", sol_npre);    
-  fprintf(fptr, "RadHydroMGPostRelax = %i\n", sol_npost);    
 
-  fprintf(fptr, "RadHydroSolPrec = %i\n", sol_prec);
-  fprintf(fptr, "RadHydroSol_precmaxit = %i\n", sol_precmaxit);
-  fprintf(fptr, "RadHydroSol_precnpre = %i\n", sol_precnpre);
-  fprintf(fptr, "RadHydroSol_precnpost = %i\n", sol_precnpost);
-  fprintf(fptr, "RadHydroSol_precJacit = %i\n", sol_precJacit);
-  fprintf(fptr, "RadHydroSol_precrelax = %i\n", sol_precrelax);
-  fprintf(fptr, "RadHydroSol_precrestol = %g\n", sol_precrestol);
+  // solver parameters
+  fprintf(fptr, "AMRFLDSolType = %"ISYM"\n", sol_type);
+  fprintf(fptr, "AMRFLDSolTolerance = %22.16e\n", sol_tolerance);
+  fprintf(fptr, "AMRFLDMaxMGIters = %"ISYM"\n", sol_maxit);    
+  fprintf(fptr, "AMRFLDMGRelaxType = %"ISYM"\n", sol_rlxtype);    
+  fprintf(fptr, "AMRFLDMGPreRelax = %"ISYM"\n", sol_npre);    
+  fprintf(fptr, "AMRFLDMGPostRelax = %"ISYM"\n", sol_npost);    
 
-  fprintf(fptr, "WeakScaling = %i\n", &WeakScaling);    
+  fprintf(fptr, "AMRFLDSolPrec = %"ISYM"\n", sol_prec);
+  fprintf(fptr, "AMRFLDSol_precmaxit = %"ISYM"\n", sol_precmaxit);
+  fprintf(fptr, "AMRFLDSol_precnpre = %"ISYM"\n", sol_precnpre);
+  fprintf(fptr, "AMRFLDSol_precnpost = %"ISYM"\n", sol_precnpost);
+  fprintf(fptr, "AMRFLDSol_precJacit = %"ISYM"\n", sol_precJacit);
+  fprintf(fptr, "AMRFLDSol_precrelax = %"ISYM"\n", sol_precrelax);
+  fprintf(fptr, "AMRFLDSol_precrestol = %g\n", sol_precrestol);
 
-  // if doing an ionization problem (ProblemTypes 410-415),
-  // output additional parameters 
-  if ((ProblemType >= 410) && (ProblemType <= 415)) {
-    for (int ibin=0; ibin<NumBins; ibin++) {
-      fprintf(fptr, "NGammaDot[%"ISYM"] = %22.16e\n", 
-	      ibin, NGammaDot[ibin]);
-      fprintf(fptr, "EtaRadius[%"ISYM"] = %22.16e\n", 
-	      ibin, EtaRadius[ibin]);
-      fprintf(fptr, "EtaCenter[%"ISYM"] = %22.16e %22.16e %22.16e\n",
-	      ibin, EtaCenter[ibin][0], EtaCenter[ibin][1], EtaCenter[ibin][2]);
-    }
-  }
+  // flag for setting up weak-scaling runs
+  fprintf(fptr, "AMRFLDWeakScaling = %"ISYM"\n", &WeakScaling);    
 
   // output relevant units: although these aren't required for restart, 
-  // cosmology runs never output the units (why?), making data analyisis tough
+  // cosmology runs never output the units (why?), making data analysis tough
   fprintf(fptr, "DensityUnits = %22.16e\n", DenUnits);
   fprintf(fptr, "LengthUnits = %22.16e\n",  LenUnits);
   fprintf(fptr, "TimeUnits = %22.16e\n",    TimeUnits);
