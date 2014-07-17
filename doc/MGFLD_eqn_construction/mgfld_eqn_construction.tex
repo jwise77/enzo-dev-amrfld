@@ -1147,12 +1147,15 @@ the AMR-FLD solver for Enzo simulations.
 \end{itemize}
 
 We have two mechanisms for specifying the emission strength of each
-source: {\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy} \underline{or}
-{\tt AMRFLDSourceGroupEnergy}.  If the former mechanism is used, both
-values must be specified for the source; if the latter is used it must
-specify a non-negative energy for that source's contribution to 
-{\em all} radiation fields.  One of these two approaches must be
-employed for each of the {\tt AMRFLDNumSources} sources.
+source via input parameters: \\
+{\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy} or
+{\tt AMRFLDSourceGroupEnergy}.  The former of these only works for
+radiation groups and not for monochromatic radiation fields.  If the
+former mechanism is used, both values must be specified for the
+source; if the latter is used it must specify a non-negative energy
+for that source's contribution to {\em all} radiation fields.  One of
+these two approaches must be employed for each of the 
+{\tt AMRFLDNumSources} sources.
 \begin{itemize}
 \item {\tt AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
   SED to use for all emissivity from a given source.  Two are
@@ -1164,20 +1167,35 @@ employed for each of the {\tt AMRFLDNumSources} sources.
   If a value is supplied, it {\em must} correspond to one of the above
   integers. 
 \item {\tt AMRFLDSourceEnergy[:]} -- floating-point value specifying
-  the total radiation emitted by a given source.  Must be used in
-  combination with {\tt AMRFLDSourceType[:]}.  At solver
-  initialization, the SED will be numerically integrated over each
-  radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
+  the total emissivity rate of ionizing radiation (i.e.~only
+  frequencies within $[13.6,\infty)$ eV), over for a given source (in
+  CGS units of ergs s$^{-1}$).
+
+  Must be used in combination with {\tt AMRFLDSourceType[:]}.  At
+  solver initialization, the SED will be numerically integrated over
+  each radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
   group's fraction of the {\tt AMRFLDSourceEnergy[:]} for the source.
+
+  We note that this does not make sense unless using a purely
+  multi-group solver (i.e. no monochromatic radiation fields), since
+  the ``frequency band'' for a monochromatic field by definition has
+  no width.  As such, monochromatic fields are skipped.
+
   If a value is supplied, it must be non-negative.
 \item {\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point value for
-  the total energy of a specific source for a specific frequency/group
-  (in physical units of ergs cm$^{-3}$ s$^{-1}$).  The first index is
-  the source index, the second is the frequency/group index.
+  the total emissivity rate of ionizing radiation for a specific
+  source over a specific frequency/group (in physical units of ergs
+  s$^{-1}$).  The first index is the source index, the second is the
+  frequency/group index. 
 
   If both {\tt AMRFLDSourceGroupEnergy} and 
   {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy} are specified, the
   values provided by {\tt AMRFLDSourceGroupEnergy} are used.
+
+  We note that this is the only mechanism to specify sources
+  for monochromatic radiation fields via the parameter file.
+
+  If a value is supplied, it must be non-negative.
 \end{itemize}
 
 
