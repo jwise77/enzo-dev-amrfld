@@ -866,17 +866,6 @@ EXTERN int FieldsToInterpolate[MAX_NUMBER_OF_BARYON_FIELDS];
 #include "RadiativeTransferSpectrumTable.h"
 EXTERN RadiativeTransferSpectrumTableType RadiativeTransferSpectrumTable;
 
-
-/* FLD spectrum integrals for AMR opacity refinement */
-
-EXTERN float IntegralRadiationSpectrum;
-EXTERN float IntegralRadiationSpectrumHI;
-EXTERN float IntegralRadiationSpectrumHeI;
-EXTERN float IntegralRadiationSpectrumHeII;
-EXTERN float IntegralRadiationSpectrumHINu;
-EXTERN float IntegralRadiationSpectrumHeINu;
-EXTERN float IntegralRadiationSpectrumHeIINu;
-
 #endif /* TRANSFER  */
 
 EXTERN int LevelCycleCount[MAX_DEPTH_OF_HIERARCHY];

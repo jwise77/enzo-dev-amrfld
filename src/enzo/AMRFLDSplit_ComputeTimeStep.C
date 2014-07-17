@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Time Step Computation Routine
 /
 /  written by: Daniel Reynolds
@@ -27,10 +27,10 @@
 float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
 {
 
-  // If dtfac is set, compute maximum time step as estimate 
-  // allowing dtfac relative error (error estimated elsewhere)
+  // If timeAccuracy is set, compute maximum time step as estimate 
+  // allowing timeAccuracy relative error (error estimated elsewhere)
   float dt_est = huge_number;    // max time step (normalized units)
-  if (dtfac != huge_number) {
+  if (timeAccuracy != huge_number) {
 
     // local variables
     float safety = 1.0;
@@ -49,7 +49,7 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Eerror)
     Err_cur = Err_new;
     
     // compute new error estimate ratio (include relative tolerance, floor)
-    Err_new = max(Eerror/dtfac/VolFac, 1.0e-8);
+    Err_new = max(Eerror/timeAccuracy/VolFac, 1.0e-8);
       
     // Set time step depending on how it has been set up by the user.
     //    dt_control determines the time adaptivity algorithm:
@@ -111,11 +111,11 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Echange)
 {
 
   // Set time step depending on how it has been set up by the user:
-  //    If dtfac is set, compute maximum time step as estimate 
-  //    allowing dtfac relative change.  This relative change is
+  //    If timeAccuracy is set, compute maximum time step as estimate 
+  //    allowing timeAccuracy relative change.  This relative change is
   //    calculated elsewhere
   float dt_est = huge_number;    // max time step (normalized units)
-  if (dtfac != huge_number) {
+  if (timeAccuracy != huge_number) {
 
     float Vol = 1.0;
     for (int i=0; i<rank; i++)
@@ -126,9 +126,9 @@ float AMRFLDSplit::ComputeTimeStep(Eflt64 Echange)
       dt_est = huge_number;
     } else {
       if (dtnorm > 0) {
-	dt_est = dt*dtfac/Echange*pow(Vol,1.0/dtnorm);
+	dt_est = dt*timeAccuracy/Echange*pow(Vol,1.0/dtnorm);
       } else {
-	dt_est = dt*dtfac/Echange*Vol;
+	dt_est = dt*timeAccuracy/Echange*Vol;
       }
     }
     dt_est = min(dt_est, huge_number);

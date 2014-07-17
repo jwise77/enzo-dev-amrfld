@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, FillRates routine.
 /
 /  written by: Daniel Reynolds
@@ -30,6 +30,7 @@
 ************************************************************************/
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
+#include "phys_constants.h"
 
 
 int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
@@ -39,15 +40,11 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 //     printf("Entering AMRFLDSplit::FillRates routine\n");
 
   // set some physical constants
-  float c = 2.99792458e10;        // speed of light [cm/s]
-  float hp = 6.6260693e-27;       // Planck's constant [ergs*s]
-  float mp = 1.67262171e-24;      // mass of a proton [g]
-  float ev2erg = 1.60217653e-12;  // conversion constant from eV to ergs
-  float dom = DenUnits*a*a*a/mp;
+  float dom = DenUnits*a*a*a/mh;
   float tbase1 = TimeUnits;
   float xbase1 = LenUnits/a/aUnits;
   float dbase1 = DenUnits*POW(a*aUnits,3.0);
-  float coolunit = POW(aUnits,5.0) * POW(xbase1,2.0) * POW(mp,2.0) 
+  float coolunit = POW(aUnits,5.0) * POW(xbase1,2.0) * POW(mh,2.0) 
     / POW(tbase1,3.0) / dbase1;
   float rtunits = ev2erg/TimeUnits/coolunit/dom;
   
@@ -102,8 +99,8 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 
 
 	// initialize rates
-	for (i=0; i<size; i++)  phHI[i] = 0.0;
-	for (i=0; i<size; i++)  photogamma[i] = 0.0;
+	for (i=0; i<size; i++)    phHI[i] = 0.0;
+	for (i=0; i<size; i++)    photogamma[i] = 0.0;
 	if (RadiativeTransferHydrogenOnly == FALSE) {
 	  for (i=0; i<size; i++)  phHeI[i]  = 0.0;
 	  for (i=0; i<size; i++)  phHeII[i] = 0.0;
@@ -113,7 +110,7 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 
 
 	// loop over frequency bins, contributing to rates
-	for (int ibin=0; ibin<NumBins; ibin++) {
+	for (int ibin=0; ibin<NumRadiationFields; ibin++) {
 
 	  // float ErUn = ErUnits[ibin];                        // original
 	  float ErUn = (ErUnits[ibin]+ErUnits0[ibin])*0.5;      // arithmetic mean
@@ -121,30 +118,27 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	  // float ErUn = 2.0*ErUnits[ibin]*ErUnits0[ibin] 
 	  //            / (ErUnits[ibin]+ErUnits0[ibin]);       // harmonic mean
 
-	  float *Enew = AccessRadiationBin(ibin, Temp->GridHierarchyEntry);
+	  float *Enew = AccessRadiationField(ibin, Temp->GridHierarchyEntry);
 	  if (Enew == NULL)
 	    ENZO_FAIL("AMRFLDSplit_FillRates ERROR: missing radiation array!");
 
 	  // fill HI photo-ionization rate
-	  float pHIconst = c*TimeUnits*intSigESigHInu[ibin]/hp/intSigE[ibin];
+	  float pHIconst = clight*TimeUnits/hplanck*intIonizing_HI[ibin];
 	  for (i=0; i<size; i++)  phHI[i] += Enew[i]*ErUn*pHIconst;
 
 	  // fill HeI and HeII photo-ionization rates
-	  float pHeIconst  = c*TimeUnits*intSigESigHeInu[ibin]/hp/intSigE[ibin];
-	  float pHeIIconst = c*TimeUnits*intSigESigHeIInu[ibin]/hp/intSigE[ibin];
+	  float pHeIconst  = clight*TimeUnits/hplanck*intIonizing_HeI[ibin];
+	  float pHeIIconst = clight*TimeUnits/hplanck*intIonizing_HeII[ibin];
 	  if (RadiativeTransferHydrogenOnly == FALSE) {
 	    for (i=0; i<size; i++)  phHeI[i]  += Enew[i]*ErUn*pHeIconst;
 	    for (i=0; i<size; i++)  phHeII[i] += Enew[i]*ErUn*pHeIIconst;
 	  }
    
 	  // fill photo-heating rate
-	  float phScale    = c*TimeUnits/intSigE[ibin]/VelUnits/VelUnits/mp/rtunits;
-	  float GHIconst   = phScale*(intSigESigHI[ibin]   
-				      - hnu0_HI*ev2erg/hp*intSigESigHInu[ibin]);
-	  float GHeIconst  = phScale*(intSigESigHeI[ibin]  
-				      - hnu0_HeI*ev2erg/hp*intSigESigHeInu[ibin]);
-	  float GHeIIconst = phScale*(intSigESigHeII[ibin] 
-				      - hnu0_HeII*ev2erg/hp*intSigESigHeIInu[ibin]);
+	  float phScale    = clight*TimeUnits/VelUnits/VelUnits/mh/rtunits;
+	  float GHIconst   = phScale*intHeating_HI[ibin];
+	  float GHeIconst  = phScale*intHeating_HeI[ibin];
+	  float GHeIIconst = phScale*intHeating_HeII[ibin];
 	  if (RadiativeTransferHydrogenOnly) {
 	    for (i=0; i<size; i++)  photogamma[i] += Enew[i]*ErUn*GHIconst;
 	  } else {

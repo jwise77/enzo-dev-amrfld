@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Constructor routine
 /
 /  written by: Daniel Reynolds
@@ -27,104 +27,125 @@
 AMRFLDSplit::AMRFLDSplit()
 {
 
-  int bin, dim, face;
+  int bin, dim, src, face;
 #ifndef MPI_INT
   int MPI_PROC_NULL = -3;
 #endif
 
-  // initialize total RT time to zero
-  RTtime = 0.0;
-  AMRSolTime = 0.0;
-
   // initialize solver parameters
-  sol_tolerance = -1.0;
-  sol_maxit = -1;
-  sol_type = -1;
-  sol_rlxtype = -1;
-  sol_npre = -1;
-  sol_npost = -1;
-  sol_printl = -1;
-  sol_log = -1;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++)
-    totIters[bin] = -1;
-  sol_prec = -1;
-  sol_precmaxit = -1;
-  sol_precnpre = -1;
-  sol_precnpost = -1;
-  sol_precJacit = -1;
-  sol_precrelax = -1;
-  sol_precrestol = -1.0;
+  sol_tolerance  = 1e-5;  // HYPRE solver tolerance
+  sol_maxit      = 200;   // HYPRE max linear iters
+  sol_type       = 1;     // BiCGSTab solver
+  sol_printl     = 1;     // HYPRE print level
+  sol_log        = 1;     // enable HYPRE logging
+  sol_prec       = 1;     // Enable HG preconditioner by default
+  sol_precmaxit  = 1;     // one preconditioning sweep per Krylov iteration
+  sol_precnpre   = 1;     // one pre-relaxation sweep
+  sol_precnpost  = 1;     // one post-relaxation sweep
+  sol_precJacit  = 2;     // two Jacobi iterations per HG call
+  sol_precrelax  = 1;     // weighted Jacobi
+  sol_precrestol = 0.0;   // use an iteration-based stop criteria
+  sol_rlxtype    = 1;     // weighted Jacobi
+  sol_npre       = 1;     // one pre-relaxation sweep
+  sol_npost      = 1;     // one post-relaxation sweep
 
-  // initialize problem grid information to -1/NULL
+  // initialize limiter parameters
+  LimiterRmin = 1.e-20;
+  LimiterDmax = 1.e-2;
+
+  // initialize solver diagnostics
+  RTtime     = 0.0;
+  AMRSolTime = 0.0;
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++)
+    totIters[bin] = 0;
+
+  // initialize problem grid information (update to defaults)
   rank = -1;
   for (dim=0; dim<3; dim++) {
     LocDims[dim] = 1;
     for (face=0; face<2; face++) {
-      OnBdry[dim][face] = false;
-      BdryType[dim][face] = -1;
-      for (bin=0; bin<MAX_RADIATION_BINS; bin++) 
+      OnBdry[dim][face] = false;   // in domain interior
+      BdryType[dim][face] = 0;     // periodic
+      for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
 	BdryVals[bin][dim][face] = NULL;
     }
   }
   
-  // initialize time-stepping related data to -1/NULL
-  maxdt = 1.0e20;
-  mindt = 0.0;
-  initdt = 1.0e20;
-  maxsubcycles = 1.0;
-  dtfac = 1.0e20;
-  dt_control = -1;
-  Err_cur = 1.0;
-  Err_new = 1.0;
-  dtnorm = 0.0;
-  dtgrowth = 1.1;
-  tnew = -1.0;
-  told = -1.0;
-  dt = -1.0;
-  dtrad = -1.0;
-  theta = -1.0;
+  // initialize time-stepping data
+  initdt       = 1.0e20;   // use Hydro step
+  maxdt        = 1.0e20;   // no maximum
+  mindt        = 0.0;      // no minimum
+  maxsubcycles = 1.0;      // no subcycling
+  timeAccuracy = 1.0e20;   // no accuracy tolerance
+  dt_control   = 2;        // PID controller
+  Err_cur      = 1.0;      // perfect error in current step
+  Err_new      = 1.0;      // perfect error in previous step
+  dtnorm       = 2.0;      // 2-norm for time error estimate
+  dtgrowth     = 1.1;      // 10% allowed dt growth per step
+  tnew         = -1.0;
+  told         = -1.0;
+  dt           = -1.0;
+  dtrad        = -1.0;
+  theta        = 1.0;      // backward Euler
+
+
+  // initialize radiation and chemistry problem-defining data
+  NumRadiationFields = 0;  // no radiation by default
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) {
+    FrequencyBand[bin][0] = -1.0;
+    FrequencyBand[bin][1] = -1.0;
+    FieldMonochromatic[bin] = false;
+    FieldNeighbors[bin][0] = false;
+    FieldNeighbors[bin][1] = false;
+  }
+  Isothermal = 0;          // temperature-dependent run
   
-  // initialize problem defining data 
-  a = 1.0;
-  a0 = 1.0;
-  adot = 0.0;
-  adot0 = 0.0;
-  aUnits = 1.0;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++) 
-    ErScale[bin] = 1.0;
-  autoScale = true;
+  // initialize ionization source parameters
+  NumSources = 0;
+  for (src=0; bin<MAX_FLD_SOURCES; src++) {
+    for (dim=0; dim<3; dim++) {
+      SourceLocation[src][dim] = 0.0;
+      OriginalSourceLocation[src][dim] = 0.0;
+    }
+    for (bin=0; bin<MAX_FLD_FIELDS; bin++)
+      SourceGroupEnergy[src][bin] = 0.0;
+  }
+  WeakScaling = 0;         // standard run, do not replicate input sources
+  
+  // initialize cosmology and scaling constants
+  a              = 1.0;
+  a0             = 1.0;
+  adot           = 0.0;
+  adot0          = 0.0;
+  aUnits         = 1.0;
+  autoScale      = true;
   StartAutoScale = false;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++) 
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
+    ErScale[bin] = 1.0;
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
     ErUnits[bin] = 1.0;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++) 
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
     ErUnits0[bin] = 1.0;
-  NiUnits = 1.0;
-  NiUnits0 = 1.0;
-  DenUnits = 1.0;
+  NiUnits   = 1.0;
+  NiUnits0  = 1.0;
+  DenUnits  = 1.0;
   DenUnits0 = 1.0;
-  LenUnits = 1.0;
+  LenUnits  = 1.0;
   LenUnits0 = 1.0;
   TimeUnits = 1.0;
-  VelUnits = 1.0;
-  NumBins = -1;
-  Nchem = -1;
-  Model = -1;
-  WeakScaling = -1;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++) {
-    ESpectrum[bin] = -2;
-    BinFrequency[bin] = 0.0;
-    intSigE[bin] = 0.0;
-    intSigESigHI[bin] = 0.0;
-    intSigESigHeI[bin] = 0.0;
-    intSigESigHeII[bin] = 0.0;
-    intSigESigHInu[bin] = 0.0;
-    intSigESigHeInu[bin] = 0.0;
-    intSigESigHeIInu[bin] = 0.0;
-    NGammaDot[bin] = 0.0;
-    EtaRadius[bin] = 0.0;
-    EtaCenter[bin][0] = 0.0;
-    EtaCenter[bin][1] = 0.0;
-    EtaCenter[bin][2] = 0.0;
+  VelUnits  = 1.0;
+
+  // initialize integrals over frequency space
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) {
+    intOpacity_HI[bin]    = 0.0;
+    intOpacity_HeI[bin]   = 0.0;
+    intOpacity_HeII[bin]  = 0.0;
+    intIonizing_HI[bin]   = 0.0;
+    intIonizing_HeI[bin]  = 0.0;
+    intIonizing_HeII[bin] = 0.0;
+    intHeating_HI[bin]    = 0.0;
+    intHeating_HeI[bin]   = 0.0;
+    intHeating_HeII[bin]  = 0.0;
   }
 
 }
