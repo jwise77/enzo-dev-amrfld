@@ -58,6 +58,7 @@
 ************************************************************************/
 #ifdef TRANSFER
 #include "gFLDProblem.h"
+#include "phys_constants.h"
 
  
  
@@ -68,12 +69,10 @@ int gFLDProblem::ComputeRadiationIntegrals()
   if (debug)  printf("Entering gFLDProblem::ComputeRadiationIntegrals\n");
 
   // set necessary constants
-  float h = 6.6260693e-27;               // Planck's constant [ergs*s]
-  float ev2erg = 1.60217653e-12;         // conversion constant from eV to ergs
-  float nu0_HI = hnu0_HI*ev2erg/h;       // ionization threshold of HI (hz)
-  float nu0_HeI = hnu0_HeI*ev2erg/h;     // ionization threshold of HeI (hz)
-  float nu0_HeII = hnu0_HeII*ev2erg/h;   // ionization threshold of HeII (hz)
-  float epsilon = 1.0;                   // floating point roundoff
+  float nu0_HI = hnu0_HI*ev2erg/hplanck;       // ionization threshold of HI (hz)
+  float nu0_HeI = hnu0_HeI*ev2erg/hplanck;     // ionization threshold of HeI (hz)
+  float nu0_HeII = hnu0_HeII*ev2erg/hplanck;   // ionization threshold of HeII (hz)
+  float epsilon = 1.0;                         // floating point roundoff
   while ((1.0 + epsilon) > 1.0)  epsilon*=0.5;
 
   // set integration parameters

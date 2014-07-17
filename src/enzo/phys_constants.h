@@ -31,6 +31,12 @@
 
 #define pi                              3.14159265358979323846
 
+/* Planck's constant */
+#define hplanck                         6.6260693e-27
+
+/* conversion factor from eV to erg */
+#define ev2erg                          1.60217653e-12
+
 
 /************************************************/
 

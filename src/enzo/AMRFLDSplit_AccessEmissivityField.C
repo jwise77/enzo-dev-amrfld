@@ -1,21 +1,19 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2014 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
-/  Split Implicit Problem Class, AccessEmissivityBin routine
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
+/  Split Implicit Problem Class, AccessEmissivityField routine
 /
 /  written by: Daniel Reynolds
-/  date:       May 2014
+/  date:       July 2014
 /  modified1:  
 /
-/  PURPOSE: Accesses a specific emissivity bin out of a Grid object.
+/  PURPOSE: Accesses a specific emissivity field out of a Grid object.
 /
 ************************************************************************/
 #ifdef TRANSFER
@@ -23,14 +21,14 @@
 
 
 
-float* AMRFLDSplit::AccessEmissivityBin(int Bin, HierarchyEntry *ThisGrid)
+float* AMRFLDSplit::AccessEmissivityField(int Field, HierarchyEntry *ThisGrid)
 {
 //   if (debug)
-//     printf("Entering AMRFLDSplit::AccessRadiationBin routine\n");
+//     printf("Entering AMRFLDSplit::AccessRadiationField routine\n");
 
-  // access emissivity fields
+  // access requested emissivity field
   float *Efield = NULL;
-  switch (Bin) {
+  switch (Field) {
   case 0:
     Efield = ThisGrid->GridData->AccessEmissivity0();
     break;
@@ -62,7 +60,7 @@ float* AMRFLDSplit::AccessEmissivityBin(int Bin, HierarchyEntry *ThisGrid)
     Efield = ThisGrid->GridData->AccessEmissivity9();
     break;
   default:
-    ENZO_FAIL("AMRFLDSplit::AccessEmissivityBin error: illegal Bin value");
+    ENZO_FAIL("AMRFLDSplit::AccessEmissivityField error: illegal Field value");
   }
 
   // return success

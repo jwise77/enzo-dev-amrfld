@@ -61,9 +61,12 @@ int grid::FlagCellsToBeRefinedByOpacity()
   int zOffset = (GridDimension[2] > 1) ? GridDimension[0]*GridDimension[1]+1 : 0;
 
   // set opacity constants
-  float HIconst   = IntegralRadiationSpectrumHI   / IntegralRadiationSpectrum;
-  float HeIconst  = IntegralRadiationSpectrumHeI  / IntegralRadiationSpectrum / 4.0;
-  float HeIIconst = IntegralRadiationSpectrumHeII / IntegralRadiationSpectrum / 4.0;
+  // float HIconst   = IntegralRadiationSpectrumHI   / IntegralRadiationSpectrum;
+  // float HeIconst  = IntegralRadiationSpectrumHeI  / IntegralRadiationSpectrum / 4.0;
+  // float HeIIconst = IntegralRadiationSpectrumHeII / IntegralRadiationSpectrum / 4.0;
+  float HIconst   = 1.e-18;   // come from blackbody source integral values
+  float HeIconst  = 6.e-19;
+  float HeIIconst = 3.e-20;
 
   // get chemistry array pointers
   float *nHI=NULL, *nHeI=NULL, *nHeII=NULL;
@@ -75,7 +78,7 @@ int grid::FlagCellsToBeRefinedByOpacity()
   int nchem = 1;
   if ((nHeI != NULL) && (nHeII != NULL))  nchem = 3;
 
-  // create and fill temporary opacity array
+  // create and fill temporary approximate opacity array
   float *kappa = new float[GridDimension[0]*GridDimension[1]*GridDimension[2]];
   for (k=0; k<GridDimension[0]*GridDimension[1]*GridDimension[2]; k++)
     kappa[k] = HIconst*nHI[k];

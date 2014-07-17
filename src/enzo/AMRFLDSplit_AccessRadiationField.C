@@ -1,21 +1,19 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2014 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
-/  Split Implicit Problem Class, EnforceBoundary routine
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
+/  Split Implicit Problem Class, radiation field access routine
 /
 /  written by: Daniel Reynolds
-/  date:       May 2014
+/  date:       July 2014
 /  modified1:  
 /
-/  PURPOSE: Accesses a specific radiation bin out of a Grid object.
+/  PURPOSE: Accesses a specific radiation field out of a Grid object.
 /
 ************************************************************************/
 #ifdef TRANSFER
@@ -23,14 +21,14 @@
 
 
 
-float* AMRFLDSplit::AccessRadiationBin(int Bin, HierarchyEntry *ThisGrid)
+float* AMRFLDSplit::AccessRadiationField(int Field, HierarchyEntry *ThisGrid)
 {
 //   if (debug)
-//     printf("Entering AMRFLDSplit::AccessRadiationBin routine\n");
+//     printf("Entering AMRFLDSplit::AccessRadiationField routine\n");
 
-  // access old/new radiation fields (old stored in KPhHI)
+  // access desired radiation field
   float *Efield = NULL;
-  switch (Bin) {
+  switch (Field) {
   case 0:
     Efield = ThisGrid->GridData->AccessRadiationFrequency0();
     break;
@@ -62,7 +60,7 @@ float* AMRFLDSplit::AccessRadiationBin(int Bin, HierarchyEntry *ThisGrid)
     Efield = ThisGrid->GridData->AccessRadiationFrequency9();
     break;
   default:
-    ENZO_FAIL("AMRFLDSplit::AccessRadiationBin error: illegal Bin value");
+    ENZO_FAIL("AMRFLDSplit::AccessRadiationField error: illegal Field value");
   }
 
   // return success

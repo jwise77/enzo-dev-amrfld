@@ -36,6 +36,8 @@ private:
   int                  iter_;          // Solver iterations
   int                  citer_;         // Coarse solver iterations
 
+  double               Rmin_;          // limiter parameter
+  double               Dmax_;          // limiter parameter
   const int            r_factor_;      // Refinement factor
   int                  bin_;           // current radiation bin
   int                  Nchem_;         // number of chemical species

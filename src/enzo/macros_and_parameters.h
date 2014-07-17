@@ -88,7 +88,7 @@
 
 #define VERSION                             2.0  /* current version number */
 
-#define MAX_RADIATION_BINS                 10
+#define MAX_FLD_FIELDS                     10
 
 /* Unmodifiable Parameters */
 

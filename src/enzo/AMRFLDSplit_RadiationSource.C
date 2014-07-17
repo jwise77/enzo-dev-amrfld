@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Emissivity Field Computation Routine
 /
 /  written by: Daniel Reynolds
@@ -21,36 +21,23 @@
 ************************************************************************/
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
+#include "phys_constants.h"
+#include "BlackbodySED.h"
  
+
+// function prototypes
+int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
  
-float AMRFLDSplit::RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[], 
+
+
+float AMRFLDSplit::RadiationSource(int ibin, LevelHierarchyEntry *LevelArray[], 
 				   int level, float time)
 {
 
   // initialize local variables to be reused
   int i, j, k;
-  float ev2erg = 1.60217653e-12;
-  float h_nu0 = hnu0_HI   * ev2erg;
-  float h_nu1 = hnu0_HeI  * ev2erg;
-  float h_nu2 = hnu0_HeII * ev2erg;
   float total_eta = 0.0;
-  float etaconst, ECenter[3], ERadius, NGDot, SpecConst;
   float cellZl, cellZr, cellYl, cellYr, cellXl, cellXr, cellXc, cellYc, cellZc;
-
-  // set multiplication factor based on radiation spectrum type
-  switch (ESpectrum[Bin]) {
-  case 1:   // T=10^5 blackbody
-  case 3:   // T=10^5 blackbody, bin0
-  case 4:   // T=10^5 blackbody, bin1
-  case 5:   // T=10^5 blackbody, bin2
-    SpecConst = 1.52877652583602;
-    break;
-  case -1:  // monochromatic at nu=BinFrequency[Bin]
-    SpecConst = BinFrequency[Bin] / hnu0_HI;
-    break;
-  default:
-    SpecConst = 1.0;
-  }
 
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -58,7 +45,7 @@ float AMRFLDSplit::RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[],
 	 Temp=Temp->NextGridThisLevel)
       if (MyProcessorNumber == Temp->GridData->ReturnProcessorNumber()) {
 	
-	// set dimension information
+	// set dimension/grid information
 	int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
 	int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
 	int ghXl = DEFAULT_GHOST_ZONES;
@@ -80,136 +67,91 @@ float AMRFLDSplit::RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[],
 	float lUn = (LenUnits + LenUnits0)*0.5;
 	float dV = dx[0]*dx[1]*dx[2]*lUn*lUn*lUn;
 
-	// set a cell "normalized volume" assuming the global domain has volume 1
+	// set a cell "normalized volume"
 	float dVscale = 1;
 	for (int dim=0; dim<rank; dim++)
 	  dVscale *= (Temp->GridData->GetGridRightEdge(dim) 
  		    - Temp->GridData->GetGridLeftEdge(dim)) 
 	            / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
 	
-	// access emissivity field, initialize to zero
-	float *eta = AccessEmissivityBin(Bin, Temp->GridHierarchyEntry);
+	// access emissivity field
+	float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
 	if (eta == NULL)
-	  ENZO_VFAIL("AMRFLDSplit_RadiationSource error: emissivity bin %"ISYM" missing\n",
-		     Bin);
-	for (i=0; i<x0len*x1len*x2len; i++)  eta[i] = 0.0;
-	
+	  ENZO_VFAIL("AMRFLDSplit_RadiationSource error: emissivity field %"ISYM" missing\n",
+		     ibin);
+
+	// iterate over sources, adding emissivity to this bin at specified location
+	for (int isrc=0; isrc<NumSources; isrc++) {
+
+	  // all sources have radius of one cell; count number of cells to receive source
+	  int num_cells = 0;
+	  for (k=ghZl; k<n3[2]+ghZl; k++) {
+	    cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
+	    for (j=ghYl; j<n3[1]+ghYl; j++) {
+	      cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
+	      for (i=ghXl; i<n3[0]+ghXl; i++) {
+		cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
+		if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
+		     (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
+		     (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
+		  num_cells++;                        // cell is within source region
+	      } // x-loop
+	    } // y-loop
+	  } // z-loop
+
+	  // equi-partition energy among affected cells
+	  float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
+	  for (k=ghZl; k<n3[2]+ghZl; k++) {
+	    cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
+	    for (j=ghYl; j<n3[1]+ghYl; j++) {
+	      cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
+	      for (i=ghXl; i<n3[0]+ghXl; i++) {
+		cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
+		if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
+		     (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
+		     (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
+		  eta[(k*x1len + j)*x0len + i] += cell_energy;
+	      } // x-loop
+	    } // y-loop
+	  } // z-loop
+
+	} // end loop over sources from input parameters
+
 	
 	/////////////
-	// compute emissivity field based on ProblemType, input parameters
+	// add emissivity based on ProblemType, if desired
 	
 	switch (ProblemType) {
-	case 410:  	// source with a fixed location/radius,
-	case 411:       // so iterate through domain, placing
-	case 413:       // emissivity source in desired cell(s)
-	case 415:
-	  
-	  // one-cell source
-	  if (EtaRadius[Bin] == 0.0) {
-	    
-	    // compute eta factor for given ionization source
-	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
 
-	    for (k=ghZl; k<n3[2]+ghZl; k++) {
-	      
-	      // z-boundaries (comoving) for this cell
-	      cellZl = x2L + (k-ghZl)*dx[2];
-	      cellZr = cellZl + dx[2];
-	      
-	      // check if we're in the right z-cell
-	      if ((cellZl > EtaCenter[Bin][2]) || (cellZr <= EtaCenter[Bin][2]))
-		continue; 
-	      
-	      for (j=ghYl; j<n3[1]+ghYl; j++) {
-		
-		// y-boundaries (comoving) for this cell
-		cellYl = x1L + (j-ghYl)*dx[1];
-		cellYr = cellYl + dx[1];
-		
-		// check if we're in the right y-cell
-		if ((cellYl > EtaCenter[Bin][1]) || (cellYr <= EtaCenter[Bin][1]))
-		  continue; 
-		
-		for (i=ghXl; i<n3[0]+ghXl; i++) {
-		  
-		  // x-boundaries (comoving) for this cell
-		  cellXl = x0L + (i-ghXl)*dx[0];
-		  cellXr = cellXl + dx[0];
-		  
-		  // check if we're in the right x-cell
-		  if ( (cellXl <= EtaCenter[Bin][0]) && (cellXr > EtaCenter[Bin][0])) { 
-		    eta[(k*x1len + j)*x0len + i] = etaconst;
-		    break;
-		  }
-		} // x-loop
-	      } // y-loop
-	    } // z-loop
-	    
-	  } else { // multi-celled source
-	    
-	    // compute eta factor for given ionization source
-	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV / POW(2.0*EtaRadius[Bin], rank);
-
-	    for (k=ghZl; k<n3[2]+ghZl; k++) {
-	      
-	      // z-center (comoving) for this cell
-	      cellZc = x2L + (k-ghZl+0.5)*dx[2];
-	      
-	      for (j=ghYl; j<n3[1]+ghYl; j++) {
-		
-		// y-center (comoving) for this cell
-		cellYc = x1L + (j-ghYl+0.5)*dx[1];
-		
-		for (i=ghXl; i<n3[0]+ghXl; i++) {
-		  
-		  // x-center (comoving) for this cell
-		  cellXc = x0L + (i-ghXl+0.5)*dx[0];
-		  
-		  // see if cell is within source region
-		  if ( (fabs(cellXc-EtaCenter[Bin][0]) < EtaRadius[Bin]*dx[0]) &&
-		       (fabs(cellYc-EtaCenter[Bin][1]) < EtaRadius[Bin]*dx[1]) &&
-		       (fabs(cellZc-EtaCenter[Bin][2]) < EtaRadius[Bin]*dx[2]) )
-		    eta[(k*x1len + j)*x0len + i] = etaconst;
-		  
-		} // x-loop
-	      } // y-loop
-	    } // z-loop
-	  } // EtaRadius == 0
-	  break;
-	
 	case 412:    // emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
 	  
-	  // place ionization sources along left wall (if on this subdomain)
-	  if (x0L == 0.0) {
+	  // only relevant for radiation groups (not individual frequencies)
+	  if (!FieldMonochromatic[ibin]) {
 
-	    // compute eta factor for given ionization source
-	    etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dx[0] / lUn;
+	    // place ionization sources along left wall (if on this subdomain)
+	    if (x0L == 0.0) {
 
-	    // place along wall (i=ghXl)
-	    for (k=ghZl; k<n3[2]+ghZl; k++)
-	      for (j=ghYl; j<n3[1]+ghYl; j++)
-		eta[(k*x1len + j)*x0len + ghXl] = etaconst;
-	  }
+	      // determine this group's portion of total blackbody emissivity
+	      BlackbodySED tmp_src(1.0e5);
+	      float total_integral;
+	      if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
+		ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
+	      }
+	      float integral;
+	      if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
+			       true, integral) != SUCCESS) {
+		ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
+	      }
+	      float wall_energy = 1e6 * 13.6 * ev2erg * integral / total_integral / dx[0] / lUn;
+
+	      // place along wall (i=ghXl)
+	      for (k=ghZl; k<n3[2]+ghZl; k++)
+		for (j=ghYl; j<n3[1]+ghYl; j++)
+		  eta[(k*x1len + j)*x0len + ghXl] = wall_energy;
+	    }
+	  } 
 	  break;
 		
-	case 414:    // point-source emissivity at center of every processor
-
-	  // compute eta factor for given ionization source
-	  etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
-	  
-	  // place ionization source in center of subdomain
-	  i = x0len / 2;
-	  j = x1len / 2;
-	  k = x2len / 2;
-	  eta[(k*x1len + j)*x0len + ghXl] = etaconst;
-	  break;
-		
-	case 416:    // homogeneous emissivity field w/ strength hnu0*NGammaDot/dV
-	  
-	  // compute eta factor for given ionization source
-	  etaconst = h_nu0 * NGammaDot[Bin] * SpecConst / dV;
-	  for (i=0; i<x0len*x1len*x2len; i++)  eta[i] = etaconst;
-	  break;
 	  
 	}
 	
@@ -220,7 +162,7 @@ float AMRFLDSplit::RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[],
  	      total_eta += eta[(k*x1len+j)*x0len+i]*eta[(k*x1len+j)*x0len+i]*dVscale;
 	
       }  // end iteration over grids on this processor
-  
+ 
   // communicate to obtain overall emissivity
   float glob_eta = 0.0;
 #ifdef USE_MPI

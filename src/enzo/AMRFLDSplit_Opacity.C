@@ -8,17 +8,16 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, opacity field calculation routine 
 /
 /  written by: Daniel Reynolds
 /  date:       July 2012
-/  modified1:  
+/  modified1:  July 2014 -- modified for multi-frequency/group
 /
-/  PURPOSE: Computes the opacity field (possibly temperature, density 
-/  and chemistry-dependent) throughout the domain, storing it in the 
-/  photo-heating baryon field (since that is not used by the code during 
-/  this phase of the calculation).
+/  PURPOSE: Computes the opacity field throughout the domain, storing it 
+/  in the photo-heating baryon field (since that is not used by the code 
+/  during this phase of the calculation).
 /
 ************************************************************************/
 #ifdef TRANSFER
@@ -33,9 +32,9 @@ int AMRFLDSplit::Opacity(int Bin, LevelHierarchyEntry *LevelArray[],
 
   // initialize local variables to be reused
   int i, j, k;
-  float HIconst   = intSigESigHI[Bin]   / intSigE[Bin];
-  float HeIconst  = intSigESigHeI[Bin]  / intSigE[Bin] / 4.0;
-  float HeIIconst = intSigESigHeII[Bin] / intSigE[Bin] / 4.0;
+  float HIconst   = intOpacity_HI[Bin];
+  float HeIconst  = intOpacity_HeI[Bin] / 4.0;
+  float HeIIconst = intOpacity_HeII[Bin] / 4.0;
   
   // iterate over grids owned by this processor (this level down)
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -77,14 +76,11 @@ int AMRFLDSplit::Opacity(int Bin, LevelHierarchyEntry *LevelArray[],
 	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeII array!");
 	}
 
-
 	/////////////
 	// compute opacity field based on ProblemType
 	switch (ProblemType) {
 
-
 	// Insert user-defined opacity fields here (don't forget to "break")...
-
 
 
 	// Standard chemistry-dependent opacity field
@@ -100,7 +96,6 @@ int AMRFLDSplit::Opacity(int Bin, LevelHierarchyEntry *LevelArray[],
 	    for (i=0; i<x0len*x1len*x2len; i++) 
 	      kap[i] = HI[i]*HIconst + HeI[i]*HeIconst + HeII[i]*HeIIconst;
 	  }
-
 	  break;
 
 	}

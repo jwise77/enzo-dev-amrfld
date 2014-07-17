@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Destructor routine
 /
 /  written by: Daniel Reynolds
@@ -30,12 +30,14 @@ AMRFLDSplit::~AMRFLDSplit()
 
   // delete boundary condition arrays
   int bin, i, j;
-  for (bin=0; bin<MAX_RADIATION_BINS; bin++)
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++)
     for (i=0; i<3; i++)
       for (j=0; j<2; j++) 
 	if (BdryVals[bin][i][j] != NULL)  
 	  delete [] BdryVals[bin][i][j];
 
+  // delete amrsolve parameters pointer
+  delete amrsolve_params;
 
 }
 #endif
