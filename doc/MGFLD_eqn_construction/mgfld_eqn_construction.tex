@@ -1105,10 +1105,11 @@ the appropriate time step, $t_{n+1}$ or $t_n$.
 We anticipate to offer the following user interface for control over
 the AMR-FLD solver for Enzo simulations.
 
-Physics input parameters:
+{\bf Physics input parameters:}
 \begin{itemize}
 \item {\tt AMRFLDNumRadiationFields} -- integer denoting the number of
-  radiation fields, $E_{\omega}$.  Default: 1
+  radiation fields, $E_{\omega}$.  Must be non-negative and at most
+  10.  Default: 0.
 \item {\tt AMRFLDFrequencyBand[:]}  -- pair of floating-point values
   denoting the frequency band for the specified radiation group.  If
   the upper limit is less than or equal to the lower limit, then the
@@ -1130,32 +1131,54 @@ Physics input parameters:
   and they must be ordered by increasing frequencies (i.e we could
   not reorder the fields in the above example).  Additionally, the
   fields may not overlap (although neighboring non-monochromatic group
-  bands may share a boundary).
+  bands may share a boundary).  The first value specified for each
+  field must be strictly positive.
 \item {\tt AMRFLDNumSources} -- integer specifying the number of
   ionization sources to be specified in the input file (as opposed to
-  on-the-fly by star-maker or other routines).
+  on-the-fly by star-maker or other routines).  Must be non-negative.
+  Default: 0. 
 \item {\tt AMRFLDSourceLocation[:]} -- set of three floating-point
   values specifying the location of each source (in normalized code
-  units).
+  units).  Must be within the simulation domain, and must be provided
+  for each source.
+\end{itemize}
+
+We have two mechanisms for specifying the emission strength of each
+source: {\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy} \underline{or}
+{\tt AMRFLDSourceGroupEnergy}.  If the former mechanism is used, both
+values must be specified for the source; if the latter is used it must
+specify a non-negative energy for that source's contribution to 
+{\em all} radiation fields.  One of these two approaches must be
+employed for each of the {\tt AMRFLDNumSources} sources.
+\begin{itemize}
 \item {\tt AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
-  SED to use for all emissivity from a given source.
+  SED to use for all emissivity from a given source.  Two are
+  currently implemented:
+  \begin{itemize}
+  \item[0] Monochromatic source at frequency $h\nu=13.6$ eV.
+  \item[1] Blackbody source at temperature $10^5$ K.
+  \end{itemize}
+  If a value is supplied, it {\em must} correspond to one of the above
+  integers. 
 \item {\tt AMRFLDSourceEnergy[:]} -- floating-point value specifying
   the total radiation emitted by a given source.  Must be used in
   combination with {\tt AMRFLDSourceType[:]}.  At solver
   initialization, the SED will be numerically integrated over each
   radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
   group's fraction of the {\tt AMRFLDSourceEnergy[:]} for the source.
-\item {\tt AMRFLDSourceGroupEnergy[:][:]} -- may be used in lieu of the
-  two previous parameters, \\
-  {\tt AMRFLDSourceType[:]} and {\tt AMRFLDSourceEnergy[:]}.
-  Specifies a floating-point value for the total energy of a specific
-  source for a specific frequency/group (in physical units of ergs
-  cm$^{-3}$ s$^{-1}$).  The first index is the source index, the
-  second is the frequency/group index.
+  If a value is supplied, it must be non-negative.
+\item {\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point value for
+  the total energy of a specific source for a specific frequency/group
+  (in physical units of ergs cm$^{-3}$ s$^{-1}$).  The first index is
+  the source index, the second is the frequency/group index.
+
+  If both {\tt AMRFLDSourceGroupEnergy} and 
+  {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy} are specified, the
+  values provided by {\tt AMRFLDSourceGroupEnergy} are used.
 \end{itemize}
 
 
-User requirements:
+{\bf User requirements:}
 \begin{itemize}
 \item Fields -- the problem initializer or provided restart file must
   allocate radiation and emissivity fields for each frequency or
@@ -1190,16 +1213,16 @@ User requirements:
 \end{itemize}
 
 
-Solver input parameters:
+{\bf Solver input parameters:}
 \begin{itemize}
 \item {\tt AMRFLDLimiterRmin} -- floating point value specifying the
   dimensionless constant in the definition of $R_{\text{min}}$ in
   equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
-    risk.}  Default: $10^{-20}$.
+    risk.}  This value must be non-negative.  Default: $10^{-20}$.
 \item {\tt AMRFLDLimiterDmax} -- floating point value specifying the
   dimensionless constant in the definition of $D_{\text{max}}$ in
   equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
-    risk.}  Default: $10^{-2}$.
+    risk.}  This value must be strictly positive.  Default: $10^{-2}$.
 \item to be continued...
 \end{itemize}
 
