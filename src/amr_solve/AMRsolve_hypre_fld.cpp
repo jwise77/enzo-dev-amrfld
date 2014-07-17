@@ -63,7 +63,7 @@ AMRsolve_Hypre_FLD::AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy,
 				       AMRsolve_Parameters& parameters,
 				       int bin, int precflag)
   : grid_(0), graph_(0), stencil_(0), A_(0), B_(0), X_(0), Y_(0), solver_(0), 
-    Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), 
+    Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), Rmin_(-1.0), Dmax_(-1.0),
     parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), iter_(-1), 
     citer_(-1), r_factor_(const_r_factor), bin_(bin), Nchem_(-1), theta_(-1.0), 
     dt_(-1.0), aval_(-1.0), aval0_(-1.0), adot_(-1.0), adot0_(-1.0), 
@@ -381,7 +381,14 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta,
   for (int i=0; i<3; i++)
     for (int j=0; j<2; j++)
       BdryType_[i][j] = BdryType[i][j];
- 
+
+  // set limiter parameters
+  std::string srmin = parameters_->value("limiter_rmin");
+  if (srmin == "") parameters_->add_parameter("limiter_rmin","1e-20");
+  Rmin_ = atof(srmin.c_str());
+  std::string sdmax = parameters_->value("limiter_dmax");
+  if (sdmax == "") parameters_->add_parameter("limiter_dmax","1e-2");
+  Dmax_ = atof(sdmax.c_str());
 
   // Create the hypre matrices and vectors
   int ierr;
@@ -890,15 +897,10 @@ Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2,
 				    Scalar nUn, Scalar lUn, Scalar dxi) 
 {
   Scalar c = 2.99792458e10;
-  Scalar Rmin = 1.0e-2 / lUn_;
-  Rmin = MIN(Rmin, 1.e-20);   // 1st is astro/cosmo, 2nd is lab frame
+  Scalar Rmin = Rmin_ / lUn_;
+  Rmin = MIN(Rmin, 1.e-20);    // 1st is astro/cosmo, 2nd is lab frame
   Scalar Emin = 1.0e-30;
-  // Scalar Dmax = 2.0539e-3 * c * lUn_;  // original
-  // Scalar Dmax = 10.0 * c * lUn_;   // fails, but is what we're using elsewhere
-  Scalar Dmax = 1.e-2 * c * lUn_; // passes Iliev#2 test, but not as well as original
-  // Scalar Dmax = 5.e-3 * c * lUn_; // improved, but still not as good as original
-  // Scalar Dmax = 2.e-3 * c * lUn_;  // solver failure!!
-  // Scalar Dmax = 1.e-3 * c * lUn_;  // great for Iliev#2 test
+  Scalar Dmax = Dmax_ * c * lUn_;
   Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
 
   Scalar Eavg = MAX((E1 + E2)*0.5, Emin);
@@ -2348,104 +2350,6 @@ void AMRsolve_Hypre_FLD::update_coarse_fine_const_(int face,
 					  0, 1, &entry, &val2);
       if (ierr != 0) ERROR("could not SetValues in A_\n");
     }  // for i=0,7
-
-    // // declare shortcut variables
-    // double Eavg, Ed, R, kap, D;
-    // double afac = adot_ / aval_;
-    // double dtfac = dt_ * theta_;
-    // // double Rmin = 1.0e-20 / lUn_;
-    // double Rmin = 1.0e-20;
-    // double c = 2.99792458e10;
-    
-    // // access relevant arrays from this grid to compute RHS
-    // Scalar* E     = grid_coarse.get_E(bin_);
-    // Scalar* kappa = grid_coarse.get_kap();
-    
-    // // get active enzo grid size
-    // int n3[3];
-    // grid_coarse.get_size(n3);
-
-    // // get buffering information on relating amrsolve grid to Enzo data
-    // int ghosts[3][2]; 
-    // grid_coarse.get_Ghosts(ghosts);
-    // int en0 = n3[0] + ghosts[0][0] + ghosts[0][1];  // enzo data dimensions
-    // int en1 = n3[1] + ghosts[1][0] + ghosts[1][1];  // enzo data dimensions
-    // int en2 = n3[2] + ghosts[2][0] + ghosts[2][1];  // enzo data dimensions
-    
-    // // global grid index limits for coarse grid
-    // int index_global[3][2];
-    // grid_coarse.indices(index_global);
-  
-    // // set this grid's mesh spacing in this direction
-    // Scalar dxi = 1.0 / grid_coarse.h(axis0) / lUn_;
-    // Scalar dxfac = dtfac * dxi * dxi;
-    
-    // // set indices for Enzo coarse grid cells on both sides of interface
-    // int adj0=0, adj1=0, adj2=0;
-    // if (axis0 == 0)  adj0 = (face == 0) ? -1 : 1;  
-    // if (axis0 == 1)  adj1 = (face == 0) ? -1 : 1;  
-    // if (axis0 == 2)  adj2 = (face == 0) ? -1 : 1;  
-    
-    // int k0 = index_coarse[0] - index_global[0][0] + ghosts[0][0];
-    // int k1 = index_coarse[1] - index_global[1][0] + ghosts[1][0];
-    // int k2 = index_coarse[2] - index_global[2][0] + ghosts[2][0];
-    // int k_row = k0 + en0*(k1 + en1*k2);
-    // int k_col = k0 + adj0 + en0*(k1 + adj1 + en1*(k2 + adj2));
-    
-    // // Compute limiter at this face
-    // Ed = E[k_row] - E[k_col];
-    // Eavg = (E[k_row] + E[k_col])*0.5;
-    // if (Eavg != 0.0)
-    //   R = MAX(dxi*fabs(Ed)/Eavg, Rmin);
-    // else
-    //   R = Rmin;
-    // kap = 2.0 * kappa[k_row] * kappa[k_col] / (kappa[k_row] + kappa[k_col]);
-    // // kap = 0.5 * (kappa[k_row] + kappa[k_col]);
-    // D = c/sqrt(9.0*kap*kap*nUn_*nUn_ + R*R);
-
-    // // set matrix entry across coarse/fine face
-    // double val_s = 1.0 / 8.0;
-    // double val = -val_s * dxfac * D;
-    // if (isnan(val) || isinf(val)) {
-    //   fprintf(stderr,"update_coarse_fine_const ERROR: encountered NaN/Inf value (%g)\n   val_s = %g, dtfac = %g, dxi = %g, D = %g, k_row = %i, k_col = %i\n\n", val, val_s, dtfac, dxi, D, k_row, k_col);
-    //   ERROR("NaN or Inf value in setting matrix entries\n");
-    // }
-    // int    entry;
-    // double value;
-
-    // // Adjust coarse-fine nonstencil values
-    // for (int i=0; i<8; i++) {
-    //   // Set new nonstencil coarse-fine entry
-    //   entry = grid_coarse.counter(index_coarse)++;
-    //   value = val;
-    //   ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-    // 					    0, 1, &entry, &value);
-    //   if (ierr != 0) ERROR("could not AddToValues in A_\n");
-    //   // Adjust stencil diagonal
-    //   entry = 0;
-    //   value = -val;
-    //   ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-    // 					    0, 1, &entry, &value);
-    //   if (ierr != 0) ERROR("could not AddToValues in A_\n");
-    // } // for i=0,7
-
-    // // Clear original matrix values from stencil
-    // val = -dxfac * D;
-
-    // //   Update off-diagonal, stencil xp=1,xm,yp,ym,zp,zm=6
-    // //   (note: "face" is for fine grid, but we want coarse)
-    // entry = 2*axis0 + 1 + face;
-    // value = -val;
-    // ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-    // 					  0, 1, &entry, &value);
-    // if (ierr != 0) ERROR("could not AddToValues in A_\n");
-
-    // //   Update diagonal
-    // entry = 0;
-    // value = val;
-    // ierr = HYPRE_SStructMatrixAddToValues(A_, level_coarse, index_coarse, 
-    // 					  0, 1, &entry, &value);
-    // if (ierr != 0) ERROR("could not AddToValues in A_\n");
 
   } // if phase == phase_matrix
 } // AMRsolve_Hypre_FLD::update_coarse_fine_const_
