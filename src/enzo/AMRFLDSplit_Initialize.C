@@ -1,18 +1,16 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class, Initialization routine
 /
 /  written by: Daniel Reynolds
-/  date:       December 2010
+/  date:       July 2014
 /
 /  PURPOSE: Allocates all necessary internal memory for problem 
 /           definition and associated linear solver.  This begins the
@@ -24,6 +22,8 @@
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
 #include "CosmologyParameters.h"
+#include "BlackbodySED.h"
+#include "MonochromaticSED.h"
 // #ifdef _OPENMP
 // #include <omp.h>
 // #endif
@@ -39,8 +39,7 @@ int CosmologyComputeExpansionFactor(FLOAT time, FLOAT *a, FLOAT *dadt);
 int GetUnits(float *DensityUnits, float *LengthUnits,
 	     float *TemperatureUnits, float *TimeUnits,
 	     float *VelocityUnits, double *MassUnits, FLOAT Time);
-
-// Function prototypes
+int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
 int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 			      HierarchyEntry &TopGrid,
 			      TopGridData &MetaData, int local);
@@ -59,8 +58,7 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 
 
 
-int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
-{
+int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
 
 #ifdef AMR_SOLVE
 
@@ -68,7 +66,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
   // find root grid corresponding to this process from the Hierarcy
   HierarchyEntry *RootGrid = &TopGrid;
-  int i, ibin, dim, face, foundgrid=0;
+  int i, ibin, isrc, dim, face, foundgrid=0;
   for (i=0; i<=MAX_NUMBER_OF_SUBGRIDS; i++) {
     if (MyProcessorNumber != RootGrid->GridData->ReturnProcessorNumber()) 
       RootGrid = RootGrid->NextGridThisLevel;
@@ -127,52 +125,19 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     location[dim] = RootGrid->GridData->GetProcessorLocation(dim);
 
   // set default module parameters
-  WeakScaling = 0;      // standard run, source based on other inputs or physics
-  NumBins = 1;          // one radiation field
-  Nchem  = 1;           // hydrogen only
-  Model  = 1;           // standard non-LTE, non-isothermal model
-  theta  = 1.0;         // backwards euler implicit time discret.
-  maxsubcycles = 1.0;   // step ratio between radiation and hydro
-  dt_control = 2;       // PID controller
-  dtnorm = 2.0;         // use 2-norm for time step estimation
-  dtgrowth = 1.1;       // 10% allowed growth in dt per step
-  for (ibin=0; ibin<MAX_RADIATION_BINS; ibin++)
-    ErScale[ibin] = 1.0;   // no radiation equation scaling
-  int autoscale = 1;    // enable automatic variable scaling
-  for (dim=0; dim<rank; dim++)     // set default radiation boundaries to 
-    for (face=0; face<2; face++)   //   periodic in each direction
-      BdryType[dim][face] = 0;
-
-  // set default solver parameters
-  sol_tolerance = 1e-5;  // HYPRE solver tolerance
-  sol_maxit     = 200;   // HYPRE max linear iters
-  sol_type      = 1;     // HYPRE solver
-  sol_printl    = 1;     // HYPRE print level
-  sol_log       = 1;     // HYPRE logging level
-  sol_rlxtype   = 1;     // HYPRE relaxation type
-  sol_npre      = 1;     // HYPRE num pre-smoothing steps
-  sol_npost     = 1;     // HYPRE num post-smoothing steps
-
-  // set default preconditioner parameters
-  sol_prec       = 1;    // Enable HG preconditioner by default
-  sol_precmaxit  = 1;    // one preconditioning sweep per Krylov iteration
-  sol_precnpre   = 1;    // one pre-relaxation sweep
-  sol_precnpost  = 1;    // one post-relaxation sweep
-  sol_precJacit  = 2;    // two Jacobi iterations per HG call
-  sol_precrelax  = 1;    // weighted Jacobi
-  sol_precrestol = 0.0;  // use an iteration-based stop criteria
-
-  // set default chemistry constants
-  hnu0_HI   = 13.6;      // ionization energy of HI   [eV]
-  hnu0_HeI  = 24.6;      // ionization energy of HeI  [eV]
-  hnu0_HeII = 54.4;      // ionization energy of HeII [eV]
-
+  int autoscale   = 1;    // enable automatic variable scaling
+  int SourceType[MAX_FLD_SOURCES];
+  int SourceEnergy[MAX_FLD_SOURCES];
+  for (isrc=0; isrc<MAX_FLD_SOURCES; isrc++) {
+    SourceType[isrc] = -1;
+    SourceEnergy[isrc] = 0.0;
+  }
 
   ////////////////////////////////
   // if input file present, over-write defaults with module inputs
   FILE *fptr;
   char line[MAX_LINE_LENGTH];
-  int bin, ival, ret;
+  int ival, ret;
   float fval, fval2, fval3;
   char *dummy = new char[MAX_LINE_LENGTH];
   dummy[0] = 0;
@@ -187,96 +152,116 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       // read until out of lines
       while (fgets(line, MAX_LINE_LENGTH, fptr) != NULL) {
 	ret = 0;
-	ret += sscanf(line, "RadHydroNumBins = %"ISYM, &NumBins);
-	if (sscanf(line, "RadHydroESpectrum[%"ISYM"] = %"ISYM, &bin, &ival) == 2) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("RadHydroESpectrum %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  ESpectrum[bin] = ival;
-	}
-	if (sscanf(line, "RadHydroBinFrequency[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("RadHydroBinFrequency %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  BinFrequency[bin] = fval;
-	}
-	ret += sscanf(line, "RadHydroModel = %"ISYM, &Model);
-	ret += sscanf(line, "RadHydroChemistry = %"ISYM, &Nchem);
-	ret += sscanf(line, "RadHydroMaxDt = %"FSYM, &maxdt);
-	ret += sscanf(line, "RadHydroMinDt = %"FSYM, &mindt);
-	ret += sscanf(line, "RadHydroInitDt = %"FSYM, &initdt);
-	ret += sscanf(line, "RadHydroDtControl = %"ISYM, &dt_control);
-	ret += sscanf(line, "RadHydroMaxSubcycles = %"FSYM, &maxsubcycles);
-	ret += sscanf(line, "RadHydroDtNorm = %"FSYM, &dtnorm);
-	ret += sscanf(line, "RadHydroDtGrowth = %"FSYM, &dtgrowth);
-	ret += sscanf(line, "RadHydroDtRadFac = %"FSYM, &dtfac);
 
-	if (sscanf(line, "RadiationScaling[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("RadiationScaling %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  ErScale[bin] = fval;
+	// radiation fields and frequency bands
+	ret += sscanf(line, "AMRFLDNumRadiationFields = %"ISYM, &NumRadiationFields);
+	if (sscanf(line, "AMRFLDFrequencyBand[%"ISYM"] = %"FSYM" %"FSYM, 
+		   &ibin, &fval, &fval2) == 3) {
+	   ret++;  
+	   if (ibin >= MAX_FLD_FIELDS) {
+	     ENZO_VFAIL("AMRFLDFrequencies field %"ISYM" > maximum allowed.\n", ibin);
+	   }
+	   FrequencyBand[ibin][0] = fval;
+	   FrequencyBand[ibin][1] = fval2;
 	}
 
-	ret += sscanf(line, "AutomaticScaling = %"ISYM, &autoscale);
-	ret += sscanf(line, "RadHydroTheta = %"FSYM, &theta);
-	ret += sscanf(line, "RadiationBoundaryX0Faces = %i %i", 
+	// radiation scaling factors
+	if (sscanf(line, "AMRFLDRadiationScaling[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDRadiationScaling field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  ErScale[ibin] = fval;
+	}
+	ret += sscanf(line, "AMRFLDAutomaticScaling = %"ISYM, &autoscale);
+
+	// radiation sources
+	ret += sscanf(line, "AMRFLDNumSources = %"ISYM, &NumSources);
+	if (sscanf(line, "AMRFLDSourceLocation[%"ISYM"] = %"FSYM" %"FSYM" %"FSYM, 
+	 	   &isrc, &fval, &fval2, &fval3) == 4) {
+	  ret++;  
+	  if (isrc >= MAX_FLD_SOURCES) {
+	    ENZO_VFAIL("AMRFLDSourceLocation source %"ISYM" > maximum allowed.\n", isrc);
+          }
+	  SourceLocation[isrc][0] = fval;
+	  SourceLocation[isrc][1] = fval2;
+	  SourceLocation[isrc][2] = fval3;
+	}
+	if (sscanf(line, "AMRFLDSourceType[%"ISYM"] = %"ISYM, &isrc, &ival) == 2) {
+	  ret++;  
+	  if (isrc >= MAX_FLD_SOURCES) {
+	    ENZO_VFAIL("AMRFLDSourceType source %"ISYM" > maximum allowed.\n", isrc);
+          }
+	  SourceType[isrc] = ival;
+	}
+	if (sscanf(line, "AMRFLDSourceEnergy[%"ISYM"] = %"FSYM, &isrc, &fval) == 2) {
+	  ret++;  
+	  if (isrc >= MAX_FLD_SOURCES) {
+	    ENZO_VFAIL("AMRFLDSourceEnergy source %"ISYM" > maximum allowed.\n", isrc);
+          }
+	  SourceEnergy[isrc] = fval;
+	}
+	if (sscanf(line, "AMRFLDSourceGroupEnergy[%"ISYM"][%"ISYM"] = %"FSYM, 
+		   &isrc, &ibin, &fval) == 3) {
+	  ret++;  
+	  if (isrc >= MAX_FLD_SOURCES) {
+	    ENZO_VFAIL("AMRFLDSourceGroupEnergy source %"ISYM" > maximum allowed.\n", isrc);
+          }
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDSourceGroupEnergy field %"ISYM" > maximum allowed.\n", ibin);
+          }
+	  SourceGroupEnergy[isrc][ibin] = fval;
+	}
+
+	// limiter parameters
+	ret += sscanf(line, "AMRFLDLimiterRmin = %"FSYM, &LimiterRmin);
+	ret += sscanf(line, "AMRFLDLimiterDmax = %"FSYM, &LimiterDmax);
+
+	// model parameters
+	ret += sscanf(line, "AMRFLDIsothermal = %"ISYM, &Isothermal);
+
+	// time-stepping parameters
+	ret += sscanf(line, "AMRFLDMaxDt = %"FSYM, &maxdt);
+	ret += sscanf(line, "AMRFLDMinDt = %"FSYM, &mindt);
+	ret += sscanf(line, "AMRFLDInitDt = %"FSYM, &initdt);
+	ret += sscanf(line, "AMRFLDDtControl = %"ISYM, &dt_control);
+	ret += sscanf(line, "AMRFLDMaxSubcycles = %"FSYM, &maxsubcycles);
+	ret += sscanf(line, "AMRFLDDtNorm = %"FSYM, &dtnorm);
+	ret += sscanf(line, "AMRFLDDtGrowth = %"FSYM, &dtgrowth);
+	ret += sscanf(line, "AMRFLDTimeAccuracy = %"FSYM, &timeAccuracy);
+	ret += sscanf(line, "AMRFLDTheta = %"FSYM, &theta);
+
+	// boundary condition types
+	ret += sscanf(line, "AMRFLDRadiationBoundaryX0 = %i %i", 
 		      BdryType[0], BdryType[0]+1);
 	if (rank > 1) {
-	  ret += sscanf(line, "RadiationBoundaryX1Faces = %i %i",
+	  ret += sscanf(line, "AMRFLDRadiationBoundaryX1 = %i %i",
 			BdryType[1], BdryType[1]+1);
 	  if (rank > 2) {
-	    ret += sscanf(line, "RadiationBoundaryX2Faces = %i %i",
+	    ret += sscanf(line, "AMRFLDRadiationBoundaryX2 = %i %i",
 			  BdryType[2], BdryType[2]+1);
 	  }
 	}
-	ret += sscanf(line, "RadHydroSolType = %i", &sol_type);
-	ret += sscanf(line, "RadHydroSolTolerance = %"FSYM, &sol_tolerance);
-	ret += sscanf(line, "RadHydroMaxMGIters = %i", &sol_maxit);
-	ret += sscanf(line, "RadHydroMGRelaxType = %i", &sol_rlxtype);
-	ret += sscanf(line, "RadHydroMGPreRelax = %i", &sol_npre);
-	ret += sscanf(line, "RadHydroMGPostRelax = %i", &sol_npost);
 
-	if (sscanf(line, "NGammaDot[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("NGammaDot %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  NGammaDot[bin] = fval;
-	}
-	if (sscanf(line, "EtaRadius[%"ISYM"] = %"FSYM, &bin, &fval) == 2) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("EtaRadius %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  EtaRadius[bin] = fval;
-	}
+	// solver parameters
+	ret += sscanf(line, "AMRFLDSolType = %"ISYM, &sol_type);
+	ret += sscanf(line, "AMRFLDSolTolerance = %"FSYM, &sol_tolerance);
+	ret += sscanf(line, "AMRFLDMaxMGIters = %"ISYM, &sol_maxit);
+	ret += sscanf(line, "AMRFLDMGRelaxType = %"ISYM, &sol_rlxtype);
+	ret += sscanf(line, "AMRFLDMGPreRelax = %"ISYM, &sol_npre);
+	ret += sscanf(line, "AMRFLDMGPostRelax = %"ISYM, &sol_npost);
 
-	if (sscanf(line, "EtaCenter[%"ISYM"] = %"FSYM" %"FSYM" %"FSYM, 
-		   &bin, &fval, &fval2, &fval3) == 4) {
-	  ret++;  
-	  if (bin >= MAX_RADIATION_BINS) {
-	    ENZO_VFAIL("EtaCenter %"ISYM" > maximum allowed.\n", bin)
-	  }
-	  EtaCenter[bin][0] = fval;
-	  EtaCenter[bin][1] = fval2;
-	  EtaCenter[bin][2] = fval3;
-	}
+	ret += sscanf(line, "AMRFLDSolPrec = %"ISYM, &sol_prec);
+	ret += sscanf(line, "AMRFLDSol_precmaxit = %"ISYM, &sol_precmaxit);
+	ret += sscanf(line, "AMRFLDSol_precnpre = %"ISYM, &sol_precnpre);
+	ret += sscanf(line, "AMRFLDSol_precnpost = %"ISYM, &sol_precnpost);
+	ret += sscanf(line, "AMRFLDSol_precJacit = %"ISYM, &sol_precJacit);
+	ret += sscanf(line, "AMRFLDSol_precrelax = %"ISYM, &sol_precrelax);
+	ret += sscanf(line, "AMRFLDSol_precrestol = %"FSYM"", &sol_precrestol);
 
+	// flag for setting up weak-scaling runs
+	ret += sscanf(line, "AMRFLDWeakScaling = %"ISYM, &WeakScaling);
 
-	ret += sscanf(line, "RadHydroSolPrec = %i", &sol_prec);
-	ret += sscanf(line, "RadHydroSol_precmaxit = %"ISYM, &sol_precmaxit);
-	ret += sscanf(line, "RadHydroSol_precnpre = %"ISYM, &sol_precnpre);
-	ret += sscanf(line, "RadHydroSol_precnpost = %"ISYM, &sol_precnpost);
-	ret += sscanf(line, "RadHydroSol_precJacit = %"ISYM, &sol_precJacit);
-	ret += sscanf(line, "RadHydroSol_precrelax = %"ISYM, &sol_precrelax);
-	ret += sscanf(line, "RadHydroSol_precrestol = %"FSYM"", &sol_precrestol);
-
-	ret += sscanf(line, "WeakScaling = %"ISYM, &WeakScaling);
-	
       }  // end loop over file lines
     }  // end successful file open
   }  // end if file name exists
@@ -287,7 +272,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   fclose(fptr);
 
 
-  ////////////////////////////////
+  //// Set local grid information ////
 
   //   LocDims holds the dimensions of the local domain, 
   //   active cells only (no ghost or boundary cells)
@@ -297,18 +282,246 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 
 
   //// Check input parameters ////
+  
+  // check for a legal number of radiation fields
+  if (NumRadiationFields < 0)
+    ENZO_FAIL("AMRFLDSplit_Initialize: negative number of radiation fields requested. Halting run");
+  if (NumRadiationFields > MAX_FLD_FIELDS)
+    ENZO_FAIL("AMRFLDSplit_Initialize: too many radiation fields requested. Halting run");
+  if (debug) 
+    printf("AMRFLDSplit::Initialize NumRadiationFields = %"ISYM"\n", NumRadiationFields);
 
-  // First, ensure that Enzo was called with RadiativeCooling enabled 
+  // warn if no radiation fields are present
+  if (NumRadiationFields == 0)
+    fprintf(stderr,"WARNING: AMRFLDSplit solver enabled, but NO radiation fields are used!\n");
+      
+  // check that frequency bands start at postive frequencies
+  for (ibin=0; ibin<NumRadiationFields; ibin++)
+    if (FrequencyBand[ibin][0] <= 0.0) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: frequency band %"ISYM" must start above 0.0. Halting run.", ibin);
+    }
+
+  // set frequency comparison tolerance
+  float FreqTol = 1e-4;
+
+  // determine whether fields are monochromatic
+  for (ibin=0; ibin<NumRadiationFields; ibin++)
+    if (FrequencyBand[ibin][0] - FrequencyBand[ibin][1] > FreqTol) {
+      FieldMonochromatic[ibin] = true;
+      FrequencyBand[ibin][1] = FrequencyBand[ibin][0]+0.1*FreqTol;  // give it a touch of width
+    }
+
+  // ensure that fields are ordered by increasing frequency
+  for (ibin=0; ibin<NumRadiationFields-1; ibin++)
+    if (FrequencyBand[ibin][0] > FrequencyBand[ibin+1][0]) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: frequencies %"ISYM" and %"ISYM" are out of order. Halting run", 
+		 ibin, ibin+1);
+    }
+
+  // ensure that groups do not overlap
+  for (ibin=0; ibin<NumRadiationFields-1; ibin++)
+    if ((!FieldMonochromatic[ibin]) && (FrequencyBand[ibin][1] - FrequencyBand[ibin+1][0] > FreqTol)) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: frequencies %"ISYM" and %"ISYM" overlap. Halting run", 
+		 ibin, ibin+1);
+    }
+
+  // if we've made it this far, the fields are legal; set neighbor flags
+  for (ibin=0; ibin<NumRadiationFields-1; ibin++) {
+    if (!FieldMonochromatic[ibin] && !FieldMonochromatic[ibin+1] && 
+	(fabs(FrequencyBand[ibin][1] - FrequencyBand[ibin+1][0]) < FreqTol)) {
+      FieldNeighbors[ibin][1] = true;
+      FieldNeighbors[ibin+1][0] = true;
+    }
+  }
+
+  // output field band information
+  for (ibin=0; ibin<NumRadiationFields; ibin++) {
+    if (debug && (FrequencyBand[ibin][1] <= FrequencyBand[ibin][0]))
+      printf("   Field %"ISYM" is monochromatic at frequency %g (eV)\n", ibin, FrequencyBand[ibin][0]);
+    if (debug && (FrequencyBand[ibin][0] < FrequencyBand[ibin][1]))
+      printf("   Field %"ISYM" band = [%g,%g] eV\n", ibin, FrequencyBand[ibin][0], FrequencyBand[ibin][1]);
+  }
+  for (ibin=0; ibin<NumRadiationFields-1; ibin++)
+    if ((debug) && (FieldNeighbors[ibin][1]))
+      printf("   Fields %"ISYM" and %"ISYM" are adjacent\n", ibin, ibin+1);
+
+  // check for legal radiation scaling factors
+  for (ibin=0; ibin<NumRadiationFields; ibin++) 
+    if (ErScale[ibin] <= 0.0) {
+      fprintf(stderr,"AMRFLDSplit_Initialize: illegal AMRFLDRadiationScaling[%"ISYM"] = %g\n",
+	      ibin, ErScale[ibin]);
+      fprintf(stderr,"   re-setting to 1.0\n");
+      ErScale[ibin] = 1.0;  // default to no scaling
+    }
+  autoScale = (autoscale != 0);  // set bool based on integer input
+  if (debug) {
+    printf("AMRFLDSplit::Initialize scaling factors:\n");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) 
+      printf("    ErScale[%"ISYM"] = %g\n", ibin, ErScale[ibin]);
+    printf("    autoScale = %"ISYM"\n", autoscale);
+  }
+
+  // check for a legal number of sources
+  if (NumSources > MAX_FLD_SOURCES) {
+    ENZO_VFAIL("AMRFLDSplit_Initialize: too many radiation sources requested (%"ISYM" > %"ISYM"). Halting run\n",
+	       NumSources, MAX_FLD_SOURCES);
+  }
+  if (debug) 
+    printf("AMRFLDSplit::Initialize NumSources = %"ISYM"\n", NumSources);
+
+  // check for legal SourceLocation
+  for (isrc=0; isrc<NumSources; isrc++) {
+    for (dim=0; dim<rank; dim++) 
+      if ((SourceLocation[isrc][dim] < DomainLeftEdge[dim]) || 
+	  (SourceLocation[isrc][dim] > DomainRightEdge[dim])) {
+	ENZO_VFAIL("AMRFLDSplit_Initialize: source %"ISYM" is outside the computational domain. Halting run\n",
+		   dim);
+      }
+    if (debug) {
+      printf("AMRFLDSplit::Initialize sources %"ISYM" at location ", isrc);
+      for (dim=0; dim<rank; dim++)  printf(" %g", SourceLocation[isrc][dim]);
+      printf("\n");
+    }
+  }
+
+  // check for legal SourceType/SourceEnergy or SourceGroupEnergy
+  for (isrc=0; isrc<NumSources; isrc++) {
+    bool sourceOK = false;
+
+    // check for SourceGroupEnergy specification approach
+    bool sourceBinsOK = true;
+    for (ibin=0; ibin<NumRadiationFields; ibin++) 
+      if (SourceGroupEnergy[isrc][ibin] < 0.0)  sourceBinsOK = false;
+    if (sourceBinsOK) {
+      sourceOK = true;
+      if (debug) {
+	printf("AMRFLDSplit::Initialize source %"ISYM" has group energies", isrc);
+	for (ibin=0; ibin<NumRadiationFields; ibin++)  printf(" %g", SourceGroupEnergy[isrc][ibin]);
+	printf("\n");
+      }
+    }
+
+    // check for SourceType/SourceEnergy specification approach
+    if ((SourceType[isrc] >= 0) && (SourceType[isrc] < NUM_FLD_SOURCE_TYPES) && (SourceEnergy[isrc] >= 0.0)) {
+
+      // warn if the source set up using both approaches
+      if (sourceOK) {
+	fprintf(stderr,"AMRFLDSplit_Initialize Warning: source %"ISYM" set up using both approaches; choosing SourceGroupEnergy values\n",isrc);
+	SourceType[isrc] = -1;
+      } else {
+	sourceOK = true;
+	if (debug) 
+	  printf("AMRFLDSplit::Initialize source %"ISYM" has type %"ISYM" and energy %g\n", 
+		 isrc, SourceType[isrc], SourceEnergy[isrc]);
+      }
+    }
+
+    // error out if the source is not set up
+    if (!sourceOK) {
+      ENZO_VFAIL("AMRFLDSplit_Initialize: source %"ISYM" is not properly configured. Halting run\n",isrc);
+    }
+  }
+
+  // check for legal limiter parameters
+  if (LimiterRmin < 0.0) {
+    ENZO_VFAIL("AMRFLDSplit_Initialize: illegal LimiterRmin = %g.\n", LimiterRmin);
+  }
+  if (debug) 
+    printf("AMRFLDSplit::Initialize LimiterRmin = %g\n", LimiterRmin);
+  if (LimiterDmax <= 0.0) {
+    ENZO_VFAIL("AMRFLDSplit_Initialize: illegal LimiterDmax = %g.\n", LimiterDmax);
+  }
+  if (debug) 
+    printf("AMRFLDSplit::Initialize LimiterDmax = %g\n", LimiterDmax);
+
+  // ensure that Enzo was called with RadiativeCooling enabled 
   // (since AMRFLDSplit doesn't handle chemistry/cooling)
   if (!RadiativeCooling) 
     ENZO_FAIL("AMRFLDSplit_Initialize: RadiativeCooling must be on!  Halting run");
   
+  // maxdt gives the maximum radiation time step size
+  if (maxdt <= 0.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal MaxDt = %g\n",maxdt);
+    fprintf(stderr,"   re-setting to %g\n",huge_number);
+    maxdt = huge_number;  // default is no limit
+  }
+
+  // mindt gives the minimum radiation time step size
+  if (mindt < 0.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal MinDt = %g\n",mindt);
+    fprintf(stderr,"   re-setting to %g\n",0.0);
+    mindt = 0.0;  // default is 0.0
+  }
+
+  // initdt gives the initial time step size
+  if (initdt <= 0.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal InitDt = %g\n",initdt);
+    fprintf(stderr,"   re-setting to %g\n",huge_number);
+    initdt = huge_number;  // default is no limit
+  }
+
+  // dt_control gives the time step controller algorithm
+  if ((dt_control < -1) || (dt_control > NUM_FLD_DT_CONTROLLERS-2)) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal DtControl = %"ISYM"\n",
+	    dt_control);
+    fprintf(stderr,"   re-setting to -1 (original controller)\n");
+    dt_control = -1;
+  }
+  
+  // maxsubcycles gives the maximum desired ratio between hydro time step 
+  // size and radiation time step size (dt_rad <= dt_hydro)
+  // ***warn if subcycling radiation***
+  if (maxsubcycles < 1.0) {
+    if (debug) {
+      fprintf(stderr,"AMRFLDSplit::Initialize: illegal MaxSubcycles = %g\n",maxsubcycles);
+      fprintf(stderr,"   re-setting to 1.0\n");
+    }
+    maxsubcycles = 1.0;    // default is to synchronize steps
+  }
+  if (maxsubcycles > 1.0) {
+    if (debug) {
+      fprintf(stderr,"\n*********************************************************\n");
+      fprintf(stderr," WARNING: radiation subcycling (MaxSubcycles = %g > 1.0)\n",
+	      maxsubcycles);
+      fprintf(stderr,"          may not work properly with Enzo chemistry module!\n");
+      fprintf(stderr,"*********************************************************\n\n");
+    }
+  }
+
+  // dtnorm gives the norm for calculating allowed relative change per step
+  if (dtnorm < 0.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal DtNorm = %g\n",dtnorm);
+    fprintf(stderr,"   re-setting to 2.0 (2-norm)\n");
+    dtnorm = 2.0;  // default is 2-norm
+  }
+
+  // dtgrowth gives the maximum growth factor in dt per step
+  if (dtgrowth < 1.0 || dtgrowth > 10.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal DtGrowth = %g\n",dtgrowth);
+    fprintf(stderr,"   re-setting to 1.1\n");
+    dtgrowth = 1.1;
+  }
+
+  // timeAccuracy gives the desired percent change in values per step
+  if (timeAccuracy <= 0.0) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal TimeAccuracy = %g\n",timeAccuracy);
+    fprintf(stderr,"   re-setting to %g\n",huge_number);
+    timeAccuracy = huge_number;  // default is no limit
+  }
+
+  // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
+  if ((theta < 0.0) || (theta > 1.0)) {
+    fprintf(stderr,"AMRFLDSplit::Initialize: illegal theta = %g\n",theta);
+    fprintf(stderr,"   re-setting theta to 1.0 (Backwards Euler)\n");
+    theta = 1.0;  // default is backwards Euler
+  }
+
   // check for appropriate BdryType values, otherwise set dim to periodic
   for (dim=0; dim<rank; dim++) 
     for (face=0; face<2; face++)
-      /// ADD NEW BOUNDARY CONDITION TYPES HERE!
-      if ((BdryType[dim][face] < 0) || (BdryType[dim][face] > 2)) {
-	fprintf(stderr,"AMRFLDSplit_Initialize Warning: re-setting BC to periodic, dim %"ISYM", face %"ISYM"\n",dim,face);
+      if ((BdryType[dim][face] < 0) || (BdryType[dim][face] >= NUM_FLD_BDRY_TYPES)) {
+	fprintf(stderr,"AMRFLDSplit_Initialize Warning: re-setting BC to periodic, dim %"ISYM", face %"ISYM"\n",
+		dim,face);
 	BdryType[dim][face] = 0;
       }
 
@@ -321,180 +534,71 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
       BdryType[dim][1] = 0;
     }
 
-  // ensure that new BdryVals array pointers are set to NULL
-  for (ibin=0; ibin<MAX_RADIATION_BINS; ibin++) 
-    for (dim=0; dim<rank; dim++) 
-      for (face=0; face<2; face++) 
-	BdryVals[ibin][dim][face] = NULL;
-
-  // Model gives the physical set of equations to use {1,4} allowed for AMRFLDSplit
-  if ((Model != 1) && (Model != 4)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal Model = %"ISYM"\n",Model);
-    fprintf(stderr,"   Model is unimplemented in this module, resetting to 1.");
-    Model = 1;
-  }
-
-  // Nchem gives the number of chemical species
-  if ((Nchem != 1) && (Nchem != 3)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal Nchem = %"ISYM"\n",Nchem);
-    fprintf(stderr,"   re-setting Nchem to 1\n");
-    Nchem = 1;  // default is hydrogen only
-  }
-
-  // maxdt gives the maximum radiation time step size
-  if (maxdt <= 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal MaxDt = %g\n",maxdt);
-    fprintf(stderr,"   re-setting to %g\n",huge_number);
-    maxdt = huge_number;  // default is no limit
-  }
-
-  // theta gives the implicit time-stepping method (1->BE, 0.5->CN, 0->FE)
-  if ((theta < 0.0) || (theta > 1.0)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal theta = %g\n",theta);
-    fprintf(stderr,"   re-setting theta to 1.0 (Backwards Euler)\n");
-    theta = 1.0;  // default is backwards Euler
-  }
-
-  // dt_control gives the time step controller algorithm
-  if ((dt_control < -1) || (dt_control > 2)) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal DtControl = %"ISYM"\n",
-	    dt_control);
-    fprintf(stderr,"   re-setting to -1 (original controller)\n");
-    dt_control = -1;
-  }
-  
-  // mindt gives the minimum radiation time step size
-  if (mindt < 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal MinDt = %g\n",mindt);
-    fprintf(stderr,"   re-setting to %g\n",0.0);
-    mindt = 0.0;  // default is 0.0
-  }
-
-  // initdt gives the initial time step size
-  if (initdt <= 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal InitDt = %g\n",initdt);
-    fprintf(stderr,"   re-setting to %g\n",huge_number);
-    initdt = huge_number;  // default is no limit
-  }
-
-  // dtfac gives the desired percent change in values per step
-  if (dtfac <= 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroDtRadFac = %g\n",dtfac);
-    fprintf(stderr,"   re-setting to %g\n",huge_number);
-    dtfac = huge_number;  // default is no limit
-  }
-
-  // dtnorm gives the norm for calculating allowed relative change per step
-  if (dtnorm < 0.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal DtNorm = %g\n",dtnorm);
-    fprintf(stderr,"   re-setting to 2.0 (2-norm)\n");
-    dtnorm = 2.0;  // default is 2-norm
-  }
-
-  // dtgrowth gives the maximum growth factor in dt per step
-  if (dtgrowth < 1.0 || dtgrowth > 10.0) {
-    fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroDtGrowth = %g\n",dtgrowth);
-    fprintf(stderr,"   re-setting to 1.1\n");
-    dtgrowth = 1.1;
-  }
-
-  // maxsubcycles gives the maximum desired ratio between hydro time step 
-  // size and radiation time step size (dt_rad <= dt_hydro)
-  // ***warn if subcycling radiation***
-  if (maxsubcycles < 1.0) {
-    if (debug) {
-      fprintf(stderr,"AMRFLDSplit Initialize: illegal RadHydroMaxSubcycles = %g\n",maxsubcycles);
-      fprintf(stderr,"   re-setting to 1.0\n");
-    }
-    maxsubcycles = 1.0;    // default is to synchronize steps
-  }
-  if (maxsubcycles > 1.0) {
-    if (debug) {
-      fprintf(stderr,"\n**************************************************************\n");
-      fprintf(stderr," WARNING: radiation subcycling (RadHydroMaxSubcycles = %g > 1.0)\n",
-	      maxsubcycles);
-      fprintf(stderr,"          may not work properly with Enzo chemistry module!\n");
-      fprintf(stderr,"**************************************************************\n\n");
-    }
-  }
-
-  // a, adot give cosmological expansion & rate
-  a = 1.0;
-  a0 = 1.0;
-  adot = 0.0;
-  adot0 = 0.0;
-
-  // check for legal NumBins parameter
-  if ((NumBins < 1) || (NumBins > MAX_RADIATION_BINS))
-    ENZO_FAIL("AMRFLDSplit_Initialize: Illegal RadHydroNumBins!  Halting run");
-
-  // check for legal radiation spectra
-  for (ibin=0; ibin<NumBins; ibin++) 
-    if ((ESpectrum[ibin] < -1) || (ESpectrum[ibin] > 5)) {
-      ENZO_VFAIL("AMRFLDSplit_Initialize: Illegal RadHydroESpectrum[%"ISYM"] = %"FSYM"\n", 
-		 ibin, ESpectrum[ibin]);
-    }
-
-  // check for legal radiation frequencies
-  for (ibin=0; ibin<NumBins; ibin++) 
-    if ((ESpectrum[ibin] == -1) && (BinFrequency[ibin] <= 0.0)) {
-      ENZO_VFAIL("AMRFLDSplit_Initialize: Illegal RadHydroBinFrequency[%"ISYM"] = %"FSYM"\n", 
-		 ibin, BinFrequency[ibin]);
-    }
-
-  // ErScale gives variable scalings for implicit solver
-  for (ibin=0; ibin<NumBins; ibin++) 
-    if (ErScale[ibin] <= 0.0) {
-      fprintf(stderr,"Initialize: illegal RadiationScaling[%"ISYM"] = %g\n",
-	      ibin, ErScale[ibin]);
-      fprintf(stderr,"   re-setting to 1.0\n");
-      ErScale[ibin] = 1.0;  // default is no scaling
-    }
-  autoScale = (autoscale != 0);  // set bool based on integer input
-  if (debug) {
-    printf("AMRFLDSplit::Initialize scaling factors:\n");
-    for (ibin=0; ibin<NumBins; ibin++) 
-      printf("    ErScale[%"ISYM"] = %g\n", ibin, ErScale[ibin]);
-    printf("    autoScale = %"ISYM"\n", autoscale);
-  }
-
   //   check linear solver parameters
+  if ((sol_type < 0) || (sol_type >= NUM_FLD_SOL_TYPES)) {
+    fprintf(stderr,"Illegal SolType = %"ISYM",  Setting to 1 (BiCGStab)\n", sol_type);
+    sol_type = 1;
+  }
+  if ((sol_tolerance < 1.0e-10) || (sol_tolerance > 1.0)) {
+    fprintf(stderr,"Illegal SolTolerance = %g. Setting to 1e-5\n",
+	    sol_tolerance);
+    sol_tolerance = 1e-5;
+  }
   if (sol_maxit <= 0) {
-    fprintf(stderr,"Illegal RadHydroMaxMGIters = %i. Setting to 200\n",
+    fprintf(stderr,"Illegal MaxMGIters = %"ISYM". Setting to 200\n",
 	    sol_maxit);
     sol_maxit = 200;
   }
-  if ((sol_type < 0) || (sol_type > 4)) {
-    fprintf(stderr,"Illegal RadHydroSolType = %i.  Setting to 1 (BiCGStab)\n", 
-	    sol_type);
-    sol_type = 1;
-  }
-  if ((sol_prec < 0) || (sol_prec > 1)) {
-    fprintf(stderr,"Illegal RadHydroSolPrec = %i.  Setting to 1 (enabled)\n", 
-	    sol_prec);
-    sol_prec = 1;
-  }
-  if ((sol_rlxtype < 0) || (sol_rlxtype > 3)) {
-    fprintf(stderr,"Illegal RadHydroMGRelaxType = %i. Setting to 1\n",
+  if ((sol_rlxtype < 0) || (sol_rlxtype >= NUM_HYPRE_RLX_TYPES)) {
+    fprintf(stderr,"Illegal MGRelaxType = %"ISYM". Setting to 1\n",
 	    sol_rlxtype);
     sol_rlxtype = 1;
   }
   if (sol_npre < 1) {
-    fprintf(stderr,"Illegal RadHydroMGPreRelax = %i. Setting to 1\n",
+    fprintf(stderr,"Illegal MGPreRelax = %"ISYM", Setting to 1\n",
 	    sol_npre);
     sol_npre = 1;
   }
   if (sol_npost < 1) {
-    fprintf(stderr,"Illegal RadHydroMGPostRelax = %i. Setting to 1\n",
+    fprintf(stderr,"Illegal MGPostRelax = %"ISYM". Setting to 1\n",
 	    sol_npost);
     sol_npost = 1;
   }
-  if ((sol_tolerance < 1.0e-15) || (sol_tolerance > 1.0)) {
-    fprintf(stderr,"Illegal RadHydroSolTolerance = %g. Setting to 1e-8\n",
-	    sol_tolerance);
-    sol_tolerance = 1.0e-8;
+  if ((sol_prec < 0) || (sol_prec > 1)) {
+    fprintf(stderr,"Illegal SolPrec = %"ISYM".  Setting to 1 (enabled)\n", 
+	    sol_prec);
+    sol_prec = 1;
   }
-
+  if (sol_precmaxit <= 0) {
+    fprintf(stderr,"Illegal Sol_precmaxit = %"ISYM". Setting to 1\n",
+	    sol_precmaxit);
+    sol_precmaxit = 1;
+  }
+  if (sol_precnpre < 1) {
+    fprintf(stderr,"Illegal Sol_precnpre = %"ISYM". Setting to 1\n",
+	    sol_precnpre);
+    sol_precnpre = 1;
+  }
+  if (sol_precnpost < 1) {
+    fprintf(stderr,"Illegal Sol_precnpost = %"ISYM". Setting to 1\n",
+	    sol_precnpost);
+    sol_precnpost = 1;
+  }
+  if (sol_precJacit < 1) {
+    fprintf(stderr,"Illegal Sol_precJacit = %"ISYM". Setting to 2\n",
+	    sol_precJacit);
+    sol_precJacit = 2;
+  }
+  if ((sol_precrelax < 0) || (sol_precrelax >= NUM_HYPRE_RLX_TYPES)) {
+    fprintf(stderr,"Illegal Sol_precrelax = %"ISYM". Setting to 1\n",
+	    sol_precrelax);
+    sol_precrelax = 1;
+  }
+  if ((sol_precrestol < 0.0) || (sol_precrestol > 1.0)) {
+    fprintf(stderr,"Illegal Sol_precrestol = %g. Setting to 0.0\n",
+	    sol_precrestol);
+    sol_precrestol = 0.0;
+  }
 
   // set flags denoting if this processor is on the external boundary
   for (dim=0; dim<rank; dim++) {
@@ -507,8 +611,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
   }
   if (debug){
-    printf("AMRFLDSplit::Initialize: rank = %"ISYM", Nchem = %"ISYM", NumBins = %"ISYM"\n",
-	   rank, Nchem, NumBins);
+    printf("AMRFLDSplit::Initialize: rank = %"ISYM"\n", rank);
     printf("AMRFLDSplit::Initialize: layout = (%"ISYM",%"ISYM",%"ISYM")\n",
 	   layout[0],layout[1],layout[2]);
     printf("AMRFLDSplit::Initialize: BdryType = (%i:%i,%i:%i,%i:%i)\n",
@@ -534,29 +637,73 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     }
   }
 
-  // if this is a weak scaling test, overwrite EtaCenter and EtaRadius on each process
-  if (WeakScaling) {
-    for (ibin=0; ibin<NumBins; ibin++) {
-      for (dim=0; dim<3; dim++)
-	EtaCenter[ibin][dim] = 0.5*( RootGrid->GridData->GetGridLeftEdge(dim) 
-				     + RootGrid->GridData->GetGridRightEdge(dim) );
-      EtaRadius[ibin] = 1.0;
-    }
-  }
-
-  // compute Radiation Energy spectrum integrals
+  // if this is a weak scaling test, overwrite SourceLocation for each 
+  // source to replicate source setup on each root grid tile
+  if (WeakScaling)
+    for (isrc=0; isrc<NumSources; isrc++) 
+      for (dim=0; dim<rank; dim++) {
+	float frac = (SourceLocation[isrc][dim] - DomainLeftEdge[dim]) 
+	           / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
+	OriginalSourceLocation[isrc][dim] = SourceLocation[isrc][dim];
+	SourceLocation[isrc][dim] = RootGrid->GridData->GetGridLeftEdge(dim) +
+                                    frac*(RootGrid->GridData->GetGridRightEdge(dim) -
+					  RootGrid->GridData->GetGridLeftEdge(dim));
+      }
+  
+  // compute Radiation Energy spectrum integrals to fill 
+  // intOpacity*, intIonizing* and intHeating* arrays
   if (this->ComputeRadiationIntegrals() == FAIL) 
     ENZO_FAIL("AMRFLDSplit::Initialize Error in radiation spectrum integrals");
 
-  // set radiation integrals into global_data for opacity-based refinement
-  // [REMOVE, OR UPDATE FOR MULTI-FREQUENCY CASE]
-  IntegralRadiationSpectrum       = intSigE[0];
-  IntegralRadiationSpectrumHI     = intSigESigHI[0];
-  IntegralRadiationSpectrumHeI    = intSigESigHeI[0];
-  IntegralRadiationSpectrumHeII   = intSigESigHeII[0];
-  IntegralRadiationSpectrumHINu   = intSigESigHInu[0];
-  IntegralRadiationSpectrumHeINu  = intSigESigHeInu[0];
-  IntegralRadiationSpectrumHeIINu = intSigESigHeIInu[0];
+
+  // fill SourceGroupEnergy for sources that are specified by type/energy
+  for (isrc=0; isrc<NumSources; isrc++) {
+    if (SourceType[isrc] == 0) {   // monochromatic source at hnu = 13.6 eV
+      MonochromaticSED tmp_src(13.6);
+      for (ibin=0; ibin<NumRadiationFields; ibin++) {
+	if (FieldMonochromatic[ibin]) {   // skip monochromatic fields
+	  SourceGroupEnergy[isrc][ibin] = 0.0;
+	  continue;
+	}
+	float integral;
+        if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
+			 true, integral) != SUCCESS) {
+	  ENZO_VFAIL("ERROR in integrating the monochromatic SED for group %"ISYM"\n", ibin);
+	}
+	SourceGroupEnergy[isrc][ibin] = integral*SourceEnergy[isrc];
+      }
+      if (debug) {
+	printf("AMRFLDSplit::Initialize monochromatic source %"ISYM" has group energies", isrc);
+	for (ibin=0; ibin<NumRadiationFields; ibin++)  printf(" %g", SourceGroupEnergy[isrc][ibin]);
+	printf("\n");
+      }
+    }
+    if (SourceType[isrc] == 1) {  // blackbody spectrum at T = 1e5 K
+      BlackbodySED tmp_src(1.0e5);
+      float total_integral;
+      if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
+	ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
+      }
+      for (ibin=0; ibin<NumRadiationFields; ibin++) {
+	if (FieldMonochromatic[ibin]) {   // skip monochromatic fields
+	  SourceGroupEnergy[isrc][ibin] = 0.0;
+	  continue;
+	}
+	float integral;
+	if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
+			 true, integral) != SUCCESS) {
+	  ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
+	}
+	SourceGroupEnergy[isrc][ibin] = integral/total_integral*SourceEnergy[isrc];
+      }
+      if (debug) {
+	printf("AMRFLDSplit::Initialize blackbody source %"ISYM" has group energies", isrc);
+	for (ibin=0; ibin<NumRadiationFields; ibin++)  printf(" %g", SourceGroupEnergy[isrc][ibin]);
+	printf("\n");
+      }
+    }
+  }
+
 
 #ifdef USE_HYPRE
 
@@ -567,7 +714,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
 #endif
   // initialize amrsolve stuff
   //    initialize the diagnostic information
-  for (ibin=0; ibin<NumBins; ibin++)
+  for (ibin=0; ibin<NumRadiationFields; ibin++)
     totIters[ibin] = 0;
 
   //    set amrsolve parameters
@@ -581,18 +728,22 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   char numstr[80];
   sprintf(numstr, "%e", sol_tolerance);
   amrsolve_params->set_parameter("solver_restol",numstr);
-  sprintf(numstr, "%i", sol_maxit);
+  sprintf(numstr, "%"ISYM, sol_maxit);
   amrsolve_params->set_parameter("solver_itmax",numstr);
-  sprintf(numstr, "%i", sol_printl);
+  sprintf(numstr, "%"ISYM, sol_printl);
   amrsolve_params->set_parameter("solver_printl",numstr);
-  sprintf(numstr, "%i", sol_log);
+  sprintf(numstr, "%"ISYM, sol_log);
   amrsolve_params->set_parameter("solver_log",numstr);
-  sprintf(numstr, "%i", sol_rlxtype);
+  sprintf(numstr, "%"ISYM, sol_rlxtype);
   amrsolve_params->set_parameter("solver_rlxtype",numstr);
-  sprintf(numstr, "%i", sol_npre);
+  sprintf(numstr, "%"ISYM, sol_npre);
   amrsolve_params->set_parameter("solver_npre",numstr);
-  sprintf(numstr, "%i", sol_npost);
+  sprintf(numstr, "%"ISYM, sol_npost);
   amrsolve_params->set_parameter("solver_npost",numstr);
+  sprintf(numstr, "%e", LimiterRmin);
+  amrsolve_params->set_parameter("limiter_rmin",numstr);
+  sprintf(numstr, "%e", LimiterDmax);
+  amrsolve_params->set_parameter("limiter_dmax",numstr);
 
   // set preconditioning options for BiCGStab and GMRES solvers
   if (sol_type == 1 || sol_type==3) {
@@ -648,29 +799,15 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RadHydroConstTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RadHydroConstTestInitialize.");
 
-    for (ibin=0; ibin<NumBins; ibin++) {
-      if (BdryType[0][0] != 0) {
-	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 left radiation BCs.");
-	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 right radiation BCs.");
-      }
-      if ( MetaData.TopGridRank >= 2 ) {
-	if (BdryType[1][0] != 0) {
-	  if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	    ENZO_FAIL("Error setting x1 left radiation BCs.");
-	  if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	    ENZO_FAIL("Error setting x1 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (BdryType[dim][face] != 0) {
+	    if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	    }
+	  }
 	}
-      }
-      if ( MetaData.TopGridRank == 3 ) {
-	if (BdryType[2][0] != 0) {
-	  if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	    ENZO_FAIL("Error setting x2 left radiation BCs.");
-	  if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	    ENZO_FAIL("Error setting x2 right radiation BCs.");
-	}
-      }
     }
     break;
     
@@ -682,25 +819,13 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationTestInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationTestInitialize.");
     
-    for (ibin=0; ibin<NumBins; ibin++) {
-      //   x0, left
-      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-      //   x0, right
-      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-      //   x1, left
-      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-      //   x1, right
-      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-      //   x2, left
-      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-      //   x2, right
-      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	  }
+	}
     }
     break;
     
@@ -712,25 +837,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationClumpInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    for (ibin=0; ibin<NumBins; ibin++) {
-      if (BdryType[0][0] != 0)
-	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 left radiation BCs.");
-      if (BdryType[0][1] != 0)
-	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 right radiation BCs.");
-      if (BdryType[1][0] != 0)
-	if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 left radiation BCs.");
-      if (BdryType[1][1] != 0)
-	if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 right radiation BCs.");
-      if (BdryType[2][0] != 0)
-	if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      if (BdryType[2][1] != 0)
-	if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (BdryType[dim][face] != 0)
+	    if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	    }
+	}
     }
     break;
     
@@ -742,25 +856,13 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (RHIonizationSteepInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in RHIonizationSteepInitialize.");
     
-    for (ibin=0; ibin<NumBins; ibin++) {
-      //   x0, left
-      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-      //   x0, right
-      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-      //   x1, left
-      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-      //   x1, right
-      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-      //   x2, left
-      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-      //   x2, right
-      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	  }
+	}
     }
     break;
     
@@ -781,25 +883,13 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (CosmoIonizationInitialize(fptr, fptr, TopGrid, MetaData, 1) == FAIL) 
       ENZO_FAIL("Error in CosmoIonizationInitialize.");
     
-    for (ibin=0; ibin<NumBins; ibin++) {
-      //   x0, left
-      if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 left radiation BCs.");
-      //   x0, right
-      if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x0 right radiation BCs.");
-      //   x1, left
-      if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 left radiation BCs.");
-      //   x1, right
-      if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x1 right radiation BCs.");
-      //   x2, left
-      if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 left radiation BCs.");
-      //   x2, right
-      if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	  }
+	}
     }
     break;
     
@@ -811,25 +901,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
   default:
 
     // set BCs based on inputs, for non periodic set to 0-valued
-    for (ibin=0; ibin<NumBins; ibin++) {
-      if (BdryType[0][0] != 0)
-	if (this->SetupBoundary(ibin,0,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 left radiation BCs.");
-      if (BdryType[0][1] != 0)
-	if (this->SetupBoundary(ibin,0,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x0 right radiation BCs.");
-      if (BdryType[1][0] != 0)
-	if (this->SetupBoundary(ibin,1,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 left radiation BCs.");
-      if (BdryType[1][1] != 0)
-	if (this->SetupBoundary(ibin,1,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x1 right radiation BCs.");
-      if (BdryType[2][0] != 0)
-	if (this->SetupBoundary(ibin,2,0,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 left radiation BCs.");
-      if (BdryType[2][1] != 0)
-	if (this->SetupBoundary(ibin,2,1,1,&ZERO) == FAIL) 
-	  ENZO_FAIL("Error setting x2 right radiation BCs.");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (dim=0; dim<rank; dim++)
+	for (face=0; face<2; face++) {
+	  if (BdryType[dim][face] != 0)
+	    if (this->SetupBoundary(ibin,dim,face,1,&ZERO) == FAIL) {
+	      ENZO_VFAIL("Error setting dim%"ISYM" face%"ISYM" radiation BCs.", dim, face);
+	    }
+	}
     }
     break;
   }
@@ -840,15 +919,15 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData)
     if (InitializeRateData(MetaData.Time) == FAIL) 
       ENZO_FAIL("Error in InitializeRateData.");
   
-  // if using an isothermal "model", freeze rate data, now that ICs exist
-  if (Model == 4) 
+  // if using an isothermal test, freeze rate data, now that ICs exist
+  if (Isothermal) 
     if (FreezeRateData(MetaData.Time, TopGrid) == FAIL) 
       ENZO_FAIL("Error in FreezeRateData.");
 
 
   //  if (debug) printf("  AMRFLDSplit_Initialize: outputting parameters to log file\n");
 
-  // output RadHydro solver parameters to output log file 
+  // output solver parameters to output log file 
   if (MyProcessorNumber == ROOT_PROCESSOR) {
     FILE *outfptr;
     if ((outfptr = fopen(outfilename, "a")) == NULL) {

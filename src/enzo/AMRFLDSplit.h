@@ -8,7 +8,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Single-Group, Multi-species, AMR, Gray Flux-Limited Diffusion 
+/  Multi-Group/Frequency, AMR, Flux-Limited Diffusion Solver
 /  Split Implicit Problem Class
 /
 /  written by: Daniel Reynolds
@@ -38,70 +38,98 @@
 #include "Grid.h"
 #include "Hierarchy.h"
 #include "TopGridData.h"
-#include "EnzoVector.h"
+/* #include "EnzoVector.h" */
 #include "ImplicitProblemABC.h"
+
+
+// increase the maximum number of FLD sources as needed
+#define MAX_FLD_SOURCES       100
+
+
+// AMRFLDSplit is hard-coded with two source types:
+//     0 -> monochromatic at hnu = 13.6 eV
+//     1 -> blackbody with temperature 1e5 K
+#define NUM_FLD_SOURCE_TYPES  2
+
+// AMRFLDSplit is hard-coded with three boundary condition types:
+//     0 -> periodic
+//     1 -> dirichlet
+//     2 -> neumann
+#define NUM_FLD_BDRY_TYPES  3
+
+// AMRFLDSplit is hard-coded with five linear solver types:
+//     0 -> FAC
+//     1 -> BiCGStab
+//     2 -> BiCGStab-BoomerAMG
+//     3 -> GMRES
+//     4 -> PFMG (unigrid only)
+#define NUM_FLD_SOL_TYPES  5
+
+// AMRFLDSplit is hard-coded with four time step adaptivity algorithms:
+//     -1 -> original time controller
+//      0 -> I controller
+//      1 -> PI controller
+//      2 -> PID controller
+#define NUM_FLD_DT_CONTROLLERS  4
+
+// HYPRE is hard-coded with four relaxation algorithms:
+//    0 -> weighted Jacobi
+//    1 -> weighted Jacobi
+//    2 -> red-black Gauss-Seidel
+//    3 -> red-black Gauss-Seidel
+#define NUM_HYPRE_RLX_TYPES  4
 
 
 class AMRFLDSplit : public virtual ImplicitProblemABC {
 
  private:
   
-  // overall time spent in solver and components
-  float RTtime;
-  float AMRSolTime;
-  
-  // AMRsolve-specific data
+  // AMRsolve parameter interface structure
 #ifdef AMR_SOLVE
   AMRsolve_Parameters* amrsolve_params;
 #endif
 
   // solver-specific parameters
   float  sol_tolerance;          // desired solver tolerance
-  Eint32 sol_maxit;              // maximum number of iterations
-  Eint32 sol_type;               // HYPRE solver type
-                                 //    0 -> FAC
-                                 //    1 -> BiCGStab
-                                 //    2 -> BiCGStab-BoomerAMG
-                                 //    3 -> GMRES
-                                 //    4 -> PFMG (unigrid only)
-  Eint32 sol_printl;             // print output level
-  Eint32 sol_log;                // amount of logging
-  Eint32 sol_prec;               // enable HG preconditioner within AMRsolve
+  int    sol_maxit;              // maximum number of iterations
+  int    sol_type;               // HYPRE solver type
+  int    sol_printl;             // print output level
+  int    sol_log;                // amount of logging
+  int    sol_prec;               // enable HG preconditioner within AMRsolve
   int    sol_precmaxit;          // # PFMG iterations within preconditioner
   int    sol_precnpre;           // # pre-relaxation sweeps within precond.
   int    sol_precnpost;          // # post-relaxation sweeps within precond.
   int    sol_precJacit;          // # Jacobi iterations within precond.
   int    sol_precrelax;          // smoother type for PFMG iteration
-  float sol_precrestol;          // tolerance for coarse PFMG solve
+  float  sol_precrestol;         // tolerance for coarse PFMG solve
 
-  // FAC/PFMG-specific solver parameters
-  Eint32 sol_rlxtype;            // relaxation type (PFMG only):
-                                 //    0,1 -> weighted Jacobi
-                                 //    2,3 -> red-black Gauss-Seidel
-  Eint32 sol_npre;               // num. pre-relaxation sweeps
-  Eint32 sol_npost;              // num. post-relaxation sweeps
+  // PFMG-specific solver parameters
+  int    sol_rlxtype;            // relaxation type (PFMG only)
+  int    sol_npre;               // num. pre-relaxation sweeps
+  int    sol_npost;              // num. post-relaxation sweeps
 
-  // amrsolve diagnostics
-  int totIters[MAX_RADIATION_BINS];   // cumulative iterations for solves
+  // limiter-specific parameters
+  float LimiterRmin;             // Rmin constant to use in limiter
+  float LimiterDmax;             // Dmax constant to use in limiter
 
-  // General problem grid information
-  bool OnBdry[3][2];       // denotes if proc owns piece of boundary
-  int rank;                // Rank of problem
-  int LocDims[3];          // top grid local dims (no ghost or bdry cells)
-  float *BdryVals[MAX_RADIATION_BINS][3][2];   // boundary values for radiation BCs
-  int WeakScaling;         // flag denoting we're doing a weak-scaling problem
+  // solver diagnostics
+  float RTtime;                  // total AMRFLDSplit module time
+  float AMRSolTime;              // total time in AMRsolve routines
+  int   totIters[MAX_FLD_FIELDS];  // cumulative iterations for solves
+
+  // grid information
+  int    rank;                   // Rank of problem
+  int    LocDims[3];             // top grid local dims (no ghost or bdry cells)
+  bool   OnBdry[3][2];           // denotes if proc owns piece of boundary
+  float *BdryVals[MAX_FLD_FIELDS][3][2];   // boundary values for radiation BCs
 
   // time-stepping related data
   float initdt;        // initial radiation time step size
   float maxdt;         // maximum radiation time step size
   float mindt;         // minimum radiation time step size
   float maxsubcycles;  // max subcycle factor for rad time step within hydro step
-  float dtfac;         // desired relative change in radiation per step
-  int dt_control;      // time step controller algorithm:
-                       //      0 -> I controller
-                       //      1 -> PI controller
-                       //      2 -> PID controller
-                       //   else -> original time controller
+  float timeAccuracy;  // desired relative change in radiation fields per step
+  int   dt_control;    // time step controller algorithm:
   float Err_cur;       // storage for error estimates in adaptive time stepper
   float Err_new;
   float dtnorm;        // norm choice for computing relative change (default=2.0):
@@ -111,16 +139,25 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float tnew;          // new time
   float told;          // old time
   float dt;            // time step size
-  float dtrad;         // radiation time step size (subcycled)
+  float dtrad;         // radiation time step size (if subcycled)
   float theta;         // implicitness parameter (1->BE, 0.5->CN, 0->FE)
   
-  // problem defining data
-  int NumBins;         // number of radiation bins to use
-  int Nchem;           // number of chemical species (non-negative integer)
-  int Model;           // choices are 1 (standard) or 4 (isothermal)
-  float NGammaDot[MAX_RADIATION_BINS];     // ionization strength (photons/sec)
-  float EtaRadius[MAX_RADIATION_BINS];     // ionization source radius
-  float EtaCenter[MAX_RADIATION_BINS][3];  // ionization source location
+  // radiation and chemistry problem-defining data
+  int   NumRadiationFields;                 // # radiation frequencies/groups to use
+  float FrequencyBand[MAX_FLD_FIELDS][2];   // frequencies or bin boundaries
+  bool  FieldMonochromatic[MAX_FLD_FIELDS]; // flag if the field is monochromatic
+  bool  FieldNeighbors[MAX_FLD_FIELDS][2];  // flag if field has neighbors (for redshifting): 
+                                            // ignored for monochromatic fields,
+                                            // groups may have lower/upper neighbors
+                                            // if their frequency bands touch
+  int   Isothermal;                         // flag denoting temperature-dependence of run
+
+  // ionization source parameters
+  int   NumSources;                          // number of input ionization sources
+  float SourceLocation[MAX_FLD_SOURCES][3];  // ionization source location
+  float SourceGroupEnergy[MAX_FLD_SOURCES][MAX_FLD_FIELDS];   // energy per source/field
+  int   WeakScaling;                         // whether to replicate inputs on each process
+  float OriginalSourceLocation[MAX_FLD_SOURCES][3];  // necessary to restart WeakScaling runs
 
   // cosmology and scaling constants
   FLOAT a;             // cosmology expansion coefficient
@@ -130,12 +167,11 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float aUnits;        // expansion parameter scaling
   bool  autoScale;     // flag to enable/disable automatic scaling factors
   bool  StartAutoScale;  // flag to turn begin automatic scaling in a run
-  float ErScale[MAX_RADIATION_BINS];     // radiation energy density scaling factors
-  float ErUnits[MAX_RADIATION_BINS];     // radiation energy density unit conversion factor
-  float ErUnits0[MAX_RADIATION_BINS];    // radiation energy density unit conversion factor
+  float ErScale[MAX_FLD_FIELDS];     // radiation energy density scaling factors
+  float ErUnits[MAX_FLD_FIELDS];     // radiation energy density unit conversion factor
+  float ErUnits0[MAX_FLD_FIELDS];    // radiation energy density unit conversion factor
   float NiUnits;       // species density unit conversion factor
   float NiUnits0;      // species density unit conversion factor
-
   float DenUnits;      // density scaling factor
   float DenUnits0;     // density scaling factor
   float LenUnits;      // length scaling factor
@@ -143,33 +179,23 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float TimeUnits;     // time scaling factor
   float VelUnits;      // velocity scaling factor
 
-  // storage for integrals over radiation spectrum (set during initialization)
-  float hnu0_HI;            // HI ionization threshold (eV)
-  float hnu0_HeI;           // HeI ionization threshold (eV)
-  float hnu0_HeII;          // HeII ionization threshold (eV)
-  int ESpectrum[MAX_RADIATION_BINS];  // integer flag determining spectrum choice
-                            //   2 -> SED with photons above 4 Ryd truncated
-                            //   1 -> 1e5 black body spectrum
-                            //   0 -> simple power law spectrum
-                            //  -1 -> monochromatic spectrum
-                            //  other positive -> power law spectrum with power -1.5
-  float BinFrequency[MAX_RADIATION_BINS];       // frequency for each bin [eV] (if monochromatic)
-  float intSigE[MAX_RADIATION_BINS];            // int_{nu0}^{inf} sigma_E(nu) d nu
-  float intSigESigHI[MAX_RADIATION_BINS];       // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu) d nu
-  float intSigESigHeI[MAX_RADIATION_BINS];      // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu) d nu
-  float intSigESigHeII[MAX_RADIATION_BINS];     // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu) d nu
-  float intSigESigHInu[MAX_RADIATION_BINS];     // int_{nu0}^{inf} sigma_E(nu)*sigma_HI(nu)/nu d nu
-  float intSigESigHeInu[MAX_RADIATION_BINS];    // int_{nu0}^{inf} sigma_E(nu)*sigma_HeI(nu)/nu d nu
-  float intSigESigHeIInu[MAX_RADIATION_BINS];   // int_{nu0}^{inf} sigma_E(nu)*sigma_HeII(nu)/nu d nu
+  // integrals over frequency space (set during initialization)
+  float intOpacity_HI[MAX_FLD_FIELDS];     // 1/|binwidth| * int_{bin} sigmaHI d nu
+  float intOpacity_HeI[MAX_FLD_FIELDS];    // 1/|binwidth| * int_{bin} sigmaHeI d nu
+  float intOpacity_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII d nu
+  float intIonizing_HI[MAX_FLD_FIELDS];    // 1/|binwidth| * int_{bin} sigmaHI/nu d nu
+  float intIonizing_HeI[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeI/nu d nu
+  float intIonizing_HeII[MAX_FLD_FIELDS];  // 1/|binwidth| * int_{bin} sigmaHeII/nu d nu
+  float intHeating_HI[MAX_FLD_FIELDS];     // 1/|binwidth| * int_{bin} sigmaHI*(1-nuHI/nu) d nu
+  float intHeating_HeI[MAX_FLD_FIELDS];    // 1/|binwidth| * int_{bin} sigmaHeI*(1-nuHeI/nu) d nu
+  float intHeating_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII*(1-nuHeII/nu) d nu
 
   // private computation routines
-  int EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
+  int   EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
   float RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
-  int Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
-  float RadiationSpectrum(int Bin, float nu);
-  float CrossSections(float nu, int species);
-  int ComputeRadiationIntegrals();
-  int FillRates(LevelHierarchyEntry *LevelArray[], int level);
+  int   Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
+  int   ComputeRadiationIntegrals();
+  int   FillRates(LevelHierarchyEntry *LevelArray[], int level);
 #ifdef AMR_SOLVE
   int RadStep(int Bin, LevelHierarchyEntry *LevelArray[], int level, 
 	      AMRsolve_Hierarchy *hierarchy, float Etyp, 
@@ -179,9 +205,6 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
  public:
 
   // boundary type in each dimension, face:
-  //    0->periodic
-  //    1->dirichlet
-  //    2->neumann
   Eint32 BdryType[3][2];
 
   ///////////////////////////////////////
@@ -218,8 +241,8 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
 
  private:
 
-  float* AccessRadiationBin(int Bin, HierarchyEntry *ThisGrid);
-  float* AccessEmissivityBin(int Bin, HierarchyEntry *ThisGrid);
+  float* AccessRadiationField(int ibin, HierarchyEntry *ThisGrid);
+  float* AccessEmissivityField(int ibin, HierarchyEntry *ThisGrid);
 
 };
 

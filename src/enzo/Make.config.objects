@@ -19,12 +19,11 @@ OBJS_CONFIG_LIB = \
         AdiabaticExpansionInitialize.o \
         AdjustRefineRegion.o \
         AdjustMustRefineParticlesRefineToLevel.o \
-	AMRFLDSplit_AccessEmissivityBin.o \
-	AMRFLDSplit_AccessRadiationBin.o \
+	AMRFLDSplit_AccessEmissivityField.o \
+	AMRFLDSplit_AccessRadiationField.o \
 	AMRFLDSplit_ComputeRadiationIntegrals.o \
 	AMRFLDSplit_ComputeTimeStep.o \
 	AMRFLDSplit_constructor.o \
-	AMRFLDSplit_CrossSections.o \
 	AMRFLDSplit_destructor.o \
 	AMRFLDSplit_EnforceBoundary.o \
 	AMRFLDSplit_Evolve.o \
@@ -32,7 +31,6 @@ OBJS_CONFIG_LIB = \
 	AMRFLDSplit_Initialize.o \
 	AMRFLDSplit_Opacity.o \
 	AMRFLDSplit_RadiationSource.o \
-	AMRFLDSplit_RadiationSpectrum.o \
 	AMRFLDSplit_SetupBoundary.o \
 	AMRFLDSplit_WriteParameters.o \
 	AMRGravitySolve.o \
