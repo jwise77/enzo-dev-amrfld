@@ -312,7 +312,9 @@ $\Gamma_i^{ph}$ for each chemical species $\mn_i$ as
 \label{eq:multifrequency_photoionization}
    \Gamma_i^{ph}(t,\rvec)  = 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
-   \sum_{\omega=1}^{N_f} \frac{c\, E_{\omega}\, \sigma_{\mn_i}(\nu_{\omega})}{h\nu_{\omega}^2}, \qquad i=1,\ldots,N_\text{chem},
+   \sum_{\omega=1}^{N_f} \frac{c\, E_{\omega}(t,\rvec)}{h} 
+   \left(\frac{\sigma_{\mn_i}(\nu_{\omega})}{\nu_{\omega}^2}\right), 
+   \qquad i=1,\ldots,N_\text{chem},
 \end{equation}
 where here we denote the ionization threshold frequency for species
 $\mn_i$ as $\bar{\nu}_i$.  Furthermore, in this equation we have
@@ -328,18 +330,19 @@ rate, $G$, using our multi-frequency radiation field
 \begin{align}
 \notag
    G(t,\rvec) &= 
-   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
+   \sum_{i=1}^{N_\text{chem}} \frac{c\, \mn_i}{\rhob}
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
      \left(\frac{h\nu - h\bar{\nu}_i}{h\nu}\right)\,\mathrm d\nu \\
 \label{eq:multifrequency_photoheating}
    &= 
-   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \mn_i
+   \sum_{i=1}^{N_\text{chem}} \frac{c\, \mn_i}{\rhob}
      \int_{\bar{\nu}_i}^{\infty} \sigma_{\mn_i}(\nu) \Enu(t,\rvec,\nu)
      \left(1 - \frac{\bar{\nu}_i}{\nu}\right)\,\mathrm d\nu \\
 \notag
    &= 
-   \frac{c}{\rhob} \sum_{i=1}^{N_\text{chem}} \sum_{\omega=1}^{N_f}\, \mn_i(t,\rvec)\,
-     \sigma_{\mn_i}(\nu_{\omega}) E_{\omega}(t,\rvec) \left(\frac{1}{\nu_{\omega}} - \frac{\bar{\nu}_i}{\nu_{\omega}^2}\right).
+   \sum_{i=1}^{N_\text{chem}} \sum_{\omega=1}^{N_f}\,
+     \frac{c\, \mn_i\, E_{\omega}(t,\rvec)}{\rhob}\,
+     \left[\sigma_{\mn_i}(\nu_{\omega}) \left(\frac{1}{\nu_{\omega}} - \frac{\bar{\nu}_i}{\nu_{\omega}^2}\right)\right].
 \end{align}
 
 
