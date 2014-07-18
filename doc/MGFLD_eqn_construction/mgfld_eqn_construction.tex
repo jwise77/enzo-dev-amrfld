@@ -801,24 +801,28 @@ Similarly, the multi-group equation \eqref{eq:mgfld_multigroup} can be
 written in comoving, normalized for as:
 \begin{align}
   \label{eq:mgfld_multigroup_Ecomoving}
-  \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla \tE_{\omega}) +
-    \frac{\adot}{a}\tE_{\omega} - (\square)_{\omega} = \frac{\eta_{\omega}}{\Eunit} - c
-    \kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f-1,
+  \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla \tE_{\omega}) -
+    (\square)_{\omega} = \frac{\eta_{\omega}}{\Eunit} - c\kappa_{\omega} \tE_{\omega},
+    \quad \omega=0,\ldots,N_f-1,
 \end{align}
 where we now define $(\square)_{\omega}$ as 
 \begin{equation}
 \label{eq:square_omega}
   (\square)_{\omega} = \begin{cases}
      \frac{\adot\, \nu_{\omega,R}}{2a}\left(\frac{\tE_{\omega}}{|g_{\omega}|} + \frac{\tE_{\omega+1}}{|g_{\omega+1}|}\right) -
-      \frac{\adot\, \nu_{\omega,L}}{2a}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right),&
+      \frac{\adot\, \nu_{\omega,L}}{2a}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right) -
+      \frac{\adot}{a}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
      \frac{\adot\, \nu_{\omega,R}\, \tE_{\omega}}{a\, |g_{\omega}|} -
-      \frac{\adot\, \nu_{\omega,L}}{2a}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right),&
+      \frac{\adot\, \nu_{\omega,L}}{2a}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right) -
+      \frac{\adot}{a}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L},\\
      \frac{\adot\, \nu_{\omega,R}}{2a}\left(\frac{\tE_{\omega}}{|g_{\omega}|} + \frac{\tE_{\omega+1}}{|g_{\omega+1}|}\right) -
-      \frac{\adot\, \nu_{\omega,L}\, \tE_{\omega}}{a\, |g_{\omega}|},&
+      \frac{\adot\, \nu_{\omega,L}\, \tE_{\omega}}{a\, |g_{\omega}|} -
+      \frac{\adot}{a}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
-     \frac{\adot\, \tE_{\omega}}{a\, |g_{\omega}|}\left(\nu_{\omega,R} - \nu_{\omega,L}\right),&
+     \frac{\adot\, \tE_{\omega}}{a\, |g_{\omega}|}\left(\nu_{\omega,R} - \nu_{\omega,L}\right) -
+      \frac{\adot}{a}\tE_{\omega} = 0,&
       \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}.
   \end{cases}
 \end{equation}
@@ -854,9 +858,9 @@ and converting \eqref{eq:mgfld_multigroup_Ecomoving} we obtain the
 multi-group equation 
 \begin{align}
   \label{eq:mgfld_multigroup_comoving}
-  \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot(D_{\omega}\,\tnabla \tE_{\omega}) +
-    \frac{\adot}{a}\tE_{\omega} - (\square)_{\omega} = \frac{\eta_{\omega}}{\Eunit} - c
-    \kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f-1.
+  \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot(D_{\omega}\,\tnabla \tE_{\omega}) -
+    (\square)_{\omega} = \frac{\eta_{\omega}}{\Eunit} - c\kappa_{\omega} \tE_{\omega},
+    \quad \omega=0,\ldots,N_f-1.
 \end{align}
 
 Similarly, we may consider time differentiation with respect to the
@@ -877,8 +881,8 @@ and inserting into \eqref{eq:mgfld_multigroup_comoving} we have the
 corresponding multi-group version,
 \begin{align}
   \label{eq:mgfld_multigroup_tnormalized}
-  \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot(D_{\omega}\,\tnabla \tE_{\omega}) +
-    \frac{\Tunit\adot}{a}\tE_{\omega} - \Tunit(\square)_{\omega} = \frac{\Tunit\eta_{\omega}}{\Eunit} - 
+  \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot(D_{\omega}\,\tnabla \tE_{\omega}) -
+    \Tunit(\square)_{\omega} = \frac{\Tunit\eta_{\omega}}{\Eunit} - 
     \Tunit c \kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f-1.
 \end{align}
 
@@ -908,13 +912,13 @@ Similarly, for the multi-group equations, we have for each $\omega=0,\ldots,N_f-
 \begin{align}
   \notag
   &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
-    + \frac{\Tunit \Aunit\tAdot}{\Tunit \Aunit\tA} \tE_{\omega} - \Tunit(\square)_{\omega} = 
-    \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega},\\
+    - \Tunit(\square)_{\omega} = \frac{\Tunit\eta_{\omega}}{\Eunit} 
+    - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega},\\
   \Leftrightarrow \quad & \\
   \label{eq:mgfld_multigroup_comoving_normalized}
   &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
-    + \frac{\tAdot}{\tA} \tE_{\omega} - (\tilde{\square})_{\omega} = 
-    \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit c\, \tK_{\omega}\, \tE_{\omega},
+    - (\tilde{\square})_{\omega} = \frac{\Tunit\eta_{\omega}}{\Eunit} 
+    - \Tunit\, \Kunit c\, \tK_{\omega}\, \tE_{\omega},
 \end{align}
 with the limiter the same as in
 \eqref{eq:Morel_limiterD_normalized}-\eqref{eq:Morel_limiterR_normalized},
@@ -923,16 +927,18 @@ and where we compute $(\tilde{\square})_{\omega}$ as
 \label{eq:square_omega_normalized}
   (\tilde{\square})_{\omega} = \begin{cases}
      \frac{\tAdot\, \nu_{\omega,R}}{2\tA}\left(\frac{\tE_{\omega}}{|g_{\omega}|} + \frac{\tE_{\omega+1}}{|g_{\omega+1}|}\right) -
-      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right),&
+      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right) -
+      \frac{\tAdot}{\tA}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
      \frac{\tAdot\, \nu_{\omega,R}\, \tE_{\omega}}{\tA\, |g_{\omega}|} -
-      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right),&
+      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1}}{|g_{\omega-1}|}+\frac{\tE_{\omega}}{|g_{\omega}|}\right) -
+      \frac{\tAdot}{\tA}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L},\\
      \frac{\tAdot\, \nu_{\omega,R}}{2\tA}\left(\frac{\tE_{\omega}}{|g_{\omega}|} + \frac{\tE_{\omega+1}}{|g_{\omega+1}|}\right) -
-      \frac{\tAdot\, \nu_{\omega,L}\, \tE_{\omega}}{\tA\, |g_{\omega}|},&
+      \frac{\tAdot\, \nu_{\omega,L}\, \tE_{\omega}}{\tA\, |g_{\omega}|} -
+      \frac{\tAdot}{\tA}\tE_{\omega},&
       \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
-     \frac{\tAdot\, \tE_{\omega}}{\tA\, |g_{\omega}|}\left(\nu_{\omega,R} - \nu_{\omega,L}\right),&
-      \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}.
+     0,& \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}.
   \end{cases}
 \end{equation}
 
@@ -983,7 +989,7 @@ for the multi-frequency equation
 \[
    \mD_{\omega}(\tE_{\omega},\tK_{\omega},\eta_{\omega},\tA,\tAdot) = 
    \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
-    - \frac{\tAdot}{\tA} \tE_{\omega} + (\tilde{\square})_{\omega}
+    + (\tilde{\square})_{\omega}
     + \frac{\Tunit\eta_{\omega}}{\Eunit} 
     - \Tunit \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}
 \]
@@ -1000,7 +1006,16 @@ solution at time $\tT_{n}$, the $\theta$-method for both equations
 \end{align}
 where in the first $\mD$ term we lag the implicit dependence of the
 solution on the flux limiter $D_{\omega}^{n+1}$ to the previous time, $D_{\omega}^n$ to
-result in a linearly implicit system of equations.  
+result in a linearly implicit system of equations.  Furthermore, to
+decouple the linear systems for each radiation field, we also lag
+the implicit dependence on the redshifting term
+$(\tilde{\square})_{\omega}^{n+1}$ to the previous time,
+$(\tilde{\square})_{\omega}^{n}$.  We note that although these
+approximations limit the asymptotic convergence rate of any
+$\theta$-method to first-order in time, i.e.~$\mathcal O(\dt)$, these
+do not affect energy conservation since the spatial fluxes use
+consistent values of $D_{\omega}^n$, and the frequency fluxes use
+consistent values of $(\tilde{\square})_{\omega}^{n}$.
 
 We must similarly apply our finite-volume spatial discretization of
 the operator $\mD_{\omega}$.  For the discretized equation for
@@ -1034,8 +1049,7 @@ and for the multi-group equations
   \notag
     &+ \frac{\Tunit}{\Lunit^2 \Delta z^2}\(D_{\omega,i,j,k+1/2}\(\tE_{\omega,i,j,k+1} - \tE_{\omega,i,j,k}\) - D_{\omega,i,j,k-1/2}\(\tE_{\omega,i,j,k} - \tE_{\omega,i,j,k-1}\)\) \\
   \notag
-    &- \frac{\tAdot}{\tA} \tE_{\omega,i,j,k} + (\tilde{\square})_{\omega,i,j,k} 
-     + \frac{\Tunit \eta_{\omega,i,j,k}}{\Eunit} 
+    &+ (\tilde{\square})_{\omega,i,j,k} + \frac{\Tunit \eta_{\omega,i,j,k}}{\Eunit} 
      - \Tunit \Kunit\, c\, \tK_{\omega,i,j,k} \tE_{\omega,i,j,k},
 \end{align}
 with
@@ -1043,18 +1057,24 @@ with
 \label{eq:square_omega_normalized_discretized}
   (\tilde{\square})_{\omega,i,j,k} = \begin{cases}
      \frac{\tAdot\, \nu_{\omega,R}}{2\tA}\left(\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|} + \frac{\tE_{\omega+1,i,j,k}}{|g_{\omega+1}|}\right) -
-      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1,i,j,k}}{|g_{\omega-1}|}+\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|}\right),&
-      \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
+      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1,i,j,k}}{|g_{\omega-1}|}+\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|}\right) -
+      \frac{\tAdot}{\tA}\tE_{\omega,i,j,k},&
+      \text{if (a)},\\
      \frac{\tAdot\, \nu_{\omega,R}\, \tE_{\omega,i,j,k}}{\tA\, |g_{\omega}|} -
-      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1,i,j,k}}{|g_{\omega-1}|}+\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|}\right),&
-      \text{if}\quad \nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L},\\
+      \frac{\tAdot\, \nu_{\omega,L}}{2\tA}\left(\frac{\tE_{\omega-1,i,j,k}}{|g_{\omega-1}|}+\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|}\right) -
+      \frac{\tAdot}{\tA}\tE_{\omega,i,j,k},&
+      \text{if (b)},\\
      \frac{\tAdot\, \nu_{\omega,R}}{2\tA}\left(\frac{\tE_{\omega,i,j,k}}{|g_{\omega}|} + \frac{\tE_{\omega+1,i,j,k}}{|g_{\omega+1}|}\right) -
-      \frac{\tAdot\, \nu_{\omega,L}\, \tE_{\omega,i,j,k}}{\tA\, |g_{\omega}|},&
-      \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L},\\
-     \frac{\tAdot\, \tE_{\omega,i,j,k}}{\tA\, |g_{\omega}|}\left(\nu_{\omega,R} - \nu_{\omega,L}\right),&
-      \text{if}\quad \nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}.
+      \frac{\tAdot\, \nu_{\omega,L}\, \tE_{\omega,i,j,k}}{\tA\, |g_{\omega}|} -
+      \frac{\tAdot}{\tA}\tE_{\omega,i,j,k},&
+      \text{if (c)},\\
+     0,& \text{if (d)},
   \end{cases}
 \end{equation}
+where (a) occurs if $\nu_{\omega-1,R}=\nu_{\omega,L},\;\nu_{\omega,R}=\nu_{\omega+1,L}$, 
+(b) occurs if $\nu_{\omega-1,R}=\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}$, 
+(c) occurs if $\nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}=\nu_{\omega+1,L}$, 
+and (d) occurs if $\nu_{\omega-1,R}\ne\nu_{\omega,L},\; \nu_{\omega,R}\ne\nu_{\omega+1,L}$.
 In the above, we must discretize the limiter at the faces
 $\{(i\pm\frac12,j,k),(i,j\pm\frac12,k),(i,j,k\pm\frac12)\}$.
 Furthermore, due to the limitations of floating-point arithmetic we
@@ -1093,11 +1113,35 @@ that these approaches give the most robust results in cosmological
 ionization simulations, wherein opacities may differ by orders of
 magnitude in neighboring cells.
 
-Finally, we note that in many of the above factors within equations
-\eqref{eq:mgfld_discrete}-\eqref{eq:discrete_limiter} , the unit
+Furthermore, we note that in many of the above factors from equations
+\eqref{eq:mgfld_discrete}-\eqref{eq:discrete_limiter}, the unit
 values may change as a function of time due to cosmological expansion.
 As a result, all quantities are converted using the unit evaluated at
 the appropriate time step, $t_{n+1}$ or $t_n$.
+
+We solve the linear systems \eqref{eq:mgfld_discrete} independently,
+where each system is solved in predictor-corrector form.  We first
+write the time-evolved solution for a given field as 
+\[
+  \tE_{\omega}^{n+1} = \tE_{p} + \delta\tE,
+\]
+where $\tE_p$ is the predicted solution, and $\delta\tE$ the the
+corrector.  We then solve the linear system $A \delta\tE = b$, where
+the matrix $A$ corresponds to the linearization
+\[
+   A = \frac{\partial}{\partial\tE_{\omega}} \left(\tE_{\omega} - \theta\Delta \tT \mD_{\omega}\right)
+\]
+(as previously noted, here both the limiter and redshifting terms are
+time-lagged), and the right-hand side has the form
+\[
+  b = \tE_{\omega}^n + (1-\theta)\Delta \tT \mD_{\omega,i,j,k}^{n} - A\tE_{p}^n.
+\]
+For the predictor we use the previous solution, $\tE_p =
+\tE_{\omega}^n$, and upon solving $A \delta\tE = b$, we compute
+$\tE_{\omega}^{n+1}$ via
+\[
+  \tE_{\omega}^{n+1} = \tE_{\omega}^n + \delta\tE.
+\]
 
 
 
