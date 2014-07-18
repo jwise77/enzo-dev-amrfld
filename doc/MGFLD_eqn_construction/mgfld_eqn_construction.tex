@@ -1094,12 +1094,12 @@ While the limiter formulation shown here is somewhat standard in the
 field, some of these specific implementation details have proven
 difficult to master, which we will point out here.  First, through
 significant trial and error, we have found that the limiter
-bounds $R_\text{min}=10^{-20} \Lunit^{-1}$ and 
+bounds $R_\text{min}=10^{-2} \Lunit^{-1}$ and 
 $D_\text{max}=10^{-2}\, c\, \Lunit$ provide the most robust results
 in a wide range of simulations, including ``lab-frame''
 radiation-hydrodynamics test problems, ``medium-scale'' astrophysical
 simulations, and ``large-scale'' cosmological reionization
-simulations.  The user may over-ride the constants $10^{-20}$ and
+simulations.  The user may over-ride the constants $10^{-2}$ and
 $10^{-2}$ in these definitions if desired, as described in Section
 \ref{sec:user_interface}.  Second, we note that the face-centered
 radiation field ($\tE_{\omega,i+1/2,j,k}$) and the face-centered
@@ -1283,7 +1283,7 @@ these two approaches must be employed for each of the
 \item {\tt AMRFLDLimiterRmin} -- floating point value specifying the
   dimensionless constant in the definition of $R_{\text{min}}$ in
   equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
-    risk.}  This value must be non-negative.  Default: $10^{-20}$.
+    risk.}  This value must be non-negative.  Default: $10^{-2}$.
 \item {\tt AMRFLDLimiterDmax} -- floating point value specifying the
   dimensionless constant in the definition of $D_{\text{max}}$ in
   equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
