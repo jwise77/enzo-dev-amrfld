@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -12,10 +10,9 @@
 /  Split Implicit Problem Class, Parameter output routine
 /
 /  written by: Daniel Reynolds
-/  date:       December 2010
+/  date:       July 2014
 /
-/  PURPOSE: Writes all necessary internal parameters for problem 
-/           restart.
+/  PURPOSE: Writes all necessary internal parameters for problem restart.
 /
 ************************************************************************/
 #ifdef TRANSFER
@@ -40,7 +37,7 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   for (ibin=0; ibin<NumRadiationFields; ibin++)
     fprintf(fptr, "AMRFLDRadiationScaling["ISYM"] = %22.16e\n", 
 	    ibin, ErScale[ibin]);
-  if (autoScale) {
+  if (autoScale[0]) {
     fprintf(fptr, "AMRFLDAutomaticScaling = 1\n");
   } else {
     fprintf(fptr, "AMRFLDAutomaticScaling = 0\n");

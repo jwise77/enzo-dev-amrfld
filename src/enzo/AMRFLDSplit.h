@@ -113,6 +113,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float LimiterDmax;             // Dmax constant to use in limiter
 
   // solver diagnostics
+  bool  diags;                   // flag on whether to compute/output diagnostics
   float RTtime;                  // total AMRFLDSplit module time
   float AMRSolTime;              // total time in AMRsolve routines
   int   totIters[MAX_FLD_FIELDS];  // cumulative iterations for solves
@@ -165,8 +166,8 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   FLOAT adot;          // time-derivative of a
   FLOAT adot0;         // time-derivative of a (old time)
   float aUnits;        // expansion parameter scaling
-  bool  autoScale;     // flag to enable/disable automatic scaling factors
-  bool  StartAutoScale;  // flag to turn begin automatic scaling in a run
+  bool  autoScale[MAX_FLD_FIELDS];   // flag to enable/disable automatic scaling factors
+  bool  StartAutoScale[MAX_FLD_FIELDS];  // flag to turn begin automatic scaling in a run
   float ErScale[MAX_FLD_FIELDS];     // radiation energy density scaling factors
   float ErUnits[MAX_FLD_FIELDS];     // radiation energy density unit conversion factor
   float ErUnits0[MAX_FLD_FIELDS];    // radiation energy density unit conversion factor
@@ -191,11 +192,12 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float intHeating_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII*(1-nuHeII/nu) d nu
 
   // private computation routines
-  int   EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
-  float RadiationSource(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
-  int   Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
-  int   ComputeRadiationIntegrals();
-  int   FillRates(LevelHierarchyEntry *LevelArray[], int level);
+  int EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
+  int RadiationSource(LevelHierarchyEntry *LevelArray[], int level, float time);
+  int Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);
+  int ComputeRadiationIntegrals();
+  int Redshifting(LevelHierarchyEntry *LevelArray[], int level);
+  int FillRates(LevelHierarchyEntry *LevelArray[], int level);
 #ifdef AMR_SOLVE
   int RadStep(int Bin, LevelHierarchyEntry *LevelArray[], int level, 
 	      AMRsolve_Hierarchy *hierarchy, float Etyp, 

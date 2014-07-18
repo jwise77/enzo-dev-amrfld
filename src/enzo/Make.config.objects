@@ -31,6 +31,7 @@ OBJS_CONFIG_LIB = \
 	AMRFLDSplit_Initialize.o \
 	AMRFLDSplit_Opacity.o \
 	AMRFLDSplit_RadiationSource.o \
+	AMRFLDSplit_Redshifting.o \
 	AMRFLDSplit_SetupBoundary.o \
 	AMRFLDSplit_WriteParameters.o \
 	AMRGravitySolve.o \

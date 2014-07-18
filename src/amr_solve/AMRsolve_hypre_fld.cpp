@@ -65,8 +65,7 @@ AMRsolve_Hypre_FLD::AMRsolve_Hypre_FLD(AMRsolve_Hierarchy& hierarchy,
   : grid_(0), graph_(0), stencil_(0), A_(0), B_(0), X_(0), Y_(0), solver_(0), 
     Ac_(0), Bc_(0), Xc_(0), cgrid_(0), cstencil_(0), Rmin_(-1.0), Dmax_(-1.0),
     parameters_(&parameters), hierarchy_(&hierarchy), resid_(-1.0), iter_(-1), 
-    citer_(-1), r_factor_(const_r_factor), bin_(bin), Nchem_(-1), theta_(-1.0), 
-    dt_(-1.0), aval_(-1.0), aval0_(-1.0), adot_(-1.0), adot0_(-1.0), 
+    citer_(-1), r_factor_(const_r_factor), bin_(bin), theta_(-1.0), dt_(-1.0), 
     nUn_(-1.0), nUn0_(-1.0), lUn_(-1.0), lUn0_(-1.0), rUn_(-1.0), rUn0_(-1.0)
 {
   // set preconditioner flag
@@ -357,21 +356,14 @@ void AMRsolve_Hypre_FLD::init_graph()
 /// Initialize the matrix A and right-hand-side vector b
 /* Creates a matrix with a given nonzero structure, and sets nonzero
    values. */
-void AMRsolve_Hypre_FLD::init_elements(double dt, int Nchem, double theta, 
-				       double aval, double aval0, 
-				       double adot, double adot0, 
+void AMRsolve_Hypre_FLD::init_elements(double dt, double theta, 
 				       double nUn, double nUn0, 
 				       double lUn, double lUn0, double rUn, 
 				       double rUn0, int BdryType[3][2])
 {
   // set input arguments into AMRsolve_Hypre_FLD object
   dt_        = dt;
-  Nchem_     = Nchem;
   theta_     = theta;
-  aval_      = aval;
-  aval0_     = aval0;
-  adot_      = adot;
-  adot0_     = adot0;
   nUn_       = nUn;
   nUn0_      = nUn0;
   lUn_       = lUn;
@@ -919,8 +911,6 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
   Scalar Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, R, R0, kap, kap0;
   Scalar D_zl, D_yl, D_xl, D_xr, D_yr, D_zr;
   Scalar D0_zl, D0_yl, D0_xl, D0_xr, D0_yr, D0_zr;
-  Scalar afac  = adot_  / aval_;
-  Scalar afac0 = adot0_ / aval0_;
   Scalar dtfac  = dt_ * theta_;
   Scalar dtfac0 = dt_ * (1.0 - theta_);
   Scalar c = 2.99792458e10;
@@ -1041,19 +1031,19 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 	  // set rhs in this cell
 	  i = i0 + n0*(i1 + n1*i2);
 	  values[i] = ( (dtfac/rUn_ + dtfac0/rUn0_)*eta[k_000]
-		      + (1.0 - dtfac0*(afac0+c*kap0))*E[k_000]
+		      + (1.0 - dtfac0*c*kap0)*E[k_000]
 		      + dxfac0*(D0_xr*Ed_xr - D0_xl*Ed_xl)
 		      + dyfac0*(D0_yr*Ed_yr - D0_yl*Ed_yl)
 		      + dzfac0*(D0_zr*Ed_zr - D0_zl*Ed_zl)
-		      - (1.0 + dtfac*(afac+c*kap))*E[k_000]
+		      - (1.0 + dtfac*c*kap)*E[k_000]
 		      + dxfac*(D_xr*Ed_xr - D_xl*Ed_xl)
 		      + dyfac*(D_yr*Ed_yr - D_yl*Ed_yl)
 		      + dzfac*(D_zr*Ed_zr - D_zl*Ed_zl) );
 
 	  // check that value is legal, otherwise output an error message
 	  if (isinf(values[i]) || isnan(values[i])) {
-	    fprintf(stderr,"init_elements_rhs_ ERROR: encountered illegal value (%g)\n   eta = %g, E = %g, dtfac = %g, dtfac0 = %g, afac = %g, kap = %g\n   D* = %g, %g, %g, %g, %g, %g\n   Ed* = %g %g %g %g %g %g\n\n",
-		    values[i], eta[k_000], E[k_000], dtfac, dtfac0, afac, kap, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, Ed_xl, Ed_xr, Ed_yl, Ed_yr, Ed_zl, Ed_zr);
+	    fprintf(stderr,"init_elements_rhs_ ERROR: encountered illegal value (%g)\n   eta = %g, E = %g, dtfac = %g, dtfac0 = %g, kap = %g\n   D* = %g, %g, %g, %g, %g, %g\n   Ed* = %g %g %g %g %g %g\n\n",
+		    values[i], eta[k_000], E[k_000], dtfac, dtfac0, kap, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, Ed_xl, Ed_xr, Ed_yl, Ed_yr, Ed_zl, Ed_zr);
 	    ERROR("NaN error in init_elements_rhs_\n");
 	  }
 
@@ -1251,7 +1241,6 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
   // declare shortcut variables
   double Ed_zl, Ed_yl, Ed_xl, Ed_xr, Ed_yr, Ed_zr, kap;
   double D_zl, D_yl, D_xl, D_xr, D_yr, D_zr;
-  double afac = adot_ / aval_;
   double dtfac = dt_ * theta_;
   double c = 2.99792458e10;
 
@@ -1358,7 +1347,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	v1[0][1][i] = -dxfac*D_xr;    // x-right
 	v1[1][1][i] = -dyfac*D_yr;    // y-right
 	v1[2][1][i] = -dzfac*D_zr;    // z-right
-	v0[i] = 1.0 + dtfac*(afac + c*kap) + dxfac*(D_xl+D_xr) 
+	v0[i] = 1.0 + dtfac*c*kap + dxfac*(D_xl+D_xr) 
 		    + dyfac*(D_yl+D_yr) + dzfac*(D_zl+D_zr);  // self
 
 	// check that value is legal, if not issue an error message
@@ -1395,7 +1384,7 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	}
 	vtmp = v0[i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, afac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i \n\n", vtmp, dtfac, afac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i \n\n", vtmp, dtfac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2);
 	  badvalue = 1;
 	}
 	if (badvalue == 1)
@@ -2126,7 +2115,6 @@ void AMRsolve_Hypre_FLD::update_fine_coarse_const_(int face,
 
   // declare shortcut variables
   Scalar Ed, D;
-  Scalar afac = adot_ / aval_;
   Scalar dtfac = dt_ * theta_;
 
   // get active enzo grid size

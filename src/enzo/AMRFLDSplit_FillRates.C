@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -12,7 +10,7 @@
 /  Split Implicit Problem Class, FillRates routine.
 /
 /  written by: Daniel Reynolds
-/  date:       December 2010
+/  date:       July 2014
 /
 /  PURPOSE: Fills the photo-ionization and photo-heating arrays used by
 /           chemistry and cooling routines using time-averaged internal

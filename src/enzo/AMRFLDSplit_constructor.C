@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -54,6 +52,7 @@ AMRFLDSplit::AMRFLDSplit()
   LimiterDmax = 1.e-2;
 
   // initialize solver diagnostics
+  diags      = false;
   RTtime     = 0.0;
   AMRSolTime = 0.0;
   for (bin=0; bin<MAX_FLD_FIELDS; bin++)
@@ -118,14 +117,13 @@ AMRFLDSplit::AMRFLDSplit()
   adot           = 0.0;
   adot0          = 0.0;
   aUnits         = 1.0;
-  autoScale      = true;
-  StartAutoScale = false;
-  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
-    ErScale[bin] = 1.0;
-  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
-    ErUnits[bin] = 1.0;
-  for (bin=0; bin<MAX_FLD_FIELDS; bin++) 
-    ErUnits0[bin] = 1.0;
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) {
+    autoScale[bin]      = true;
+    StartAutoScale[bin] = false;
+    ErScale[bin]        = 1.0;
+    ErUnits[bin]        = 1.0;
+    ErUnits0[bin]       = 1.0;
+  }
   NiUnits   = 1.0;
   NiUnits0  = 1.0;
   DenUnits  = 1.0;
