@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -61,176 +59,160 @@ int AMRFLDSplit::EnforceBoundary(int ibin, LevelHierarchyEntry *LevelArray[])
   float dx[3];
   for (int dim=0; dim<rank; dim++)
     dx[dim] = (ThisGrid->GridData->GetGridRightEdge(dim) 
-	       - ThisGrid->GridData->GetGridLeftEdge(dim)) 
-            / n3[dim];
+	     - ThisGrid->GridData->GetGridLeftEdge(dim)) 
+             / n3[dim];
       
-  // access old/new radiation fields (old always stored in KPhHI)
-  float *Eold = ThisGrid->GridData->AccessKPhHI();
+  // access current radiation field
   float *Enew = AccessRadiationField(ibin, ThisGrid);
-
+  
   // set some shortcuts
-  float *fields[2];
-  fields[0] = Eold;
-  fields[1] = Enew;
-  float dxscale[] = {LenUnits0, LenUnits};
-  float units[] = {ErUnits0[ibin], ErUnits[ibin]};
-  float dxa, dya, dza, unit, *udata;
+  float dxa, dya, dza, unit;
   int i, i2, j, j2, k, k2, idx, idx2, idxbc;
-
-  // execute the boundary condition loop twice, first for Eold, then for Enew
-  for (int loop=0; loop<2; loop++) {
+  dxa = dx[0] * LenUnits;
+  
+  // x0 left boundary
+  //   Dirichlet
+  if (OnBdry[0][0] && (BdryType[0][0]==1)) {
+    for (k=0; k<n3[2]; k++)
+      for (j=0; j<n3[1]; j++)
+	for (i=0; i<ghXl; i++) {
+	  idxbc = k*n3[1] + j;
+	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
+	  Enew[idx] = BdryVals[ibin][0][0][idxbc]/ErUnits[ibin];
+	}
+  }
+  //   Neumann
+  if (OnBdry[0][0] && (BdryType[0][0]==2)) {
+    i = -1;  i2 = i+1;
+    for (k=0; k<n3[2]; k++)
+      for (j=0; j<n3[1]; j++) {
+	idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
+	idxbc = k*n3[1] + j;
+	Enew[idx] = Enew[idx2] + dxa*BdryVals[ibin][0][0][idxbc]/ErUnits[ibin];
+      }
+  }
     
-    // set shortcuts to this radiation field, mesh spacing
-    dxa = dx[0] * dxscale[loop];
-    dya = dx[1] * dxscale[loop];
-    dya = dx[2] * dxscale[loop];
-    unit = units[loop];
-    udata = fields[loop];
-
-    // x0 left boundary
+  // x0 right boundary
+  //   Dirichlet
+  if (OnBdry[0][1] && (BdryType[0][1]==1)) {
+    for (k=0; k<n3[2]; k++)
+      for (j=0; j<n3[1]; j++)
+	for (i=x0len-ghXl; i<x0len; i++) {
+	  idxbc = k*n3[1] + j;
+	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
+	  Enew[idx] = BdryVals[ibin][0][1][idxbc]/ErUnits[ibin];
+	}
+  }
+  //   Neumann
+  if (OnBdry[0][1] && (BdryType[0][1]==2)) {
+    i = n3[0];  i2 = i-1;
+    for (k=0; k<n3[2]; k++)
+      for (j=0; j<n3[1]; j++) {
+	idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
+	idxbc = k*n3[1] + j;
+	Enew[idx] = Enew[idx2] + dxa*BdryVals[ibin][0][1][idxbc]/ErUnits[ibin];
+      }
+  }
+    
+  if (rank > 1) {
+    dya = dx[1]*LenUnits;
+    // x1 left boundary
     //   Dirichlet
-    if (OnBdry[0][0] && (BdryType[0][0]==1)) {
+    if (OnBdry[1][0] && (BdryType[1][0]==1)) {
       for (k=0; k<n3[2]; k++)
-	for (j=0; j<n3[1]; j++)
-	  for (i=0; i<ghXl; i++) {
-	    idxbc = k*n3[1] + j;
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
-	    udata[idx] = BdryVals[ibin][0][0][idxbc]/unit;
+	for (j=0; j<ghYl; j++)
+	  for (i=0; i<n3[0]; i++) {
+	    idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
+	    idxbc = i*n3[2] + k;
+	    Enew[idx] = BdryVals[ibin][1][0][idxbc]/ErUnits[ibin];
 	  }
     }
     //   Neumann
-    if (OnBdry[0][0] && (BdryType[0][0]==2)) {
-      i = -1;  i2 = i+1;
+    if (OnBdry[1][0] && (BdryType[1][0]==2)) {
+      j = -1;  j2 = j+1;
       for (k=0; k<n3[2]; k++)
-	for (j=0; j<n3[1]; j++) {
+	for (i=0; i<n3[0]; i++) {
 	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	  idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
-	  idxbc = k*n3[1] + j;
-	  udata[idx] = udata[idx2] + dxa*BdryVals[ibin][0][0][idxbc]/unit;
+	  idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
+	  idxbc = i*n3[2] + k;
+	  Enew[idx] = Enew[idx2] + dya*BdryVals[ibin][1][0][idxbc]/ErUnits[ibin];
 	}
     }
-    
-    // x0 right boundary
+      
+    // x1 right boundary
     //   Dirichlet
-    if (OnBdry[0][1] && (BdryType[0][1]==1)) {
+    if (OnBdry[1][1] && (BdryType[1][1]==1)) {
       for (k=0; k<n3[2]; k++)
-	for (j=0; j<n3[1]; j++)
-	  for (i=x0len-ghXl; i<x0len; i++) {
-	    idxbc = k*n3[1] + j;
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i;
-	    udata[idx] = BdryVals[ibin][0][1][idxbc]/unit;
+	for (j=x1len-ghYl; j<x1len; j++)
+	  for (i=0; i<n3[0]; i++) {
+	    idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
+	    idxbc = i*n3[2] + k;
+	    Enew[idx] = BdryVals[ibin][1][1][idxbc]/ErUnits[ibin];
 	  }
     }
     //   Neumann
-    if (OnBdry[0][1] && (BdryType[0][1]==2)) {
-      i = n3[0];  i2 = i-1;
+    if (OnBdry[1][1] && (BdryType[1][1]==2)) {
+      j = n3[1];  j2 = j-1;
       for (k=0; k<n3[2]; k++)
-	for (j=0; j<n3[1]; j++) {
+	for (i=0; i<n3[0]; i++) {
 	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	  idx2 = ((k+ghZl)*x1len + j+ghYl)*x0len + i2+ghXl;
-	  idxbc = k*n3[1] + j;
-	  udata[idx] = udata[idx2] + dxa*BdryVals[ibin][0][1][idxbc]/unit;
+	  idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
+	  idxbc = i*n3[2] + k;
+	  Enew[idx] = Enew[idx2] + dya*BdryVals[ibin][1][1][idxbc]/ErUnits[ibin];
 	}
     }
+  }  // end if rank > 1
     
-    if (rank > 1) {
-      dya = dx[1]*LenUnits/a;
-      // x1 left boundary
-      //   Dirichlet
-      if (OnBdry[1][0] && (BdryType[1][0]==1)) {
-	for (k=0; k<n3[2]; k++)
-	  for (j=0; j<ghYl; j++)
-	    for (i=0; i<n3[0]; i++) {
-	      idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
-	      idxbc = i*n3[2] + k;
-	      udata[idx] = BdryVals[ibin][1][0][idxbc]/unit;
-	    }
-      }
-      //   Neumann
-      if (OnBdry[1][0] && (BdryType[1][0]==2)) {
-	j = -1;  j2 = j+1;
-	for (k=0; k<n3[2]; k++)
-	  for (i=0; i<n3[0]; i++) {
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	    idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
-	    idxbc = i*n3[2] + k;
-	    udata[idx] = udata[idx2] + dya*BdryVals[ibin][1][0][idxbc]/unit;
-	  }
-      }
-      
-      // x1 right boundary
-      //   Dirichlet
-      if (OnBdry[1][1] && (BdryType[1][1]==1)) {
-	for (k=0; k<n3[2]; k++)
-	  for (j=x1len-ghYl; j<x1len; j++)
-	    for (i=0; i<n3[0]; i++) {
-	      idx = ((k+ghZl)*x1len + j)*x0len + i+ghXl;
-	      idxbc = i*n3[2] + k;
-	      udata[idx] = BdryVals[ibin][1][1][idxbc]/unit;
-	    }
-      }
-      //   Neumann
-      if (OnBdry[1][1] && (BdryType[1][1]==2)) {
-	j = n3[1];  j2 = j-1;
-	for (k=0; k<n3[2]; k++)
-	  for (i=0; i<n3[0]; i++) {
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	    idx2 = ((k+ghZl)*x1len + j2+ghYl)*x0len + i+ghXl;
-	    idxbc = i*n3[2] + k;
-	    udata[idx] = udata[idx2] + dya*BdryVals[ibin][1][1][idxbc]/unit;
-	  }
-      }
-    }  // end if rank > 1
-    
-    if (rank > 2) {
-      dza = dx[2]*LenUnits/a;
-      // x2 left boundary
-      //   Dirichlet
-      if (OnBdry[2][0] && (BdryType[2][0]==1)) {
-	for (k=0; k<ghZl; k++)
-	  for (j=0; j<n3[1]; j++)
-	    for (i=0; i<n3[0]; i++) {
-	      idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
-	      idxbc = j*n3[0] + i;
-	      udata[idx] = BdryVals[ibin][2][0][idxbc]/unit;
-	    }
-      }
-      //   Neumann
-      if (OnBdry[2][0] && (BdryType[2][0]==2)) {
-	k = -1;  k2 = k+1;
+  if (rank > 2) {
+    dza = dx[2]*LenUnits;
+    // x2 left boundary
+    //   Dirichlet
+    if (OnBdry[2][0] && (BdryType[2][0]==1)) {
+      for (k=0; k<ghZl; k++)
 	for (j=0; j<n3[1]; j++)
 	  for (i=0; i<n3[0]; i++) {
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	    idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	    idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
 	    idxbc = j*n3[0] + i;
-	    udata[idx] = udata[idx2] + dza*BdryVals[ibin][2][0][idxbc]/unit;
+	    Enew[idx] = BdryVals[ibin][2][0][idxbc]/ErUnits[ibin];
 	  }
-      }
+    }
+    //   Neumann
+    if (OnBdry[2][0] && (BdryType[2][0]==2)) {
+      k = -1;  k2 = k+1;
+      for (j=0; j<n3[1]; j++)
+	for (i=0; i<n3[0]; i++) {
+	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	  idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	  idxbc = j*n3[0] + i;
+	  Enew[idx] = Enew[idx2] + dza*BdryVals[ibin][2][0][idxbc]/ErUnits[ibin];
+	}
+    }
       
-      // x2 right boundary
-      //   Dirichlet
-      if (OnBdry[2][1] && (BdryType[2][1]==1)) {
-	for (k=x2len-ghZl; k<x2len; k++)
-	  for (j=0; j<n3[1]; j++)
-	    for (i=0; i<n3[0]; i++) {
-	      idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
-	      idxbc = j*n3[0] + i;
-	      udata[idx] = BdryVals[ibin][2][1][idxbc]/unit;
-	    }
-      }
-      //   Neumann
-      if (OnBdry[2][1] && (BdryType[2][1]==2)) {
-	k = n3[2];  k2 = k-1;
+    // x2 right boundary
+    //   Dirichlet
+    if (OnBdry[2][1] && (BdryType[2][1]==1)) {
+      for (k=x2len-ghZl; k<x2len; k++)
 	for (j=0; j<n3[1]; j++)
 	  for (i=0; i<n3[0]; i++) {
-	    idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
-	    idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	    idx = (k*x1len + j+ghYl)*x0len + i+ghXl;
 	    idxbc = j*n3[0] + i;
-	    udata[idx] = udata[idx2] + dza*BdryVals[ibin][2][1][idxbc]/unit;
+	    Enew[idx] = BdryVals[ibin][2][1][idxbc]/ErUnits[ibin];
 	  }
-      }
-    }  // end if rank > 2
-  }  // end for "loop"
+    }
+    //   Neumann
+    if (OnBdry[2][1] && (BdryType[2][1]==2)) {
+      k = n3[2];  k2 = k-1;
+      for (j=0; j<n3[1]; j++)
+	for (i=0; i<n3[0]; i++) {
+	  idx = ((k+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	  idx2 = ((k2+ghZl)*x1len + j+ghYl)*x0len + i+ghXl;
+	  idxbc = j*n3[0] + i;
+	  Enew[idx] = Enew[idx2] + dza*BdryVals[ibin][2][1][idxbc]/ErUnits[ibin];
+	}
+    }
+  }  // end if rank > 2
 
 //   if (debug)
 //     printf("Exiting AMRFLDSplit::EnforceBoundary routine\n");

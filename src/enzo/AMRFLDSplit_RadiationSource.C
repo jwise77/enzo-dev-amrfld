@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -12,12 +10,13 @@
 /  Split Implicit Problem Class, Emissivity Field Computation Routine
 /
 /  written by: Daniel Reynolds
-/  date:       January 2011
+/  date:       July 2014
 /  modified1:  
 /
 /  PURPOSE: Computes the emissivity field to enforce on the radiation 
-/           energy equation.  This is only called if StarMaker sources 
-/           are not handled elsewhere (i.e. for test problems).
+/           energy equation.  The source terms are added to any sources
+/           already present in each emissivity field.
+/
 ************************************************************************/
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
@@ -30,8 +29,8 @@ int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
  
 
 
-float AMRFLDSplit::RadiationSource(int ibin, LevelHierarchyEntry *LevelArray[], 
-				   int level, float time)
+int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[], 
+				 int level, float time)
 {
 
   // initialize local variables to be reused
@@ -73,108 +72,96 @@ float AMRFLDSplit::RadiationSource(int ibin, LevelHierarchyEntry *LevelArray[],
 	  dVscale *= (Temp->GridData->GetGridRightEdge(dim) 
  		    - Temp->GridData->GetGridLeftEdge(dim)) 
 	            / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
+
+
+	// iterate over all radiation fields
+	for (int ibin=0; ibin<NumRadiationFields; ibin++) {
+
+	  // access emissivity field
+	  float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
+	  if (eta == NULL)
+	    ENZO_VFAIL("AMRFLDSplit_RadiationSource error: emissivity field %"ISYM" missing\n",
+		       ibin);
+
+	  // iterate over sources, adding emissivity to this bin at specified location
+	  for (int isrc=0; isrc<NumSources; isrc++) {
+
+	    // all sources have radius of one cell; count number of cells to receive source
+	    int num_cells = 0;
+	    for (k=ghZl; k<n3[2]+ghZl; k++) {
+	      cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
+	      for (j=ghYl; j<n3[1]+ghYl; j++) {
+		cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
+		for (i=ghXl; i<n3[0]+ghXl; i++) {
+		  cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
+		  if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
+		       (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
+		       (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
+		    num_cells++;                        // cell is within source region
+		} // x-loop
+	      } // y-loop
+	    } // z-loop
+
+	    // equi-partition energy among affected cells
+	    float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
+	    for (k=ghZl; k<n3[2]+ghZl; k++) {
+	      cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
+	      for (j=ghYl; j<n3[1]+ghYl; j++) {
+		cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
+		for (i=ghXl; i<n3[0]+ghXl; i++) {
+		  cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
+		  if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
+		       (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
+		       (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
+		    eta[(k*x1len + j)*x0len + i] += cell_energy;
+		} // x-loop
+	      } // y-loop
+	    } // z-loop
+
+	  } // end loop over sources from input parameters
+
 	
-	// access emissivity field
-	float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
-	if (eta == NULL)
-	  ENZO_VFAIL("AMRFLDSplit_RadiationSource error: emissivity field %"ISYM" missing\n",
-		     ibin);
-
-	// iterate over sources, adding emissivity to this bin at specified location
-	for (int isrc=0; isrc<NumSources; isrc++) {
-
-	  // all sources have radius of one cell; count number of cells to receive source
-	  int num_cells = 0;
-	  for (k=ghZl; k<n3[2]+ghZl; k++) {
-	    cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
-	    for (j=ghYl; j<n3[1]+ghYl; j++) {
-	      cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
-	      for (i=ghXl; i<n3[0]+ghXl; i++) {
-		cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
-		if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
-		     (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
-		     (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
-		  num_cells++;                        // cell is within source region
-	      } // x-loop
-	    } // y-loop
-	  } // z-loop
-
-	  // equi-partition energy among affected cells
-	  float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
-	  for (k=ghZl; k<n3[2]+ghZl; k++) {
-	    cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
-	    for (j=ghYl; j<n3[1]+ghYl; j++) {
-	      cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
-	      for (i=ghXl; i<n3[0]+ghXl; i++) {
-		cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
-		if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
-		     (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
-		     (fabs(cellZc-SourceLocation[ibin][2]) < dx[2]) )
-		  eta[(k*x1len + j)*x0len + i] += cell_energy;
-	      } // x-loop
-	    } // y-loop
-	  } // z-loop
-
-	} // end loop over sources from input parameters
-
+	  /////////////
+	  // add emissivity based on ProblemType, if desired
 	
-	/////////////
-	// add emissivity based on ProblemType, if desired
-	
-	switch (ProblemType) {
+	  switch (ProblemType) {
 
-	case 412:    // emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
+	  case 412:    // emissivity flux along x=0 wall (NGammaDot photons/s/cm^2)
 	  
-	  // only relevant for radiation groups (not individual frequencies)
-	  if (!FieldMonochromatic[ibin]) {
+	    // only relevant for radiation groups (not individual frequencies)
+	    if (!FieldMonochromatic[ibin]) {
 
-	    // place ionization sources along left wall (if on this subdomain)
-	    if (x0L == 0.0) {
+	      // place ionization sources along left wall (if on this subdomain)
+	      if (x0L == 0.0) {
 
-	      // determine this group's portion of total blackbody emissivity
-	      BlackbodySED tmp_src(1.0e5);
-	      float total_integral;
-	      if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
-		ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
+		// determine this group's portion of total blackbody emissivity
+		BlackbodySED tmp_src(1.0e5);
+		float total_integral;
+		if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
+		  ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
+		}
+		float integral;
+		if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
+				 true, integral) != SUCCESS) {
+		  ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
+		}
+		float wall_energy = 1e6 * 13.6 * ev2erg * integral / total_integral / dx[0] / lUn;
+
+		// place along wall (i=ghXl)
+		for (k=ghZl; k<n3[2]+ghZl; k++)
+		  for (j=ghYl; j<n3[1]+ghYl; j++)
+		    eta[(k*x1len + j)*x0len + ghXl] = wall_energy;
 	      }
-	      float integral;
-	      if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
-			       true, integral) != SUCCESS) {
-		ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
-	      }
-	      float wall_energy = 1e6 * 13.6 * ev2erg * integral / total_integral / dx[0] / lUn;
-
-	      // place along wall (i=ghXl)
-	      for (k=ghZl; k<n3[2]+ghZl; k++)
-		for (j=ghYl; j<n3[1]+ghYl; j++)
-		  eta[(k*x1len + j)*x0len + ghXl] = wall_energy;
-	    }
-	  } 
-	  break;
-		
+	    } 
+	    break;
 	  
-	}
+	  }
 	
-	// accumulate L2 norm of total active emissivity on this grid
-	for (k=ghZl; k<n3[2]+ghZl; k++) 
-	  for (j=ghYl; j<n3[1]+ghYl; j++) 
-	    for (i=ghXl; i<n3[0]+ghXl; i++) 
- 	      total_eta += eta[(k*x1len+j)*x0len+i]*eta[(k*x1len+j)*x0len+i]*dVscale;
+	}  // end iteration over radiation fields
 	
       }  // end iteration over grids on this processor
  
-  // communicate to obtain overall emissivity
-  float glob_eta = 0.0;
-#ifdef USE_MPI
-  MPI_Datatype DataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
-  MPI_Arg ONE = 1;
-  MPI_Allreduce(&total_eta,&glob_eta,ONE,DataType,MPI_SUM,MPI_COMM_WORLD);
-#else
-  glob_eta = total_eta;
-#endif
-  
-  return sqrt(glob_eta);
-
+  return SUCCESS;
 }
 
 #endif

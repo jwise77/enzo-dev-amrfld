@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2012 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *

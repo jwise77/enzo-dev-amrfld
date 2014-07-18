@@ -40,13 +40,8 @@ private:
   double               Dmax_;          // limiter parameter
   const int            r_factor_;      // Refinement factor
   int                  bin_;           // current radiation bin
-  int                  Nchem_;         // number of chemical species
   double               theta_;         // time discretization parameter
   double               dt_;            // time step size
-  double               aval_;          // cosmological expansion constant
-  double               aval0_;         // cosmological expansion constant (old time)
-  double               adot_;          // rate of cosmological expansion
-  double               adot0_;         // rate of cosmological expansion (old time)
   double               nUn_;           // number density units
   double               nUn0_;          // number density units (old time)
   double               lUn_;           // length units
@@ -65,9 +60,8 @@ public:
   void init_hierarchy();
   void init_stencil();
   void init_graph();
-  void init_elements(double dt, int Nchem, double theta, double aval, 
-		     double aval0, double adot, double adot0, 		     
-		     double nUn, double nUn0, double lUn, double lUn0, 
+  void init_elements(double dt, double theta, double nUn, 
+		     double nUn0, double lUn, double lUn0, 
 		     double rUn, double rUn0, int BdryType[3][2]);
   double rdiff_norm(double pnorm, double atol);
   void solve();

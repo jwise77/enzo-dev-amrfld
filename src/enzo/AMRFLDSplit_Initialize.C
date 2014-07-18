@@ -353,7 +353,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
       fprintf(stderr,"   re-setting to 1.0\n");
       ErScale[ibin] = 1.0;  // default to no scaling
     }
-  autoScale = (autoscale != 0);  // set bool based on integer input
+  for (ibin=0; ibin<NumRadiationFields; ibin++) 
+    autoScale[ibin] = (autoscale != 0);  // set bool values based on integer input flag
   if (debug) {
     printf("AMRFLDSplit::Initialize scaling factors:\n");
     for (ibin=0; ibin<NumRadiationFields; ibin++) 
@@ -923,6 +924,17 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
   if (Isothermal) 
     if (FreezeRateData(MetaData.Time, TopGrid) == FAIL) 
       ENZO_FAIL("Error in FreezeRateData.");
+
+
+  // set 'diags' flag if any processor has 'debug' set
+  int glob_debug = 0;
+#ifdef USE_MPI
+  MPI_Datatype DataType = (sizeof(int) == 4) ? MPI_INT : MPI_LONG_LONG_INT;
+  MPI_Allreduce(&debug,&glob_debug,1,DataType,MPI_SUM,MPI_COMM_WORLD);
+#else
+  glob_debug = debug;
+#endif
+  diags = (glob_debug != 0);
 
 
   //  if (debug) printf("  AMRFLDSplit_Initialize: outputting parameters to log file\n");
