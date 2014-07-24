@@ -95,8 +95,8 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	    } // z-loop
 
 	    // equi-partition energy among affected cells
-	    //float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
-	    float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV * 1.52877652583602;
+	    float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
+	    //float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV * 1.52877652583602;
 	    for (k=ghZl; k<n3[2]+ghZl; k++) {
 	      cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
 	      for (j=ghYl; j<n3[1]+ghYl; j++) {
