@@ -76,11 +76,11 @@ int grid::RHIonizationClumpInitializeGrid(int NumChemicals,
   FieldType[RhoNum = NumberOfBaryonFields++] = Density;
   FieldType[TENum = NumberOfBaryonFields++]  = TotalEnergy;
   if (DualEnergyFormalism) 
-    FieldType[IENum = NumberOfBaryonFields++]  = InternalEnergy;
-  FieldType[V0Num = NumberOfBaryonFields++]    = Velocity1;
-  FieldType[V1Num = NumberOfBaryonFields++]    = Velocity2;
-  FieldType[V2Num = NumberOfBaryonFields++]    = Velocity3;
-  FieldType[E0Num = NumberOfBaryonFields++]    = RadiationFreq0;
+    FieldType[IENum = NumberOfBaryonFields++] = InternalEnergy;
+  FieldType[V0Num = NumberOfBaryonFields++]   = Velocity1;
+  FieldType[V1Num = NumberOfBaryonFields++]   = Velocity2;
+  FieldType[V2Num = NumberOfBaryonFields++]   = Velocity3;
+  FieldType[E0Num = NumberOfBaryonFields++]   = RadiationFreq0;
   if (NumBins > 1)
     FieldType[E1Num = NumberOfBaryonFields++]    = RadiationFreq1;
   if (NumBins > 2)
@@ -120,7 +120,8 @@ int grid::RHIonizationClumpInitializeGrid(int NumChemicals,
   }
   // if using the AMRFLDSplit solver, set fields for the emissivity
   if (ImplicitProblem == 6) {
-    FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
+    if (NumBins > 0)
+      FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
     if (NumBins > 1)
       FieldType[eta1Num = NumberOfBaryonFields++] = Emissivity1;
     if (NumBins > 2)
@@ -226,7 +227,8 @@ int grid::RHIonizationClumpInitializeGrid(int NumChemicals,
 
     // if using the AMRFLDSplit solver, set emissivity fields
     if (ImplicitProblem == 6) {
-      for (i=0; i<size; i++)  BaryonField[eta0Num][i] = 0.0;
+      if (NumBins > 0)
+	for (i=0; i<size; i++)  BaryonField[eta0Num][i] = 0.0;
       if (NumBins > 1) 
 	for (i=0; i<size; i++)  BaryonField[eta1Num][i] = 0.0;
       if (NumBins > 2) 

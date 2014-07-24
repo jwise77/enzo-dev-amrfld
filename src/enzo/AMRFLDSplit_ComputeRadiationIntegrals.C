@@ -46,7 +46,32 @@
 
 
 // function prototypes
-int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
+float SED_integral(SED &sed, float a, float b, bool convertHz);
+
+// SED types for computing cross-section integrals 
+class CrossSection_Ionizing : public virtual SED {
+ private:
+  CrossSectionSED *baseSED;     // base SED
+ public:
+  CrossSection_Ionizing(CrossSectionSED &base) { this->baseSED = &base; };
+  bool monochromatic() { return this->baseSED->monochromatic(); };
+  float lower_bound() { return this->baseSED->lower_bound(); };
+  float upper_bound() { return this->baseSED->upper_bound(); };
+  float value(float hnu) { return this->baseSED->value(hnu)*hplanck/hnu/ev2erg; };
+};
+
+class CrossSection_Heating : public virtual SED {
+ private:
+  CrossSectionSED *baseSED;     // base SED
+ public:
+  CrossSection_Heating(CrossSectionSED &base) { this->baseSED = &base; };
+  bool monochromatic() { return this->baseSED->monochromatic(); };
+  float lower_bound() { return this->baseSED->lower_bound(); };
+  float upper_bound() { return this->baseSED->upper_bound(); };
+  float value(float hnu) { 
+    return this->baseSED->value(hnu)*(1.0 - this->baseSED->lower_bound()/hnu); 
+  };
+};
 
 
 
@@ -54,16 +79,16 @@ int AMRFLDSplit::ComputeRadiationIntegrals() {
 
   //  if (debug)  printf("Entering AMRFLDSplit::ComputeRadiationIntegrals\n");
 
-  // create SED objects
-  CrossSectionSED sHI(0, 0);
-  CrossSectionSED sHeI(1, 0);
-  CrossSectionSED sHeII(2, 0);
-  CrossSectionSED sHI_ion(0, 1);
-  CrossSectionSED sHeI_ion(1, 1);
-  CrossSectionSED sHeII_ion(2, 1);
-  CrossSectionSED sHI_heat(0, 2);
-  CrossSectionSED sHeI_heat(1, 2);
-  CrossSectionSED sHeII_heat(2, 2);
+  // create SED objects for each chemical species and integrand
+  CrossSectionSED sHI(0);
+  CrossSectionSED sHeI(1);
+  CrossSectionSED sHeII(2);
+  CrossSection_Ionizing sHI_i(sHI);
+  CrossSection_Ionizing sHeI_i(sHeI);
+  CrossSection_Ionizing sHeII_i(sHeII);
+  CrossSection_Heating sHI_h(sHI);
+  CrossSection_Heating sHeI_h(sHeI);
+  CrossSection_Heating sHeII_h(sHeII);
 
   // loop over radiation fields
   for (int ibin=0; ibin<NumRadiationFields; ibin++) {
@@ -79,15 +104,15 @@ int AMRFLDSplit::ComputeRadiationIntegrals() {
       intOpacity_HeI[ibin]  = sHeI.value(hnu);
       intOpacity_HeII[ibin] = sHeII.value(hnu);
 
-      // sigma(nu_freq) / nu_freq^2
-      intIonizing_HI[ibin]   = sHI_ion.value(hnu)/nu;
-      intIonizing_HeI[ibin]  = sHeI_ion.value(hnu)/nu;
-      intIonizing_HeII[ibin] = sHeII_ion.value(hnu)/nu;
+      // sigma(nu_freq) / nu_freq
+      intIonizing_HI[ibin]   = sHI_i.value(hnu);
+      intIonizing_HeI[ibin]  = sHeI_i.value(hnu);
+      intIonizing_HeII[ibin] = sHeII_i.value(hnu);
 
-      // sigma(nu_freq) * (1/nu_freq - nu_species / nu_freq^2)
-      intHeating_HI[ibin]   = sHI_heat.value(hnu)/nu;
-      intHeating_HeI[ibin]  = sHeI_heat.value(hnu)/nu;
-      intHeating_HeII[ibin] = sHeII_heat.value(hnu)/nu;
+      // sigma(nu_freq) * (1 - nu_species / nu_freq)
+      intHeating_HI[ibin]   = sHI_h.value(hnu);
+      intHeating_HeI[ibin]  = sHeI_h.value(hnu);
+      intHeating_HeII[ibin] = sHeII_h.value(hnu);
       
     // radiation group
     } else {
@@ -98,55 +123,51 @@ int AMRFLDSplit::ComputeRadiationIntegrals() {
       float IntVal;
 
       // 1/|binwidth| * int_{bin} sigmaHI(nu) d nu
-      if (SED_integral(sHI, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HI opacity integral")
-      intOpacity_HI[ibin] = IntVal / binwidth;
+      intOpacity_HI[ibin] = SED_integral(sHI, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeI(nu) d nu
-      if (SED_integral(sHeI, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeI opacity integral")
-      intOpacity_HeI[ibin] = IntVal / binwidth;
+      intOpacity_HeI[ibin] = SED_integral(sHeI, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeII(nu) d nu
-      if (SED_integral(sHeII, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeII opacity integral")
-      intOpacity_HeII[ibin] = IntVal / binwidth;
+      intOpacity_HeII[ibin] = SED_integral(sHeII, hnu_L, hnu_R, true) / binwidth;
       
       // 1/|binwidth| * int_{bin} sigmaHI(nu)/nu d nu
-      if (SED_integral(sHI_ion, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HI ionization integral")
-      intIonizing_HI[ibin] = IntVal / binwidth;
+      intIonizing_HI[ibin] = SED_integral(sHI_i, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeI(nu)/nu d nu
-      if (SED_integral(sHeI_ion, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeI ionization integral")
-      intIonizing_HeI[ibin] = IntVal / binwidth;
+      intIonizing_HeI[ibin] = SED_integral(sHeI_i, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeII(nu)/nu d nu
-      if (SED_integral(sHeII_ion, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeII ionization integral")
-      intIonizing_HeII[ibin] = IntVal / binwidth;
+      intIonizing_HeII[ibin] = SED_integral(sHeII_i, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHI(nu)*(1-nuHI/nu) d nu
-      if (SED_integral(sHI_heat, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HI photoheating integral")
-      intHeating_HI[ibin] = IntVal / binwidth;
+      intHeating_HI[ibin] = SED_integral(sHI_h, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeI(nu)*(1-nuHeI/nu) d nu
-      if (SED_integral(sHeI_heat, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeI photoheating integral")
-      intHeating_HeI[ibin] = IntVal / binwidth;
+      intHeating_HeI[ibin] = SED_integral(sHeI_h, hnu_L, hnu_R, true) / binwidth;
 
       // 1/|binwidth| * int_{bin} sigmaHeII(nu)*(1-nuHeII/nu) d nu
-      if (SED_integral(sHeII_heat, hnu_L, hnu_R, true, IntVal) != SUCCESS)
-	ENZO_FAIL("Error in computing HeII photoheating integral")
-      intHeating_HeII[ibin] = IntVal / binwidth;
+      intHeating_HeII[ibin] = SED_integral(sHeII_h, hnu_L, hnu_R, true) / binwidth;
 
+    }
+
+    // output bin integrals
+    if (debug) {
+      printf("Computed Integrals for Radiation Field %"ISYM":\n", ibin);
+      printf("  intOpacity_HI    = %22.16e\n", intOpacity_HI[ibin]);
+      printf("  intOpacity_HeI   = %22.16e\n", intOpacity_HeI[ibin]);
+      printf("  intOpacity_HeII  = %22.16e\n", intOpacity_HeII[ibin]);
+      printf("  intIonizing_HI   = %22.16e\n", intIonizing_HI[ibin]);
+      printf("  intIonizing_HeI  = %22.16e\n", intIonizing_HeI[ibin]);
+      printf("  intIonizing_HeII = %22.16e\n", intIonizing_HeII[ibin]);
+      printf("  intHeating_HI    = %22.16e\n", intHeating_HI[ibin]);
+      printf("  intHeating_HeI   = %22.16e\n", intHeating_HeI[ibin]);
+      printf("  intHeating_HeII  = %22.16e\n", intHeating_HeII[ibin]);
     }
 
   }  // end loop over radiation fields
 
   return SUCCESS;
 }
- 
+
 #endif

@@ -376,7 +376,7 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, double theta,
 
   // set limiter parameters
   std::string srmin = parameters_->value("limiter_rmin");
-  if (srmin == "") parameters_->add_parameter("limiter_rmin","1e-20");
+  if (srmin == "") parameters_->add_parameter("limiter_rmin","1e-2");
   Rmin_ = atof(srmin.c_str());
   std::string sdmax = parameters_->value("limiter_dmax");
   if (sdmax == "") parameters_->add_parameter("limiter_dmax","1e-2");
@@ -470,9 +470,9 @@ void AMRsolve_Hypre_FLD::init_elements(double dt, double theta,
     ierr = HYPRE_StructMatrixAssemble(Ac_);
     if (ierr != 0) ERROR("could not assemble Ac_\n");
     ierr = HYPRE_StructVectorAssemble(Bc_);
-    if (ierr != 0) ERROR("could not assemble Ac_\n");
+    if (ierr != 0) ERROR("could not assemble Bc_\n");
     ierr = HYPRE_StructVectorAssemble(Xc_);
-    if (ierr != 0) ERROR("could not assemble Ac_\n");
+    if (ierr != 0) ERROR("could not assemble Xc_\n");
   }
 
 

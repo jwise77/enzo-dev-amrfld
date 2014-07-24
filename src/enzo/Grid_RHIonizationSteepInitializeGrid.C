@@ -77,25 +77,25 @@ int grid::RHIonizationSteepInitializeGrid(int NumChemicals,
   FieldType[V0Num = NumberOfBaryonFields++] = Velocity1;
   FieldType[V1Num = NumberOfBaryonFields++] = Velocity2;
   FieldType[V2Num = NumberOfBaryonFields++] = Velocity3;
-  FieldType[E0Num = NumberOfBaryonFields++]    = RadiationFreq0;
+  FieldType[E0Num = NumberOfBaryonFields++] = RadiationFreq0;
   if (NumBins > 1)
-    FieldType[E1Num = NumberOfBaryonFields++]    = RadiationFreq1;
+    FieldType[E1Num = NumberOfBaryonFields++] = RadiationFreq1;
   if (NumBins > 2)
-    FieldType[E2Num = NumberOfBaryonFields++]    = RadiationFreq2;
+    FieldType[E2Num = NumberOfBaryonFields++] = RadiationFreq2;
   if (NumBins > 3)
-    FieldType[E3Num = NumberOfBaryonFields++]    = RadiationFreq3;
+    FieldType[E3Num = NumberOfBaryonFields++] = RadiationFreq3;
   if (NumBins > 4)
-    FieldType[E4Num = NumberOfBaryonFields++]    = RadiationFreq4;
+    FieldType[E4Num = NumberOfBaryonFields++] = RadiationFreq4;
   if (NumBins > 5)
-    FieldType[E5Num = NumberOfBaryonFields++]    = RadiationFreq5;
+    FieldType[E5Num = NumberOfBaryonFields++] = RadiationFreq5;
   if (NumBins > 6)
-    FieldType[E6Num = NumberOfBaryonFields++]    = RadiationFreq6;
+    FieldType[E6Num = NumberOfBaryonFields++] = RadiationFreq6;
   if (NumBins > 7)
-    FieldType[E7Num = NumberOfBaryonFields++]    = RadiationFreq7;
+    FieldType[E7Num = NumberOfBaryonFields++] = RadiationFreq7;
   if (NumBins > 8)
-    FieldType[E8Num = NumberOfBaryonFields++]    = RadiationFreq8;
+    FieldType[E8Num = NumberOfBaryonFields++] = RadiationFreq8;
   if (NumBins > 9)
-    FieldType[E9Num = NumberOfBaryonFields++]    = RadiationFreq9;
+    FieldType[E9Num = NumberOfBaryonFields++] = RadiationFreq9;
   FieldType[DeNum = NumberOfBaryonFields++]  = ElectronDensity;
   FieldType[HINum = NumberOfBaryonFields++]  = HIDensity;
   FieldType[HIINum = NumberOfBaryonFields++] = HIIDensity;
@@ -117,7 +117,8 @@ int grid::RHIonizationSteepInitializeGrid(int NumChemicals,
   }
   // if using the AMRFLDSplit solver, set fields for the emissivity
   if (ImplicitProblem == 6) {
-    FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
+    if (NumBins > 0)
+      FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
     if (NumBins > 1)
       FieldType[eta1Num = NumberOfBaryonFields++] = Emissivity1;
     if (NumBins > 2)
@@ -221,7 +222,8 @@ int grid::RHIonizationSteepInitializeGrid(int NumChemicals,
 
     // if using the AMRFLDSplit solver, set emissivity fields
     if (ImplicitProblem == 6) {
-      for (i=0; i<size; i++)  BaryonField[eta0Num][i] = 0.0;
+      if (NumBins > 0)
+	for (i=0; i<size; i++)  BaryonField[eta0Num][i] = 0.0;
       if (NumBins > 1) 
 	for (i=0; i<size; i++)  BaryonField[eta1Num][i] = 0.0;
       if (NumBins > 2) 

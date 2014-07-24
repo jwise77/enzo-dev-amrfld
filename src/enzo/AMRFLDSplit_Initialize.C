@@ -21,7 +21,6 @@
 ************************************************************************/
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
-#include "CosmologyParameters.h"
 #include "BlackbodySED.h"
 #include "MonochromaticSED.h"
 // #ifdef _OPENMP
@@ -35,11 +34,7 @@ EXTERN char outfilename[];
 // function prototypes
 int InitializeRateData(FLOAT Time);
 int FreezeRateData(FLOAT Time, HierarchyEntry &TopGrid);
-int CosmologyComputeExpansionFactor(FLOAT time, FLOAT *a, FLOAT *dadt);
-int GetUnits(float *DensityUnits, float *LengthUnits,
-	     float *TemperatureUnits, float *TimeUnits,
-	     float *VelocityUnits, double *MassUnits, FLOAT Time);
-int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
+float SED_integral(SED &sed, float a, float b, bool convertHz);
 int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 			      HierarchyEntry &TopGrid,
 			      TopGridData &MetaData, int local);
@@ -101,18 +96,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
     ENZO_FAIL("Error in AMRFLDSplit_Initialize: rank must be 3 (for now)");
 
   // initialize internal module units
-  double MassUnits;
-  float TempUnits;
-  DenUnits=LenUnits=TempUnits=MassUnits=TimeUnits=VelUnits=aUnits=1.0;
-  if (GetUnits(&DenUnits, &LenUnits, &TempUnits, 
-	       &TimeUnits, &VelUnits, &MassUnits, MetaData.Time) == FAIL) 
-    ENZO_FAIL("Error in GetUnits.");
-  a = 1.0; adot = 0.0;
-  if (ComovingCoordinates) {
-    if (CosmologyComputeExpansionFactor(MetaData.Time, &a, &adot) == FAIL) 
-      ENZO_FAIL("Error in CosmologyComputeExpansionFactor.");
-    aUnits = 1.0/(1.0 + InitialRedshift);
-  }
+  if (this->UpdateUnits(MetaData.Time, MetaData.Time) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Initialize: Error in UpdateUnits.");
   
   // get processor layout from Grid
   int layout[3];     // number of procs in each dim (1-based)
@@ -127,7 +112,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
   // set default module parameters
   int autoscale   = 1;    // enable automatic variable scaling
   int SourceType[MAX_FLD_SOURCES];
-  int SourceEnergy[MAX_FLD_SOURCES];
+  float SourceEnergy[MAX_FLD_SOURCES];
   for (isrc=0; isrc<MAX_FLD_SOURCES; isrc++) {
     SourceType[isrc] = -1;
     SourceEnergy[isrc] = 0.0;
@@ -306,7 +291,7 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
 
   // determine whether fields are monochromatic
   for (ibin=0; ibin<NumRadiationFields; ibin++)
-    if (FrequencyBand[ibin][0] - FrequencyBand[ibin][1] > FreqTol) {
+    if (FrequencyBand[ibin][1] - FrequencyBand[ibin][0] < FreqTol) {
       FieldMonochromatic[ibin] = true;
       FrequencyBand[ibin][1] = FrequencyBand[ibin][0]+0.1*FreqTol;  // give it a touch of width
     }
@@ -358,8 +343,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
   if (debug) {
     printf("AMRFLDSplit::Initialize scaling factors:\n");
     for (ibin=0; ibin<NumRadiationFields; ibin++) 
-      printf("    ErScale[%"ISYM"] = %g\n", ibin, ErScale[ibin]);
-    printf("    autoScale = %"ISYM"\n", autoscale);
+      printf("   ErScale[%"ISYM"] = %g\n", ibin, ErScale[ibin]);
+    printf("   autoScale = %"ISYM"\n", autoscale);
   }
 
   // check for a legal number of sources
@@ -666,12 +651,8 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
 	  SourceGroupEnergy[isrc][ibin] = 0.0;
 	  continue;
 	}
-	float integral;
-        if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
-			 true, integral) != SUCCESS) {
-	  ENZO_VFAIL("ERROR in integrating the monochromatic SED for group %"ISYM"\n", ibin);
-	}
-	SourceGroupEnergy[isrc][ibin] = integral*SourceEnergy[isrc];
+	SourceGroupEnergy[isrc][ibin] = SourceEnergy[isrc]
+	  * SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true);
       }
       if (debug) {
 	printf("AMRFLDSplit::Initialize monochromatic source %"ISYM" has group energies", isrc);
@@ -681,21 +662,14 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
     }
     if (SourceType[isrc] == 1) {  // blackbody spectrum at T = 1e5 K
       BlackbodySED tmp_src(1.0e5);
-      float total_integral;
-      if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
-	ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
-      }
+      float total_integral = SED_integral(tmp_src, 13.6, -1.0, true);
       for (ibin=0; ibin<NumRadiationFields; ibin++) {
 	if (FieldMonochromatic[ibin]) {   // skip monochromatic fields
 	  SourceGroupEnergy[isrc][ibin] = 0.0;
 	  continue;
 	}
-	float integral;
-	if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
-			 true, integral) != SUCCESS) {
-	  ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
-	}
-	SourceGroupEnergy[isrc][ibin] = integral/total_integral*SourceEnergy[isrc];
+	SourceGroupEnergy[isrc][ibin] = SourceEnergy[isrc] / total_integral
+	  * SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true);
       }
       if (debug) {
 	printf("AMRFLDSplit::Initialize blackbody source %"ISYM" has group energies", isrc);

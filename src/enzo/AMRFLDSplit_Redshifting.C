@@ -50,9 +50,6 @@ int AMRFLDSplit::Redshifting(LevelHierarchyEntry *LevelArray[], int level)
 	// iterate over all radiation fields
 	for (int ibin=0; ibin<NumRadiationFields; ibin++) {
 
-	  // skip monochromatic fields
-	  if (FieldMonochromatic[ibin])  continue;
-
 	  // access emissivity field to place redshifting contributions
 	  float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
 	  if (eta == NULL) {

@@ -108,6 +108,7 @@ int grid::CosmologySimulationInitializeGrid(
 			  float CosmologySimulationInitialFractionMetalIa,
 #ifdef TRANSFER
 			  float RadHydroRadiation,
+			  int   NumBins,
 #endif
 			  int   UseMetallicityField,
 			  PINT &CurrentParticleNumber,
@@ -121,12 +122,9 @@ int grid::CosmologySimulationInitializeGrid(
   int idim, dim, i, j, vel, OneComponentPerFile, ndim, level;
   int DeNum, HINum, HIINum, HeINum, HeIINum, HeIIINum, HMNum, H2INum, H2IINum,
     DINum, DIINum, HDINum, MetalNum, MetalIaNum;
-#ifdef TRANSFER
-  int EgNum, kphHINum, kphHeINum, kphHeIINum, gammaNum, kdissH2INum;
-#endif
-#ifdef EMISSIVITY
-  int EtaNum;
-#endif
+  int kphHINum, kphHeINum, kphHeIINum, gammaNum, kdissH2INum;
+  int E0Num, E1Num, E2Num, E3Num, E4Num, E5Num, E6Num, E7Num, E8Num, E9Num;
+  int eta0Num, eta1Num, eta2Num, eta3Num, eta4Num, eta5Num, eta6Num, eta7Num, eta8Num, eta9Num;
   int MachNum, PSTempNum, PSDenNum;
  
   int ExtraField[2];
@@ -246,7 +244,25 @@ int grid::CosmologySimulationInitializeGrid(
     
 #ifdef TRANSFER
     if (RadiativeTransferFLD > 1) {
-      FieldType[EgNum = NumberOfBaryonFields++] = RadiationFreq0;
+      FieldType[E0Num = NumberOfBaryonFields++] = RadiationFreq0;
+      if (NumBins > 1)
+	FieldType[E1Num = NumberOfBaryonFields++] = RadiationFreq1;
+      if (NumBins > 2)
+	FieldType[E2Num = NumberOfBaryonFields++] = RadiationFreq2;
+      if (NumBins > 3)
+	FieldType[E3Num = NumberOfBaryonFields++] = RadiationFreq3;
+      if (NumBins > 4)
+	FieldType[E4Num = NumberOfBaryonFields++] = RadiationFreq4;
+      if (NumBins > 5)
+	FieldType[E5Num = NumberOfBaryonFields++] = RadiationFreq5;
+      if (NumBins > 6)
+	FieldType[E6Num = NumberOfBaryonFields++] = RadiationFreq6;
+      if (NumBins > 7)
+	FieldType[E7Num = NumberOfBaryonFields++] = RadiationFreq7;
+      if (NumBins > 8)
+	FieldType[E8Num = NumberOfBaryonFields++] = RadiationFreq8;
+      if (NumBins > 9)
+	FieldType[E9Num = NumberOfBaryonFields++] = RadiationFreq9;
       
       // if using external chemistry/cooling, set rate fields
       if (RadiativeCooling) {
@@ -295,8 +311,27 @@ int grid::CosmologySimulationInitializeGrid(
     if (WritePotential)
       FieldType[NumberOfBaryonFields++] = GravPotential;
 #ifdef EMISSIVITY
-    if (StarMakerEmissivityField > 0)
-      FieldType[EtaNum = NumberOfBaryonFields++] = Emissivity0;
+    if (StarMakerEmissivityField > 0) {
+      FieldType[eta0Num = NumberOfBaryonFields++] = Emissivity0;
+      if (NumBins > 1)
+	FieldType[eta1Num = NumberOfBaryonFields++] = Emissivity1;
+      if (NumBins > 2)
+	FieldType[eta2Num = NumberOfBaryonFields++] = Emissivity2;
+      if (NumBins > 3)
+	FieldType[eta3Num = NumberOfBaryonFields++] = Emissivity3;
+      if (NumBins > 4)
+	FieldType[eta4Num = NumberOfBaryonFields++] = Emissivity4;
+      if (NumBins > 5)
+	FieldType[eta5Num = NumberOfBaryonFields++] = Emissivity5;
+      if (NumBins > 6)
+	FieldType[eta6Num = NumberOfBaryonFields++] = Emissivity6;
+      if (NumBins > 7)
+	FieldType[eta7Num = NumberOfBaryonFields++] = Emissivity7;
+      if (NumBins > 8)
+	FieldType[eta8Num = NumberOfBaryonFields++] = Emissivity8;
+      if (NumBins > 9)
+	FieldType[eta9Num = NumberOfBaryonFields++] = Emissivity9;
+    }
 #endif
     if(ShockMethod){
       FieldType[MachNum   = NumberOfBaryonFields++] = Mach;
@@ -420,8 +455,25 @@ int grid::CosmologySimulationInitializeGrid(
   // if using FLD-based radiation energy density, set the field
   if ((RadiativeTransferFLD > 1) && ReadData) {
     float RadScaled = RadHydroRadiation/DensityUnits/VelocityUnits/VelocityUnits;
-    for (i=0; i<size; i++)
-      BaryonField[EgNum][i] = RadScaled;
+    for (i=0; i<size; i++)  BaryonField[E0Num][i] = RadScaled;
+    if (NumBins > 1) 
+      for (i=0; i<size; i++)  BaryonField[E1Num][i] = RadScaled;
+    if (NumBins > 2) 
+      for (i=0; i<size; i++)  BaryonField[E2Num][i] = RadScaled;
+    if (NumBins > 3) 
+      for (i=0; i<size; i++)  BaryonField[E3Num][i] = RadScaled;
+    if (NumBins > 4) 
+      for (i=0; i<size; i++)  BaryonField[E4Num][i] = RadScaled;
+    if (NumBins > 5) 
+      for (i=0; i<size; i++)  BaryonField[E5Num][i] = RadScaled;
+    if (NumBins > 6) 
+      for (i=0; i<size; i++)  BaryonField[E6Num][i] = RadScaled;
+    if (NumBins > 7) 
+      for (i=0; i<size; i++)  BaryonField[E7Num][i] = RadScaled;
+    if (NumBins > 8) 
+      for (i=0; i<size; i++)  BaryonField[E8Num][i] = RadScaled;
+    if (NumBins > 9) 
+      for (i=0; i<size; i++)  BaryonField[E9Num][i] = RadScaled;
     
     // if using external chemistry/cooling, set rate fields
     if (RadiativeCooling) {
@@ -532,9 +584,28 @@ int grid::CosmologySimulationInitializeGrid(
   
 
 #ifdef EMISSIVITY
-    // If using an emissivity field, initialize to zero
-    if ((StarMakerEmissivityField > 0) && ReadData)
-      for (i=0; i<size; i++)  BaryonField[EtaNum][i] = 0.0;
+  // If using emissivity field(s), initialize to zero
+  if ((StarMakerEmissivityField > 0) && ReadData) {
+      for (i=0; i<size; i++)    BaryonField[eta0Num][i] = 0.0;
+      if (NumBins > 1) 
+	for (i=0; i<size; i++)  BaryonField[eta1Num][i] = 0.0;
+      if (NumBins > 2) 
+	for (i=0; i<size; i++)  BaryonField[eta2Num][i] = 0.0;
+      if (NumBins > 3) 
+	for (i=0; i<size; i++)  BaryonField[eta3Num][i] = 0.0;
+      if (NumBins > 4) 
+	for (i=0; i<size; i++)  BaryonField[eta4Num][i] = 0.0;
+      if (NumBins > 5) 
+	for (i=0; i<size; i++)  BaryonField[eta5Num][i] = 0.0;
+      if (NumBins > 6) 
+	for (i=0; i<size; i++)  BaryonField[eta6Num][i] = 0.0;
+      if (NumBins > 7) 
+	for (i=0; i<size; i++)  BaryonField[eta7Num][i] = 0.0;
+      if (NumBins > 8) 
+	for (i=0; i<size; i++)  BaryonField[eta8Num][i] = 0.0;
+      if (NumBins > 9) 
+	for (i=0; i<size; i++)  BaryonField[eta9Num][i] = 0.0;
+  }
 #endif
  
   // If they were not read in above, set the total & gas energy fields now

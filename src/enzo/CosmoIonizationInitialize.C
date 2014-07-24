@@ -108,7 +108,7 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroInitialFractionHeIII = 0.0;
   float RadHydroOmegaBaryonNow       = 0.2;
   int   RadHydroChemistry            = 1;
-  int   RadHydroNumBins              = 0;    // grey solver
+  int   AMRFLDNumRadiationFields     = 0;    // grey solver
 
   // overwrite input from RadHydroParamFile file, if it exists
   if (MetaData.RadHydroParameterFname != NULL) {
@@ -122,8 +122,8 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroX2Velocity);
 	ret += sscanf(line, "RadHydroChemistry = %"ISYM, 
 		      &RadHydroChemistry);
-	ret += sscanf(line, "RadHydroNumBins = %"ISYM, 
-		      &RadHydroNumBins);
+	ret += sscanf(line, "AMRFLDNumRadiationFields = %"ISYM, 
+		      &AMRFLDNumRadiationFields);
 	ret += sscanf(line, "RadHydroTemperature = %"FSYM, 
 		      &RadHydroTemperature);
 	ret += sscanf(line, "RadHydroRadiationEnergy = %"FSYM, 
@@ -132,12 +132,10 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroInitialFractionHII);
 	ret += sscanf(line, "RadHydroHFraction = %"FSYM, 
 		      &RadHydroHydrogenMassFraction);
-	if ((RadHydroChemistry == 3) || (MultiSpecies == 1)) {
-	  ret += sscanf(line, "RadHydroInitialFractionHeII = %"FSYM, 
-			&RadHydroInitialFractionHeII);
-	  ret += sscanf(line, "RadHydroInitialFractionHeIII = %"FSYM, 
-			&RadHydroInitialFractionHeIII);
-	}
+	ret += sscanf(line, "RadHydroInitialFractionHeII = %"FSYM, 
+		      &RadHydroInitialFractionHeII);
+	ret += sscanf(line, "RadHydroInitialFractionHeIII = %"FSYM, 
+		      &RadHydroInitialFractionHeIII);
 	ret += sscanf(line, "RadHydroOmegaBaryonNow = %"FSYM, 
 		      &RadHydroOmegaBaryonNow);
 
@@ -159,6 +157,10 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
       fprintf(stderr,"Error in InitializeRateData.\n");
       return FAIL;
     }
+
+  // since AMRFLD solver no longer relies on RadHydroChemistry input, deduce the value here
+  if (ImplicitProblem == 6) 
+    RadHydroChemistry = (RadiativeTransferHydrogenOnly) ? 1 : 3;
 
   // convert input temperature to internal energy
   RadHydroTemperature = max(RadHydroTemperature,MIN_TEMP); // enforce minimum
@@ -192,7 +194,7 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
   HierarchyEntry *TempGrid = &TopGrid;
   while (TempGrid != NULL) {
     if (TempGrid->GridData->CosmoIonizationInitializeGrid(
-			RadHydroChemistry, RadHydroNumBins, RadHydroX0Velocity, 
+			RadHydroChemistry, AMRFLDNumRadiationFields, RadHydroX0Velocity, 
 			RadHydroX1Velocity, RadHydroX2Velocity, 
 			RadHydroIEnergy, RadHydroRadiationEnergy, 
 			RadHydroHydrogenMassFraction, 
@@ -216,27 +218,27 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
   DataLabel[BaryonField++] = Vel1Name;
   DataLabel[BaryonField++] = Vel2Name;
   DataLabel[BaryonField++] = Vel3Name;
-  if (RadHydroNumBins == 0)
+  if (AMRFLDNumRadiationFields == 0)
     DataLabel[BaryonField++] = RadName;
-  if (RadHydroNumBins > 0)
+  if (AMRFLDNumRadiationFields > 0)
     DataLabel[BaryonField++] = RadName0;
-  if (RadHydroNumBins > 1)
+  if (AMRFLDNumRadiationFields > 1)
     DataLabel[BaryonField++] = RadName1;
-  if (RadHydroNumBins > 2)
+  if (AMRFLDNumRadiationFields > 2)
     DataLabel[BaryonField++] = RadName2;
-  if (RadHydroNumBins > 3)
+  if (AMRFLDNumRadiationFields > 3)
     DataLabel[BaryonField++] = RadName3;
-  if (RadHydroNumBins > 4)
+  if (AMRFLDNumRadiationFields > 4)
     DataLabel[BaryonField++] = RadName4;
-  if (RadHydroNumBins > 5)
+  if (AMRFLDNumRadiationFields > 5)
     DataLabel[BaryonField++] = RadName5;
-  if (RadHydroNumBins > 6)
+  if (AMRFLDNumRadiationFields > 6)
     DataLabel[BaryonField++] = RadName6;
-  if (RadHydroNumBins > 7)
+  if (AMRFLDNumRadiationFields > 7)
     DataLabel[BaryonField++] = RadName7;
-  if (RadHydroNumBins > 8)
+  if (AMRFLDNumRadiationFields > 8)
     DataLabel[BaryonField++] = RadName8;
-  if (RadHydroNumBins > 9)
+  if (AMRFLDNumRadiationFields > 9)
     DataLabel[BaryonField++] = RadName9;
   DataLabel[BaryonField++] = DeName;
   DataLabel[BaryonField++] = HIName;
@@ -261,27 +263,25 @@ int CosmoIonizationInitialize(FILE *fptr, FILE *Outfptr,
 
   // if using the AMRFLDSplit solver, set fields for the emissivity
   if (ImplicitProblem == 6) {
-    if (RadHydroNumBins == 0)
-      DataLabel[BaryonField++] = EtaName;
-    if (RadHydroNumBins > 0)
+    if (AMRFLDNumRadiationFields > 0)
       DataLabel[BaryonField++] = EtaName0;
-    if (RadHydroNumBins > 1)
+    if (AMRFLDNumRadiationFields > 1)
       DataLabel[BaryonField++] = EtaName1;
-    if (RadHydroNumBins > 2)
+    if (AMRFLDNumRadiationFields > 2)
       DataLabel[BaryonField++] = EtaName2;
-    if (RadHydroNumBins > 3)
+    if (AMRFLDNumRadiationFields > 3)
       DataLabel[BaryonField++] = EtaName3;
-    if (RadHydroNumBins > 4)
+    if (AMRFLDNumRadiationFields > 4)
       DataLabel[BaryonField++] = EtaName4;
-    if (RadHydroNumBins > 5)
+    if (AMRFLDNumRadiationFields > 5)
       DataLabel[BaryonField++] = EtaName5;
-    if (RadHydroNumBins > 6)
+    if (AMRFLDNumRadiationFields > 6)
       DataLabel[BaryonField++] = EtaName6;
-    if (RadHydroNumBins > 7)
+    if (AMRFLDNumRadiationFields > 7)
       DataLabel[BaryonField++] = EtaName7;
-    if (RadHydroNumBins > 8)
+    if (AMRFLDNumRadiationFields > 8)
       DataLabel[BaryonField++] = EtaName8;
-    if (RadHydroNumBins > 9)
+    if (AMRFLDNumRadiationFields > 9)
       DataLabel[BaryonField++] = EtaName9;
   }
 

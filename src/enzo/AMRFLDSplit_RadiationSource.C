@@ -25,7 +25,7 @@
  
 
 // function prototypes
-int SED_integral(SED &sed, float a, float b, bool convertHz, double &R);
+float SED_integral(SED &sed, float a, float b, bool convertHz);
  
 
 
@@ -35,7 +35,6 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 
   // initialize local variables to be reused
   int i, j, k;
-  float total_eta = 0.0;
   float cellZl, cellZr, cellYl, cellYr, cellXl, cellXr, cellXc, cellYc, cellZc;
 
   // iterate over grids owned by this processor (this level down)
@@ -65,13 +64,6 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	          / n3[dim];
 	float lUn = (LenUnits + LenUnits0)*0.5;
 	float dV = dx[0]*dx[1]*dx[2]*lUn*lUn*lUn;
-
-	// set a cell "normalized volume"
-	float dVscale = 1;
-	for (int dim=0; dim<rank; dim++)
-	  dVscale *= (Temp->GridData->GetGridRightEdge(dim) 
- 		    - Temp->GridData->GetGridLeftEdge(dim)) 
-	            / n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
 
 
 	// iterate over all radiation fields
@@ -103,7 +95,8 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	    } // z-loop
 
 	    // equi-partition energy among affected cells
-	    float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
+	    //float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV;
+	    float cell_energy = SourceGroupEnergy[isrc][ibin] / num_cells / dV * 1.52877652583602;
 	    for (k=ghZl; k<n3[2]+ghZl; k++) {
 	      cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
 	      for (j=ghYl; j<n3[1]+ghYl; j++) {
@@ -136,16 +129,9 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 
 		// determine this group's portion of total blackbody emissivity
 		BlackbodySED tmp_src(1.0e5);
-		float total_integral;
-		if (SED_integral(tmp_src, 13.6, -1.0, true, total_integral) != SUCCESS) {
-		  ENZO_FAIL("ERROR in integrating the overall blackbody SED\n");
-		}
-		float integral;
-		if (SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], 
-				 true, integral) != SUCCESS) {
-		  ENZO_VFAIL("ERROR in integrating the blackbody SED for group %"ISYM"\n", ibin);
-		}
-		float wall_energy = 1e6 * 13.6 * ev2erg * integral / total_integral / dx[0] / lUn;
+		float wall_energy = 1e6 * 13.6 * ev2erg  / dx[0] / lUn
+		  * SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true) 
+		  / SED_integral(tmp_src, 13.6, -1.0, true);
 
 		// place along wall (i=ghXl)
 		for (k=ghZl; k<n3[2]+ghZl; k++)
