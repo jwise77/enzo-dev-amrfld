@@ -116,7 +116,7 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   float RadHydroInitialFractionHeII  = 0.0;
   float RadHydroInitialFractionHeIII = 0.0;
   int   RadHydroChemistry            = 1;
-  int   RadHydroNumBins              = 0;    // grey solver
+  int   AMRFLDNumRadiationFields     = 0;    // grey solver
   float ClumpCenterX                 = 5.0;  // normalized units
   float ClumpCenterY                 = 3.3;
   float ClumpCenterZ                 = 3.3;
@@ -134,8 +134,8 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroX2Velocity);
 	ret += sscanf(line, "RadHydroChemistry = %"ISYM, 
 		      &RadHydroChemistry);
-	ret += sscanf(line, "RadHydroNumBins = %"ISYM, 
-		      &RadHydroNumBins);
+	ret += sscanf(line, "AMRFLDNumRadiationFields = %"ISYM, 
+		      &AMRFLDNumRadiationFields);
 	ret += sscanf(line, "RadHydroNumDensityIn = %"FSYM, 
 		      &RadHydroNumDensityIn);
 	ret += sscanf(line, "RadHydroNumDensityOut = %"FSYM, 
@@ -150,13 +150,10 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 		      &RadHydroInitialFractionHII);
 	ret += sscanf(line, "RadHydroHFraction = %"FSYM, 
 		      &RadHydroHydrogenMassFraction);
-	if ((RadHydroChemistry == 3) || (MultiSpecies == 1)) {
-	  ret += sscanf(line, "RadHydroInitialFractionHeII = %"FSYM, 
-			&RadHydroInitialFractionHeII);
-	  ret += sscanf(line, "RadHydroInitialFractionHeIII = %"FSYM, 
-			&RadHydroInitialFractionHeIII);
-	}
-	
+	ret += sscanf(line, "RadHydroInitialFractionHeII = %"FSYM, 
+		      &RadHydroInitialFractionHeII);
+	ret += sscanf(line, "RadHydroInitialFractionHeIII = %"FSYM, 
+		      &RadHydroInitialFractionHeIII);
 	ret += sscanf(line, "ClumpCenter = %"FSYM" %"FSYM" %"FSYM,
 		      &ClumpCenterX, &ClumpCenterY, &ClumpCenterZ);
 	ret += sscanf(line, "ClumpRadius = %"FSYM, &ClumpRadius);
@@ -179,6 +176,10 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
       fprintf(stderr,"Error in InitializeRateData.\n");
       return FAIL;
     }
+
+  // since AMRFLD solver no longer relies on RadHydroChemistry input, deduce the value here
+  if (ImplicitProblem == 6) 
+    RadHydroChemistry = (RadiativeTransferHydrogenOnly) ? 1 : 3;
 
   // if temperature specified and not internal energy, perform conversion here
   RadHydroTemperatureIn  = max(RadHydroTemperatureIn, MIN_TEMP); // enforce minimum
@@ -220,7 +221,7 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   HierarchyEntry *TempGrid = &TopGrid;
   while (TempGrid != NULL) {
     if (TempGrid->GridData->RHIonizationClumpInitializeGrid(
-                        RadHydroChemistry, RadHydroNumBins, RadHydroNumDensityIn, 
+                        RadHydroChemistry, AMRFLDNumRadiationFields, RadHydroNumDensityIn, 
 			RadHydroNumDensityOut, RadHydroX0Velocity, 
 			RadHydroX1Velocity, RadHydroX2Velocity, 
 			RadHydroIEnergyIn, RadHydroIEnergyOut, 
@@ -244,27 +245,27 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
   DataLabel[BaryonField++] = Vel0Name;
   DataLabel[BaryonField++] = Vel1Name;
   DataLabel[BaryonField++] = Vel2Name;
-  if (RadHydroNumBins == 0)
+  if (AMRFLDNumRadiationFields == 0)
     DataLabel[BaryonField++] = RadName;
-  if (RadHydroNumBins > 0)
+  if (AMRFLDNumRadiationFields > 0)
     DataLabel[BaryonField++] = RadName0;
-  if (RadHydroNumBins > 1)
+  if (AMRFLDNumRadiationFields > 1)
     DataLabel[BaryonField++] = RadName1;
-  if (RadHydroNumBins > 2)
+  if (AMRFLDNumRadiationFields > 2)
     DataLabel[BaryonField++] = RadName2;
-  if (RadHydroNumBins > 3)
+  if (AMRFLDNumRadiationFields > 3)
     DataLabel[BaryonField++] = RadName3;
-  if (RadHydroNumBins > 4)
+  if (AMRFLDNumRadiationFields > 4)
     DataLabel[BaryonField++] = RadName4;
-  if (RadHydroNumBins > 5)
+  if (AMRFLDNumRadiationFields > 5)
     DataLabel[BaryonField++] = RadName5;
-  if (RadHydroNumBins > 6)
+  if (AMRFLDNumRadiationFields > 6)
     DataLabel[BaryonField++] = RadName6;
-  if (RadHydroNumBins > 7)
+  if (AMRFLDNumRadiationFields > 7)
     DataLabel[BaryonField++] = RadName7;
-  if (RadHydroNumBins > 8)
+  if (AMRFLDNumRadiationFields > 8)
     DataLabel[BaryonField++] = RadName8;
-  if (RadHydroNumBins > 9)
+  if (AMRFLDNumRadiationFields > 9)
     DataLabel[BaryonField++] = RadName9;
   DataLabel[BaryonField++] = DeName;
   DataLabel[BaryonField++] = HIName;
@@ -289,27 +290,25 @@ int RHIonizationClumpInitialize(FILE *fptr, FILE *Outfptr,
 
   // if using the AMRFLDSplit solver, set fields for the emissivity
   if (ImplicitProblem == 6) {
-    if (RadHydroNumBins == 0)
-      DataLabel[BaryonField++] = EtaName;
-    if (RadHydroNumBins > 0)
+    if (AMRFLDNumRadiationFields > 0)
       DataLabel[BaryonField++] = EtaName0;
-    if (RadHydroNumBins > 1)
+    if (AMRFLDNumRadiationFields > 1)
       DataLabel[BaryonField++] = EtaName1;
-    if (RadHydroNumBins > 2)
+    if (AMRFLDNumRadiationFields > 2)
       DataLabel[BaryonField++] = EtaName2;
-    if (RadHydroNumBins > 3)
+    if (AMRFLDNumRadiationFields > 3)
       DataLabel[BaryonField++] = EtaName3;
-    if (RadHydroNumBins > 4)
+    if (AMRFLDNumRadiationFields > 4)
       DataLabel[BaryonField++] = EtaName4;
-    if (RadHydroNumBins > 5)
+    if (AMRFLDNumRadiationFields > 5)
       DataLabel[BaryonField++] = EtaName5;
-    if (RadHydroNumBins > 6)
+    if (AMRFLDNumRadiationFields > 6)
       DataLabel[BaryonField++] = EtaName6;
-    if (RadHydroNumBins > 7)
+    if (AMRFLDNumRadiationFields > 7)
       DataLabel[BaryonField++] = EtaName7;
-    if (RadHydroNumBins > 8)
+    if (AMRFLDNumRadiationFields > 8)
       DataLabel[BaryonField++] = EtaName8;
-    if (RadHydroNumBins > 9)
+    if (AMRFLDNumRadiationFields > 9)
       DataLabel[BaryonField++] = EtaName9;
   }
 

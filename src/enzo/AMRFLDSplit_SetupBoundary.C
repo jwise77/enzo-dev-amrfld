@@ -10,7 +10,7 @@
 /  Split Implicit Problem Class, SetupBoundary routine
 /
 /  written by: Daniel Reynolds
-/  date:       December 2010
+/  date:       July 2014
 /  modified1:  
 /
 /  PURPOSE: This routine is used to set values at boundary faces 

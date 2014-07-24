@@ -59,8 +59,8 @@ int AMRFLDSplit::EnforceBoundary(int ibin, LevelHierarchyEntry *LevelArray[])
   float dx[3];
   for (int dim=0; dim<rank; dim++)
     dx[dim] = (ThisGrid->GridData->GetGridRightEdge(dim) 
-	     - ThisGrid->GridData->GetGridLeftEdge(dim)) 
-             / n3[dim];
+              - ThisGrid->GridData->GetGridLeftEdge(dim)) 
+            / n3[dim];
       
   // access current radiation field
   float *Enew = AccessRadiationField(ibin, ThisGrid);

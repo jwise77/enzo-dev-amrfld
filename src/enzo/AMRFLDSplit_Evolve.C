@@ -1,7 +1,5 @@
 /*****************************************************************************
  *                                                                           *
- * Copyright 2010 Daniel R. Reynolds                                         *
- *                                                                           *
  * This software is released under the terms of the "Enzo Public License"    *
  * in the accompanying LICENSE file.                                         *
  *                                                                           *
@@ -12,7 +10,7 @@
 /  Split Implicit Problem Class, Evolve Routine
 /
 /  written by: Daniel Reynolds
-/  date:       December 2010
+/  date:       July 2014
 /  modified1:
 /
 /  PURPOSE:
@@ -24,25 +22,21 @@
 #ifdef TRANSFER
  
 #include "AMRFLDSplit.h"
-#include "CosmologyParameters.h"
-
+#include "phys_constants.h"
 
 //#define FAIL_ON_NAN
 #define NO_FAIL_ON_NAN
 
-
-/* function prototypes */
-int CosmologyComputeExpansionFactor(FLOAT time, FLOAT *a, FLOAT *dadt);
-int GetUnits(float *DensityUnits, float *LengthUnits,
-	     float *TemperatureUnits, float *TimeUnits,
-	     float *VelocityUnits, double *MassUnits, FLOAT Time);
-int RadiationGetUnits(float *RadiationUnits, FLOAT Time);
+// function prototypes
 int SetBoundaryConditions(HierarchyEntry *Grids[], int NumberOfGrids,
 #ifdef FAST_SIB
 			  SiblingGridList SiblingList[],
 #endif
 			  int level, TopGridData *MetaData,
 			  ExternalBoundary *Exterior, LevelHierarchyEntry * Level);
+float TotalFieldValue(LevelHierarchyEntry *LevelArray[], 
+		      int levelStart, int levelFinish, int field);
+
 
 
 // This routine evolves the radiation field in an operator-split fashion, 
@@ -74,84 +68,29 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 
   if (debug)  printf("\n AMRFLDSplit Evolve:\n");
 
+  // Find a grid on this level to get current time
+  HierarchyEntry* ThisGrid=LevelArray[level]->GridHierarchyEntry;
+  tnew = ThisGrid->GridData->ReturnTime();
+  told = tnew;
 
-  // scale radiation fields on all relevant grids to solver units; output statistics
-  LevelHierarchyEntry *Temp;
+  // update internal units for current times
+  if (this->UpdateUnits(told, tnew) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Evolve: Error in UpdateUnits.");
+
+  // scale radiation fields on all relevant grids to solver units
+  if (ScaleFields(LevelArray, level, false) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Evolve: Error in ScaleFields.");
+    
+  // collect and output statistics on current radiation field
   float Etyp[MAX_FLD_FIELDS];
   float Emax[MAX_FLD_FIELDS];
-  int ibin;
-  for (ibin=0; ibin<MAX_FLD_FIELDS; ibin++) {
-    Etyp[ibin] = 0.0;
-    Emax[ibin] = 0.0;
-  }
-  float Enum=0.0;
-  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
-    for (Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel)
-      if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
-
-	  // set grid dimension information
-	  int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
-	  int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
-	  int ghXl = DEFAULT_GHOST_ZONES;
-	  int n3[] = {1, 1, 1};
-	  for (int dim=0; dim<rank; dim++)
-	    n3[dim] = Temp->GridHierarchyEntry->GridData->GetGridEndIndex(dim)
-	            - Temp->GridHierarchyEntry->GridData->GetGridStartIndex(dim) + 1;
-	  int x0len = n3[0] + 2*ghXl;
-	  int x1len = n3[1] + 2*ghYl;
-	  int x2len = n3[2] + 2*ghZl;
-	  Enum += x0len*x1len*x2len;
-	  
-	  // scale radiation fields
-	  for (ibin=0; ibin<NumRadiationFields; ibin++) {
-	    float *Enew = AccessRadiationField(ibin, Temp->GridHierarchyEntry);
-	    if (Enew == NULL) {
-	      ENZO_VFAIL("AMRFLDSplit_Evolve error: cannot access radiation bin %"ISYM"\n",
-			 ibin);
-	    }
-	    for (int k=0; k<x0len*x1len*x2len; k++)  Enew[k]/=ErScale[ibin];
-
-	    for (int k=0; k<x0len*x1len*x2len; k++)  {
-	      Etyp[ibin] += Enew[k]*Enew[k];
-	      Emax[ibin] = max(Emax[ibin], fabs(Enew[k]));
-	    }
-	  }
-
-      }  // end loop over grids on this proc
-
-  // communicate among all procs to get statistics of current radiation field
-  if (diags) {
-#ifdef USE_MPI
-    MPI_Datatype FDataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
-    MPI_Arg nbins_p1 = NumRadiationFields+1;
-    MPI_Arg nbins = NumRadiationFields;
-    float dtmpIn[NumRadiationFields+1];
-    for (ibin=0; ibin<NumRadiationFields; ibin++)  
-      dtmpIn[ibin] = Etyp[ibin];
-    dtmpIn[NumRadiationFields] = Enum;
-    float dtmpOut[NumRadiationFields+1];
-    MPI_Allreduce(&Emax, &dtmpOut, nbins, FDataType, MPI_MAX, MPI_COMM_WORLD);
-    for (ibin=0; ibin<NumRadiationFields; ibin++)  
-      Emax[ibin] = dtmpOut[ibin];
-    MPI_Allreduce(&dtmpIn, &dtmpOut, nbins_p1, FDataType, MPI_SUM, MPI_COMM_WORLD);
-    for (ibin=0; ibin<NumRadiationFields; ibin++)  
-      Etyp[ibin] = sqrt(dtmpOut[ibin]/dtmpOut[NumRadiationFields]);
-#else
-    for (ibin=0; ibin<NumRadiationFields; ibin++)  
-      Etyp[ibin] = sqrt(Etyp[ibin]/Enum);
-#endif
-    if (debug) {
-      printf("   current internal quantities:\n");
-      for (ibin=0; ibin<NumRadiationFields; ibin++) 
-	printf("      E%"ISYM": rms = %13.7e, max = %13.7e\n", 
-	       ibin, Etyp[ibin], Emax[ibin]);
-    }    
-  }
+  if (PrintStats(LevelArray, level, Etyp, Emax) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Evolve: PrintStats error");
 
   // if autoScale enabled, determine scaling factor updates here
   float ScaleCorrTol = 1.e-2;
   float ErScaleCorr[NumRadiationFields];
-  for (ibin=0; ibin<NumRadiationFields; ibin++) {
+  for (int ibin=0; ibin<NumRadiationFields; ibin++) {
     ErScaleCorr[ibin] = 1.0;
     if (StartAutoScale[ibin] && autoScale[ibin])
       if ((Emax[ibin] - Etyp[ibin]) > ScaleCorrTol*Emax[ibin])
@@ -176,17 +115,13 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   ////////////////////////////////////
   // Problem Solve Phase
 
-  // Find a grid on this level to get current time
-  HierarchyEntry* ThisGrid=LevelArray[level]->GridHierarchyEntry;
-  tnew = ThisGrid->GridData->ReturnTime();
-
   // add redshifting sources to emissivity fields for each bin
   if (this->Redshifting(LevelArray, level) != SUCCESS)
     ENZO_FAIL("AMRFLDSplit_Evolve: Redshifting error");
 
   // add parameter-specified sources to emissivity fields for each bin
   if (this->RadiationSource(LevelArray, level, tnew) != SUCCESS)
-    ENZO_FAIL("AMRFLDSplit_Evolve: Redshifting error");
+    ENZO_FAIL("AMRFLDSplit_Evolve: RadiationSource error");
 
   // internal time-stepping loop to catch up with Hydro time
   float end_time = tnew + dthydro;
@@ -225,7 +160,7 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
       // loop over radiation bins, taking a step of each
       Eerror = 0.0;
       recompute_step = 0;
-      for (ibin=0; ibin<NumRadiationFields; ibin++) {
+      for (int ibin=0; ibin<NumRadiationFields; ibin++) {
 	recompute_step += this->RadStep(ibin, LevelArray, level, hierarchy, 
 					Etyp[ibin], Emax[ibin], &errtmp);
 	if (recompute_step) break;
@@ -296,6 +231,23 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
   if (this->FillRates(LevelArray, level) == FAIL)
     ENZO_FAIL("AMRFLDSplit Evolve: FillRates error");
 
+  // if diagnostics enabled, output RMS of photo-ionization and photo-heating rates
+  if (diags) {
+    float phHI_rms       = TotalFieldValue(LevelArray, level, MAX_DEPTH_OF_HIERARCHY, kphHI);
+    float phHeI_rms      = TotalFieldValue(LevelArray, level, MAX_DEPTH_OF_HIERARCHY, kphHeI);
+    float phHeII_rms     = TotalFieldValue(LevelArray, level, MAX_DEPTH_OF_HIERARCHY, kphHeII);
+    float photogamma_rms = TotalFieldValue(LevelArray, level, MAX_DEPTH_OF_HIERARCHY, PhotoGamma);
+    if (debug) {
+      printf("   photo-ionization and photo-heating rates:\n");
+      printf("            phHI = %13.7e\n", phHI_rms);
+      if (!RadiativeTransferHydrogenOnly) {
+	printf("           phHeI = %13.7e\n", phHeI_rms);
+	printf("          phHeII = %13.7e\n", phHeII_rms);
+      }
+      printf("      photogamma = %13.7e\n", photogamma_rms);
+    }    
+  }
+
   // update the radiation time step size at this level for next time step 
   if (dtrad != huge_number) {
     for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
@@ -304,47 +256,16 @@ int AMRFLDSplit::Evolve(LevelHierarchyEntry *LevelArray[], int level,
 	Temp->GridHierarchyEntry->GridData->SetMaxRadiationDt(dtrad*maxsubcycles);
   }
 
-  // scale radiation fields on all relevant grids back to enzo units, and 
+  // scale radiation fields on all relevant grids back to enzo units
+  if (ScaleFields(LevelArray, level, true) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Evolve: Error in ScaleFields.");
+
   // zero out emissivity fields for all grids on this processor
-  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
-    for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
-	 Temp=Temp->NextGridThisLevel)
-      if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
+  if (ResetEmissivityFields(LevelArray, level) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_Evolve: Error in ResetEmissivityFields.");
 
-	  // set grid dimension information
-	  int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
-	  int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
-	  int ghXl = DEFAULT_GHOST_ZONES;
-	  int n3[] = {1, 1, 1};
-	  for (int dim=0; dim<rank; dim++)
-	    n3[dim] = Temp->GridHierarchyEntry->GridData->GetGridEndIndex(dim)
-	            - Temp->GridHierarchyEntry->GridData->GetGridStartIndex(dim) + 1;
-	  int x0len = n3[0] + 2*ghXl;
-	  int x1len = n3[1] + 2*ghYl;
-	  int x2len = n3[2] + 2*ghZl;
-	  
-	  // scale radiation fields
-	  for (ibin=0; ibin<NumRadiationFields; ibin++) {
-	    float *Enew = AccessRadiationField(ibin, Temp->GridHierarchyEntry);
-	    if (Enew == NULL) {
-	      ENZO_VFAIL("AMRFLDSplit_Evolve error: cannot access radiation bin %"ISYM"\n", ibin);
-	    }
-	    for (int k=0; k<x0len*x1len*x2len; k++)  Enew[k]*=ErScale[ibin];
-	  }
-
-	  // reset emissivity fields
-	  for (ibin=0; ibin<NumRadiationFields; ibin++) {
-	    float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
-	    if (eta == NULL) {
-	      ENZO_VFAIL("AMRFLDSplit_Evolve error: cannot access emissivity bin %"ISYM"\n", ibin);
-	    }
-	    for (int k=0; k<x0len*x1len*x2len; k++)  eta[k]=0.0;
-	  }
-
-      }  // end loop over grids on this proc
-    
   // update scaling factors to account for new values
-  for (ibin=0; ibin<NumRadiationFields; ibin++)
+  for (int ibin=0; ibin<NumRadiationFields; ibin++)
     if (StartAutoScale[ibin] && autoScale[ibin]) 
       ErScale[ibin] *= ErScaleCorr[ibin];
 
@@ -381,36 +302,10 @@ int AMRFLDSplit::RadStep(int ibin, LevelHierarchyEntry *LevelArray[],
 			 float Etyp, float Emax, Eflt64 *Eerror)
 {
 
-  // update internal Enzo units for current times
-  float TempUnits, RadUnits;
-  double MassUnits;
-  DenUnits0 = LenUnits0 = TempUnits = TimeUnits = VelUnits = MassUnits = 1.0;
-  if (GetUnits(&DenUnits0, &LenUnits0, &TempUnits, &TimeUnits, 
-	       &VelUnits, &MassUnits, told) != SUCCESS) 
-    ENZO_FAIL("AMRFLDSplit_RadStep: Error in GetUnits.");
-  if (RadiationGetUnits(&RadUnits, told) != SUCCESS) 
-    ENZO_FAIL("AMRFLDSplit_RadStep: Error in RadiationGetUnits.");
-  float mp = 1.67262171e-24;   // Mass of a proton [g]
-  ErUnits0[ibin] = RadUnits*ErScale[ibin];
-  NiUnits0 = DenUnits0/mp;
-  if (ComovingCoordinates) 
-    if (CosmologyComputeExpansionFactor(told, &a0, &adot0) != SUCCESS) 
-      ENZO_FAIL("AMRFLDSplit_RadStep: Error in CosmologyComputeExpansionFactor.");
-  adot0 /= TimeUnits;  // rescale to physical units
+  // update internal units for current times
+  if (this->UpdateUnits(told, tnew) != SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_RadStep: Error in UpdateUnits.");
 
-  DenUnits = LenUnits = TempUnits = TimeUnits = VelUnits = MassUnits = 1.0;
-  if (GetUnits(&DenUnits, &LenUnits, &TempUnits, &TimeUnits, 
-	       &VelUnits, &MassUnits, tnew) != SUCCESS) 
-    ENZO_FAIL("AMRFLDSplit_RadStep: Error in GetUnits.");
-  if (RadiationGetUnits(&RadUnits, tnew) != SUCCESS) 
-    ENZO_FAIL("AMRFLDSplit_RadStep: Error in RadiationGetUnits.");
-  ErUnits[ibin] = RadUnits*ErScale[ibin];
-  NiUnits = DenUnits/mp;
-  if (ComovingCoordinates) 
-    if (CosmologyComputeExpansionFactor(tnew, &a, &adot) != SUCCESS) 
-      ENZO_FAIL("AMRFLDSplit_RadStep: Error in CosmologyComputeExpansionFactor.");
-  adot /= TimeUnits;  // rescale to physical units
-    
   // rescale dt, told, tnew to physical values for use within solver
   dt   *= TimeUnits;
   told *= TimeUnits;
@@ -426,8 +321,6 @@ int AMRFLDSplit::RadStep(int ibin, LevelHierarchyEntry *LevelArray[],
     
   //   copy current radiation field into temporary field (KPhHI)
   //   on all grids owned by this processor, all levels here and down;
-  //   if diagnostics enabled, calculate emissivity source norm
-  float srcNorm=0.0;
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
 	 Temp=Temp->NextGridThisLevel)
@@ -454,49 +347,21 @@ int AMRFLDSplit::RadStep(int ibin, LevelHierarchyEntry *LevelArray[],
 	    ENZO_VFAIL("AMRFLDSplit_RadStep: cannot access radiation field %"ISYM"!!\n", ibin);
 	  }
 
-	  if (diags) {
-	    // compute emissivity norm for diagnostic output
-	    float dVscale = 1;
-	    for (int dim=0; dim<rank; dim++)
-	      dVscale *= (Temp->GridData->GetGridRightEdge(dim) 
-			  - Temp->GridData->GetGridLeftEdge(dim)) 
-		/ n3[dim] / (DomainRightEdge[dim] - DomainLeftEdge[dim]);
-	    float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
-	    if (eta == NULL) {
-	      ENZO_VFAIL("AMRFLDSplit_RadStep: cannot access emissivity field %"ISYM"!!\n",
-			 ibin);
-	    }
-	    for (int k=ghZl; k<n3[2]+ghZl; k++) 
-	      for (int j=ghYl; j<n3[1]+ghYl; j++) 
-		for (int i=ghXl; i<n3[0]+ghXl; i++) 
-		  srcNorm += eta[(k*x1len+j)*x0len+i]*eta[(k*x1len+j)*x0len+i]*dVscale;
-	  }
-	  
 	  // copy new radiation field into into old field
 	  for (int k=0; k<x0len*x1len*x2len; k++)  Eold[k] = Enew[k];
 
       }  // end loop over grids on this proc
-
-  // finish off emissivity norm
-  if (diags) {
-    float glob_eta;
-#ifdef USE_MPI
-    MPI_Datatype DataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
-    MPI_Arg ONE = 1;
-    MPI_Allreduce(&srcNorm,&glob_eta,ONE,DataType,MPI_SUM,MPI_COMM_WORLD);
-#else
-    glob_eta = srcNorm;
-#endif
-    srcNorm = sqrt(glob_eta);
-    if (debug)   printf("   emissivity %"ISYM" norm = %g\n", ibin, srcNorm);
-  }
+  
+  // calculate emissivity source norm
+  float glob_eta = TotalFieldValue(LevelArray, level, MAX_DEPTH_OF_HIERARCHY, Emissivity0+ibin);
+  if (debug)   printf("   total emissivity %"ISYM" = %g\n", ibin, glob_eta);
 
   // determine if the radiation system needs to be solved in this step:
   //   if not, set error to 0, reset units, return with a successful step; 
   float srctol=1.0e-30;
   float radtol=1.0e-8;
-  if ((srcNorm*dt < srctol) && (fabs(Etyp-Emax) < radtol)) {
-    *Eerror = 0.0;
+  if ((glob_eta*dt < srctol) && (fabs(Etyp-Emax) < radtol)) {
+    *Eerror = 0.1;
     dt   /= TimeUnits;
     told /= TimeUnits;
     tnew /= TimeUnits;
@@ -569,8 +434,9 @@ int AMRFLDSplit::RadStep(int ibin, LevelHierarchyEntry *LevelArray[],
   amrfldsolve.update_enzo();
 
   // enforce a solution floor on radiation
-  float epsilon=1.0;      // radiation floor, set to just above roundoff
+  float epsilon=1.0;      // radiation floor, set to 100*roundoff
   while ((1.0 + epsilon) > 1.0)  epsilon*=0.5;
+  epsilon *= 100.0;
   for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
     for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
 	 Temp=Temp->NextGridThisLevel)
@@ -617,6 +483,164 @@ int AMRFLDSplit::RadStep(int ibin, LevelHierarchyEntry *LevelArray[],
 }
 
 #endif   // AMR_SOLVE
+
+
+// This routine scales the current radiation fields on this process, 
+// from level down, either to/from solver units based on the "Rescale" 
+// argument (false -> solver units, true -> Enzo units)
+int AMRFLDSplit::ScaleFields(LevelHierarchyEntry *LevelArray[], int level, bool Rescale) {
+
+  // scale radiation fields on all relevant grids to/from solver units
+  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
+    for (LevelHierarchyEntry *Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel)
+      if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
+
+	// set grid dimension information
+	int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
+	int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
+	int ghXl = DEFAULT_GHOST_ZONES;
+	int n3[] = {1, 1, 1};
+	for (int dim=0; dim<rank; dim++)
+	  n3[dim] = Temp->GridHierarchyEntry->GridData->GetGridEndIndex(dim)
+	          - Temp->GridHierarchyEntry->GridData->GetGridStartIndex(dim) + 1;
+	int x0len = n3[0] + 2*ghXl;
+	int x1len = n3[1] + 2*ghYl;
+	int x2len = n3[2] + 2*ghZl;
+	  
+	// scale radiation fields
+	for (int ibin=0; ibin<NumRadiationFields; ibin++) {
+	  float *Enew = AccessRadiationField(ibin, Temp->GridHierarchyEntry);
+	  if (Enew == NULL) {
+	    ENZO_VFAIL("AMRFLDSplit_ScaleFields error: cannot access radiation bin %"ISYM"\n",ibin);
+	  }
+	  if (Rescale)
+	    for (int k=0; k<x0len*x1len*x2len; k++)  Enew[k] *= ErScale[ibin];
+	  else
+	    for (int k=0; k<x0len*x1len*x2len; k++)  Enew[k] /= ErScale[ibin];
+	}
+
+      }  // end loop over grids on this proc
+  
+  return SUCCESS;
+}
+
+
+
+// This routine zeros out the emissivity fields from this level down
+// (used after the step is over and energy has been deposited)
+int AMRFLDSplit::ResetEmissivityFields(LevelHierarchyEntry *LevelArray[], int level) {
+
+  // zero out emissivity fields for all grids on this processor
+  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
+    for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
+	 Temp=Temp->NextGridThisLevel)
+      if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
+
+	// set grid dimension information
+	int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
+	int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
+	int ghXl = DEFAULT_GHOST_ZONES;
+	int n3[] = {1, 1, 1};
+	for (int dim=0; dim<rank; dim++)
+	  n3[dim] = Temp->GridHierarchyEntry->GridData->GetGridEndIndex(dim)
+	          - Temp->GridHierarchyEntry->GridData->GetGridStartIndex(dim) + 1;
+	int x0len = n3[0] + 2*ghXl;
+	int x1len = n3[1] + 2*ghYl;
+	int x2len = n3[2] + 2*ghZl;
+	  
+	// reset emissivity fields
+	for (int ibin=0; ibin<NumRadiationFields; ibin++) {
+	  float *eta = AccessEmissivityField(ibin, Temp->GridHierarchyEntry);
+	  if (eta == NULL) {
+	    ENZO_VFAIL("AMRFLDSplit_Evolve error: cannot access emissivity bin %"ISYM"\n", ibin);
+	  }
+	  for (int k=0; k<x0len*x1len*x2len; k++)  eta[k]=0.0;
+	}
+
+      }  // end loop over grids on this proc
+    
+  return SUCCESS;
+}
+
+
+
+// This routine compiles and outputs statistics on the current 
+// radiation field, returning the RMS and maximum values of the
+// radiation fields, and printing statistics to the screen
+int AMRFLDSplit::PrintStats(LevelHierarchyEntry *LevelArray[], 
+			    int level, float *Etyp, float *Emax) {
+
+  // generate local statistics on this process
+  int ibin;
+  for (ibin=0; ibin<MAX_FLD_FIELDS; ibin++) {
+    Etyp[ibin] = 0.0;
+    Emax[ibin] = 0.0;
+  }
+  float Enum=0.0;
+  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
+    for (LevelHierarchyEntry *Temp=LevelArray[thislevel]; Temp; Temp=Temp->NextGridThisLevel)
+      if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
+
+	  // set grid dimension information
+	  int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghXl = DEFAULT_GHOST_ZONES;
+	  int n3[] = {1, 1, 1};
+	  for (int dim=0; dim<rank; dim++)
+	    n3[dim] = Temp->GridHierarchyEntry->GridData->GetGridEndIndex(dim)
+	            - Temp->GridHierarchyEntry->GridData->GetGridStartIndex(dim) + 1;
+	  int x0len = n3[0] + 2*ghXl;
+	  int x1len = n3[1] + 2*ghYl;
+	  int x2len = n3[2] + 2*ghZl;
+	  Enum += n3[0]*n3[1]*n3[2];
+	  
+	  // scale radiation fields, and accumulate field statistics
+	  for (ibin=0; ibin<NumRadiationFields; ibin++) {
+	    float *Enew = AccessRadiationField(ibin, Temp->GridHierarchyEntry);
+	    if (Enew == NULL) {
+	      ENZO_VFAIL("AMRFLDSplit_PrintStats error: cannot access radiation bin %"ISYM"\n",
+			 ibin);
+	    }
+
+	    for (int k=ghZl; k<n3[2]+ghZl; k++) 
+	      for (int j=ghYl; j<n3[1]+ghYl; j++) 
+		for (int i=ghXl; i<n3[0]+ghXl; i++) {
+		  Etyp[ibin] += Enew[(k*x1len+j)*x0len+i]*Enew[(k*x1len+j)*x0len+i];
+		  Emax[ibin] = max(Emax[ibin], fabs(Enew[(k*x1len+j)*x0len+i]));
+		}
+	  }
+
+      }  // end loop over grids on this proc
+
+  // communicate among all procs to get statistics of current radiation field
+#ifdef USE_MPI
+  MPI_Datatype FDataType = (sizeof(float) == 4) ? MPI_FLOAT : MPI_DOUBLE;
+  MPI_Arg nbins_p1 = NumRadiationFields+1;
+  MPI_Arg nbins = NumRadiationFields;
+  float dtmpIn[NumRadiationFields+1];
+  for (ibin=0; ibin<NumRadiationFields; ibin++)  dtmpIn[ibin] = Etyp[ibin];
+  dtmpIn[NumRadiationFields] = Enum;
+  float dtmpOut[NumRadiationFields+1];
+  if (MPI_Allreduce(Emax, dtmpOut, nbins, FDataType, MPI_MAX, MPI_COMM_WORLD) != MPI_SUCCESS)
+    ENZO_FAIL("AMRFLDSplit_PrintStats error in MPI_Allreduce\n");
+  for (ibin=0; ibin<NumRadiationFields; ibin++)  
+    Emax[ibin] = dtmpOut[ibin];
+  MPI_Allreduce(dtmpIn, dtmpOut, nbins_p1, FDataType, MPI_SUM, MPI_COMM_WORLD);
+  for (ibin=0; ibin<NumRadiationFields; ibin++)  
+    Etyp[ibin] = sqrt(dtmpOut[ibin]/dtmpOut[NumRadiationFields]);
+#else
+  for (ibin=0; ibin<NumRadiationFields; ibin++)  
+    Etyp[ibin] = sqrt(Etyp[ibin]/Enum);
+#endif
+  if (debug) {
+    printf("   current internal quantities:\n");
+    for (ibin=0; ibin<NumRadiationFields; ibin++) 
+      printf("      E%"ISYM": rms = %13.7e, max = %13.7e\n", 
+	     ibin, Etyp[ibin], Emax[ibin]);
+  }    
+
+  return SUCCESS;
+}
 
 
 #endif   // TRANSFER

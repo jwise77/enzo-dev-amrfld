@@ -192,6 +192,10 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float intHeating_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII*(1-nuHeII/nu) d nu
 
   // private computation routines
+  int UpdateUnits(FLOAT Told, FLOAT Tnew);
+  int ScaleFields(LevelHierarchyEntry *LevelArray[], int level, bool Rescale);
+  int ResetEmissivityFields(LevelHierarchyEntry *LevelArray[], int level);
+  int PrintStats(LevelHierarchyEntry *LevelArray[], int level, float *Etyp, float *Emax);
   int EnforceBoundary(int Bin, LevelHierarchyEntry *LevelArray[]);
   int RadiationSource(LevelHierarchyEntry *LevelArray[], int level, float time);
   int Opacity(int Bin, LevelHierarchyEntry *LevelArray[], int level, float time);

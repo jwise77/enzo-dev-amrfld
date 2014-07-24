@@ -92,6 +92,7 @@ static float CosmologySimulationInitialUniformBField[MAX_DIMENSION];  // in prop
 
 #ifdef TRANSFER
 static float RadHydroInitialRadiationEnergy = 1.0e-32;
+static int AMRFLDNumRadiationFields = 0;   // default to a grey FLD solver
 #endif
 
 #define MAX_INITIAL_GRIDS 10
@@ -137,6 +138,26 @@ int CosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
 
 #ifdef TRANSFER
   char *RadName      = "Grey_Radiation_Energy";
+  char *RadName0     = "Radiation0";
+  char *RadName1     = "Radiation1";
+  char *RadName2     = "Radiation2";
+  char *RadName3     = "Radiation3";
+  char *RadName4     = "Radiation4";
+  char *RadName5     = "Radiation5";
+  char *RadName6     = "Radiation6";
+  char *RadName7     = "Radiation7";
+  char *RadName8     = "Radiation8";
+  char *RadName9     = "Radiation9";
+  char *EtaName0     = "Emissivity0";
+  char *EtaName1     = "Emissivity1";
+  char *EtaName2     = "Emissivity2";
+  char *EtaName3     = "Emissivity3";
+  char *EtaName4     = "Emissivity4";
+  char *EtaName5     = "Emissivity5";
+  char *EtaName6     = "Emissivity6";
+  char *EtaName7     = "Emissivity7";
+  char *EtaName8     = "Emissivity8";
+  char *EtaName9     = "Emissivity9";
   char *kphHIName    = "HI_kph";
   char *kphHeIName   = "HeI_kph";
   char *kphHeIIName  = "HeII_kph";
@@ -344,6 +365,9 @@ int CosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
 	  // read relevant problem parameters
 	  ret += sscanf(line, "RadHydroRadiationEnergy = %"FSYM, 
 			&RadHydroInitialRadiationEnergy);
+	  // read relevant problem parameters
+	  ret += sscanf(line, "AMRFLDNumRadiationFields = %"ISYM, 
+			&AMRFLDNumRadiationFields);
 	} // end input from parameter file
 	fclose(RHfptr);
       }
@@ -658,6 +682,7 @@ int CosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
 			     CosmologySimulationInitialFractionMetalIa,
 #ifdef TRANSFER
 			     RadHydroInitialRadiationEnergy,
+			     AMRFLDNumRadiationFields,
 #endif
 			     CosmologySimulationUseMetallicityField,
 			     MetaData.NumberOfParticles,
@@ -729,7 +754,29 @@ int CosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
   */
 #ifdef TRANSFER
   if (RadiativeTransferFLD > 1) {
-    DataLabel[i++] = RadName;
+
+    if (AMRFLDNumRadiationFields == 0)
+      DataLabel[i++] = RadName;
+    if (AMRFLDNumRadiationFields > 0)
+      DataLabel[i++] = RadName0;
+    if (AMRFLDNumRadiationFields > 1)
+      DataLabel[i++] = RadName1;
+    if (AMRFLDNumRadiationFields > 2)
+      DataLabel[i++] = RadName2;
+    if (AMRFLDNumRadiationFields > 3)
+      DataLabel[i++] = RadName3;
+    if (AMRFLDNumRadiationFields > 4)
+      DataLabel[i++] = RadName4;
+    if (AMRFLDNumRadiationFields > 5)
+      DataLabel[i++] = RadName5;
+    if (AMRFLDNumRadiationFields > 6)
+      DataLabel[i++] = RadName6;
+    if (AMRFLDNumRadiationFields > 7)
+      DataLabel[i++] = RadName7;
+    if (AMRFLDNumRadiationFields > 8)
+      DataLabel[i++] = RadName8;
+    if (AMRFLDNumRadiationFields > 9)
+      DataLabel[i++] = RadName9;
     
     // if using external chemistry/cooling, set rate labels
     if (RadiativeCooling) {
@@ -779,8 +826,30 @@ int CosmologySimulationInitialize(FILE *fptr, FILE *Outfptr,
     DataLabel[i++] = GPotName;  
 
 #ifdef EMISSIVITY
-  if (StarMakerEmissivityField > 0)
-    DataLabel[i++] = EtaName;
+  if (StarMakerEmissivityField > 0) {
+    if (AMRFLDNumRadiationFields == 0)
+      DataLabel[i++] = EtaName;
+    if (AMRFLDNumRadiationFields > 0)
+      DataLabel[i++] = EtaName0;
+    if (AMRFLDNumRadiationFields > 1)
+      DataLabel[i++] = EtaName1;
+    if (AMRFLDNumRadiationFields > 2)
+      DataLabel[i++] = EtaName2;
+    if (AMRFLDNumRadiationFields > 3)
+      DataLabel[i++] = EtaName3;
+    if (AMRFLDNumRadiationFields > 4)
+      DataLabel[i++] = EtaName4;
+    if (AMRFLDNumRadiationFields > 5)
+      DataLabel[i++] = EtaName5;
+    if (AMRFLDNumRadiationFields > 6)
+      DataLabel[i++] = EtaName6;
+    if (AMRFLDNumRadiationFields > 7)
+      DataLabel[i++] = EtaName7;
+    if (AMRFLDNumRadiationFields > 8)
+      DataLabel[i++] = EtaName8;
+    if (AMRFLDNumRadiationFields > 9)
+      DataLabel[i++] = EtaName9;
+  }
 #endif
  
   if (ShockMethod) {
@@ -1034,6 +1103,7 @@ int CosmologySimulationReInitialize(HierarchyEntry *TopGrid,
 			     CosmologySimulationInitialFractionMetalIa,
 #ifdef TRANSFER
 			     RadHydroInitialRadiationEnergy,
+			     AMRFLDNumRadiationFields,
 #endif
 			     CosmologySimulationUseMetallicityField,
 			     MetaData.NumberOfParticles,

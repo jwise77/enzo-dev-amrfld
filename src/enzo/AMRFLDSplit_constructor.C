@@ -48,7 +48,7 @@ AMRFLDSplit::AMRFLDSplit()
   sol_npost      = 1;     // one post-relaxation sweep
 
   // initialize limiter parameters
-  LimiterRmin = 1.e-20;
+  LimiterRmin = 1.e-2;
   LimiterDmax = 1.e-2;
 
   // initialize solver diagnostics
@@ -101,13 +101,13 @@ AMRFLDSplit::AMRFLDSplit()
   
   // initialize ionization source parameters
   NumSources = 0;
-  for (src=0; bin<MAX_FLD_SOURCES; src++) {
+  for (src=0; src<MAX_FLD_SOURCES; src++) {
     for (dim=0; dim<3; dim++) {
       SourceLocation[src][dim] = 0.0;
       OriginalSourceLocation[src][dim] = 0.0;
     }
     for (bin=0; bin<MAX_FLD_FIELDS; bin++)
-      SourceGroupEnergy[src][bin] = 0.0;
+      SourceGroupEnergy[src][bin] = -1.0;
   }
   WeakScaling = 0;         // standard run, do not replicate input sources
   
