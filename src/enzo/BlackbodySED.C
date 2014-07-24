@@ -6,7 +6,7 @@
  *****************************************************************************/
 /***********************************************************************
 /
-/  Monochromatic radiation SED instantiation of the SED base class.
+/  Blackbody radiation SED instantiation of the SED base class.
 /
 /  written by: Daniel Reynolds
 /  date:       July, 2014
@@ -17,34 +17,28 @@
 /
 ************************************************************************/
 
-#ifndef MONOCHROMATIC_SED_DEFINED__
-#define MONOCHROMATIC_SED_DEFINED__
+#include "BlackbodySED.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include "macros_and_parameters.h"
-#include "typedefs.h"
-#include "SED.h"
+// constructor
+BlackbodySED::BlackbodySED(float Temp) { this->Temperature = Temp; };
 
-class MonochromaticSED : public virtual SED {
+// monochromatic return function
+bool BlackbodySED::monochromatic() { 
+  return false;  // not monochromatic
+}
 
- private:
+// lower bound function
+float BlackbodySED::lower_bound() { 
+  return 0.0;    // lower bound of hnu=0
+}
 
-  // SED-defining data
-  float frequency;
+// upper bound function
+float BlackbodySED::upper_bound() { 
+  return -1.0;   // no upper bound
+}
 
- public:
-
-  // constructor
-  MonochromaticSED(float Frequency);
-
-  // required functions
-  bool monochromatic();
-  float lower_bound();
-  float upper_bound();
-  float value(float hnu);
-
-};
-  
-#endif
+// main SED function
+float BlackbodySED::value(float hnu) {
+  float nu = hnu*ev2erg/hplanck;    // convert frequency to Hz
+  return (8.0*pi*hplanck*POW(nu/clight,3)/(exp(hplanck*nu/kboltz/Temperature)-1.0));
+}

@@ -30,8 +30,8 @@
 /           infinity, we note that it is typically more efficient 
 /           to set b to infinity than to arbitrarily select a large 
 /           value.  If the resulting interval does not satisfy the
-/           requirement that (a < b), an error flag will be returned, 
-/           and the integral value will be set to 0.0.
+/           requirement that (a < b), the resulting integral value 
+/           will be set to 0.0.
 /
 /  NOTE:    Both the SED and integration limits must operate on 
 /           frequencies given in eV.  However, if the integral over 
@@ -43,11 +43,6 @@
 /           [a,b] -- integration interval, in units of eV
 /           convertHz -- flag denoting whether the integral (performed 
 /                        over hnu in eV) should be converted to Hz.
-/           R -- the resulting value of the integral
-/
-/  RETURN:
-/           returns SUCCESS on successful integration
-/           returns FAIL on an illegal interval
 /
 ************************************************************************/
 #include <stdlib.h>
@@ -66,13 +61,13 @@ float SED_composite_integral2(SED &sed, float a, int n);
 
 // adaptive numerical integration of a specified integrand over 
 // a specified interval to a specified accuracy
-int SED_integral(SED &sed, float a, float b, bool convertHz, double &R) {
+float SED_integral(SED &sed, float a, float b, bool convertHz) {
 
   // initialize result
-  R = 0.0;
+  float R = 0.0;
 
   // return error on illegal interval
-  if ((a > b) && (a > 0) && (b > 0.0))  return FAIL;
+  if ((a > b) && (a > 0) && (b > 0.0))  return R;
 
   // if the sed is monochromatic:
   // return 1.0 if the sed frequency lies inside the interval, otherwise return 0.0
@@ -86,7 +81,7 @@ int SED_integral(SED &sed, float a, float b, bool convertHz, double &R) {
     } else {
       R = 1.0;
     }
-    return SUCCESS;
+    return R;
   }
 
   // set local variables for integration bounds
@@ -103,7 +98,7 @@ int SED_integral(SED &sed, float a, float b, bool convertHz, double &R) {
     nu_R = sed.upper_bound();
 	    
   // if the integral has now disappeared, return 0.0
-  if (!b_infinite && (nu_L >= nu_R))  return SUCCESS;
+  if (!b_infinite && (nu_L >= nu_R))  return R;
 
   // set the number of subintervals and compute approximation
   int N = 5000;
@@ -115,7 +110,7 @@ int SED_integral(SED &sed, float a, float b, bool convertHz, double &R) {
   // R is computed based on integration in eV; scale result if Hz was desired
   if (convertHz)  R *= ev2erg/hplanck;
 
-  return SUCCESS;
+  return R;
 }
 
  

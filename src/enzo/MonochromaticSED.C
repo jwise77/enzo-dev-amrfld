@@ -17,34 +17,29 @@
 /
 ************************************************************************/
 
-#ifndef MONOCHROMATIC_SED_DEFINED__
-#define MONOCHROMATIC_SED_DEFINED__
+#include "MonochromaticSED.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include "macros_and_parameters.h"
-#include "typedefs.h"
-#include "SED.h"
-
-class MonochromaticSED : public virtual SED {
-
- private:
-
-  // SED-defining data
-  float frequency;
-
- public:
-
-  // constructor
-  MonochromaticSED(float Frequency);
-
-  // required functions
-  bool monochromatic();
-  float lower_bound();
-  float upper_bound();
-  float value(float hnu);
-
+// constructor
+MonochromaticSED::MonochromaticSED(float Frequency) { 
+  this->frequency = Frequency; 
 };
-  
-#endif
+
+// monochromatic return function
+bool MonochromaticSED::monochromatic() { 
+  return true; 
+};
+
+// lower bound function
+float MonochromaticSED::lower_bound() { 
+  return frequency; 
+};
+
+// upper bound function
+float MonochromaticSED::upper_bound() { 
+  return frequency; 
+};
+
+// SED function
+float MonochromaticSED::value(float hnu) { 
+  return 1.0; 
+};

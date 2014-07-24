@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-//#include "preincludes.h"
 #include "macros_and_parameters.h"
 #include "typedefs.h"
 #include "phys_constants.h"
@@ -39,22 +38,13 @@ class BlackbodySED : public virtual SED {
  public:
 
   // constructor
-  BlackbodySED(float Temp) { this->Temperature = Temp; };
+  BlackbodySED(float Temp);
 
-  // monochromatic return function
-  bool monochromatic() { return false; };  // not monochromatic
-
-  // lower bound function
-  float lower_bound() { return 0.0; };     // lower bound of hnu=0
-
-  // upper bound function
-  float upper_bound() { return -1.0; };    // no upper bound
-
-  // SED function
-  float value(float hnu) {
-    float nu = hnu*ev2erg/hplanck;    // convert frequency to Hz
-    return (8.0*pi*hplanck*POW(nu/clight,3)/(exp(hplanck*nu/kboltz/Temperature)-1.0));
-  };
+  // required functions
+  bool monochromatic();
+  float lower_bound();
+  float upper_bound();
+  float value(float hnu);
 
 };
   
