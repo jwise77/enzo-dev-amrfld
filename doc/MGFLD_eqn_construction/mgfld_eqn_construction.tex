@@ -250,36 +250,38 @@ consider the overall frequency-dependent radiation energy density
 function to have the form 
 \begin{equation}
 \label{eq:multifrequency_radiation}
-  \Enu(t,\rvec,\nu) = \sum_{\omega=1}^{N_f} \frac{1}{\nu_{\omega}}\,E_{\omega}(t,\rvec)\, \delta_{\nu_{\omega}}(\nu),
+  \Enu(t,\rvec,\nu) = \sum_{\omega=1}^{N_f} E_{\omega}(t,\rvec)\, \delta_{\nu_{\omega}}(\nu),
 \end{equation}
-where $\delta_{\nu_{\omega}}(\nu)$ is the Dirac delta function, and where we
-have defined a set of monochromatic radiation energy densities, $E_1,
-E_2, \ldots, E_{N_f}$.  We note that with this definition, each
-radiation energy field, $E_{\omega}$ has units of energy density (ergs 
-cm$^{-3}$), unlike the original frequency-dependent radiation energy
-$\Enu$ that had units ergs cm$^{-3}$ Hz$^{-1}$.
-Under this approximation, the equation \eqref{eq:mgfld_simplified2} is
-only defined at each of the frequencies $\nu_{\omega},\; 
-\omega=1,\ldots,N_f$.  By evaluating the equation
-\eqref{eq:mgfld_simplified2} at each specific frequency $\nu_{\omega}$
-and multiplying the result by the same frequency, we obtain the system
-of equations
+where $\delta_{\nu_{\omega}}(\nu)$ is the Dirac delta function (with
+units of Hz$^{-1}$), and where we have defined a set of monochromatic
+radiation energy densities, $E_1, E_2, \ldots, E_{N_f}$.  We note that
+with this definition, each radiation energy field, $E_{\omega}$ has
+units of energy density (ergs cm$^{-3}$), unlike the original
+frequency-dependent radiation energy $\Enu$ that had units ergs
+cm$^{-3}$ Hz$^{-1}$. Under this approximation, the equation
+\eqref{eq:mgfld_simplified2} is only defined at each of the
+frequencies $\nu_{\omega},\;  \omega=1,\ldots,N_f$.  By integrating the
+equation \eqref{eq:mgfld_simplified2} over frequency space, we obtain
+a set of $N_f$ independent equations, one at each specific frequency
+$\nu_{\omega}$,
 \begin{align}
   \label{eq:mgfld_multifrequency}
-  \partial_{t} E_{\omega} - \nabla\cdot(D_{\omega}\,\nabla E_{\omega}) + \frac{3 \adot}{a}
+  \partial_{t} E_{\omega} - \nabla\cdot(D_{\omega}\,\nabla E_{\omega}) + \frac{4 \adot}{a}
   E_{\omega} = \eta_{\omega} - c \kappa_{\omega} E_{\omega}, \qquad \omega=1,\ldots,N_f.
 \end{align}
 We note that since each of these frequencies solves the equation at a
 different $\nu_{\omega}$, the frequency-space coupling term 
 $\frac{\nu \adot}{a}\partial_{\nu}\Enu$ from equation
 \eqref{eq:mgfld_simplified2} has been omitted.
-We note that each of these monochromatic radiation energy densities is
-only a function of space and time, i.e. $E_{\omega} = E_{\omega}(t,\rvec)$.
+We further note that each of these monochromatic radiation energy
+densities is only a function of space and time, i.e. $E_{\omega} =
+E_{\omega}(t,\rvec)$.
 
 In the above transformation of the equation
 \eqref{eq:mgfld_simplified2} to the system of equations
-\eqref{eq:mgfld_multifrequency}, we elaborate on two non-trivial
-terms, the opacity $\kappa_{\omega}$ and emissivity $\eta_{\omega}$. 
+\eqref{eq:mgfld_multifrequency}, we elaborate on three non-trivial
+terms, the opacity $\kappa_{\omega}$, emissivity $\eta_{\omega}$ and
+the cosmological expansion term $4\frac{\adot}{a}E_{\omega}$. 
 The first of these may simply be defined through evaluating the
 corresponding multi-frequency opacity at the associated frequency
 $\nu_{\omega}$, i.e.
@@ -291,18 +293,46 @@ The resulting frequency-specific opacity $\kappa_{\omega}$ therefore
 retains the units of cm$^{-1}$.
 
 We define emissivity for each of these radiation fields through taking
-the corresponding multi-frequency emissivity and performing the same
-transformation as was applied to the equations themselves.  To define
-the single-frequency emissivity $\eta_{\omega}$ we evaluate the
-frequency-dependent emissivity at $\nu_{\omega}$ and multiply the
-result by $\nu_{\omega}$:
-\begin{align}
+the corresponding multi-frequency emissivity and integrating over
+frequency space, as was performed to the equations themselves.  We
+note that in order for this integrated emissivity to be usable within
+the discrete single-frequency equations
+\eqref{eq:mgfld_multifrequency}, we must assum that the
+multi-frequency emissivity admits a form similar to
+\eqref{eq:multifrequency_radiation}, i.e.~we assume that
+\begin{equation}
 \label{eq:multifrequency_emissivity}
-  \eta_{\omega}(t,\rvec) &= \nu_{\omega}\, \eta_{\nu}(t,\rvec,\nu_{\omega}).
+  \eta_{\nu}(t,\rvec,\nu) = \sum_{\omega=1}^{N_f}
+  \eta_{\omega}(t,\rvec)\, \delta_{\nu_{\omega}}(\nu), 
+\end{equation}
+The resulting frequency-specific emissivity $\eta_{\omega}$ therefore
+has units of ergs cm$^{-3}$ s$^{-1}$, corresponding to the rate of
+energy density emission at the frequency $\nu_{\omega}$.
+
+The term that corresponds to cosmological expansion,
+$4\frac{\adot}{a}E_{\omega}$, results from the two terms in the
+original equation, 
+$\frac{3 \adot}{a} \Enu - \frac{\nu \adot}{a}\partial_{\nu}\Enu$.  
+Specifically, the second of these reduces to
+$\frac{\adot}{a}E_{\omega}$ through integration by parts,
+\begin{align}
+\notag
+   \frac{\nu \adot}{a}\partial_{\nu}\Enu \;\rightarrow\;
+   \int_{0}^{\infty} \frac{\nu \adot}{a}\partial_{\nu}\Enu\,\mathrm d\nu
+   &=
+   \frac{\adot}{a} \sum_{\omega=1}^{N_f} E_{\omega} \int_{0}^{\infty} \nu\,\partial_{\nu}\delta_{\nu_{\omega}}(\nu)\,\mathrm d\nu \\
+\label{eq:multifrequency_redshifting}
+   &=
+   \frac{\adot}{a} \sum_{\omega=1}^{N_f} E_{\omega}
+   \left[(\nu\,\delta_{\nu_{\omega}})\bigg\vert_{0}^{\infty} - \int_{0}^{\infty} \delta_{\nu_{\omega}}\,\mathrm d\nu\right]\\
+\notag
+   &=
+   \frac{\adot}{a} \sum_{\omega=1}^{N_f} E_{\omega}
+   \left[0 - 1\right] = -\frac{\adot}{a} \sum_{\omega=1}^{N_f} E_{\omega}.
 \end{align}
-The resulting frequency-specific emissivity therefore has units of ergs
-cm$^{-3}$ s$^{-1}$, corresponding to the rate of energy density
-emission at the frequency $\nu_{\omega}$.
+As with the other terms in equation \eqref{eq:mgfld_multifrequency},
+each portion of this sum is evolved separately, along with the
+other terms at each frequency $\nu_{\omega}$.
 
 Additionally, we may define the photo-heating and photo-ionization
 terms that couple these radiation fields to the matter.  
@@ -313,7 +343,7 @@ $\Gamma_i^{ph}$ for each chemical species $\mn_i$ as
    \Gamma_i^{ph}(t,\rvec)  = 
    c \int_{\bar{\nu}_i}^{\infty} \frac{\sigma_{\mn_i}(\nu)\Enu(t,\rvec,\nu)}{h\nu}\,\mathrm d\nu =  
    \sum_{\omega=1}^{N_f} \frac{c\, E_{\omega}(t,\rvec)}{h} 
-   \left(\frac{\sigma_{\mn_i}(\nu_{\omega})}{\nu_{\omega}^2}\right), 
+   \left(\frac{\sigma_{\mn_i}(\nu_{\omega})}{\nu_{\omega}}\right), 
    \qquad i=1,\ldots,N_\text{chem},
 \end{equation}
 where here we denote the ionization threshold frequency for species
@@ -342,7 +372,8 @@ rate, $G$, using our multi-frequency radiation field
    &= 
    \sum_{i=1}^{N_\text{chem}} \sum_{\omega=1}^{N_f}\,
      \frac{c\, \mn_i\, E_{\omega}(t,\rvec)}{\rhob}\,
-     \left[\sigma_{\mn_i}(\nu_{\omega}) \left(\frac{1}{\nu_{\omega}} - \frac{\bar{\nu}_i}{\nu_{\omega}^2}\right)\right].
+     \left[\sigma_{\mn_i}(\nu_{\omega}) \left(1 -
+       \frac{\bar{\nu}_i}{\nu_{\omega}}\right)\right]. 
 \end{align}
 
 
@@ -449,7 +480,7 @@ radiation group. We investigate each term separately,
    \partial_{t} \Enu &\;\rightarrow\;
    \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \partial_{t} \Enu\,\mathrm d\nu
    =
-   \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \partial_{t} E_{\omega}\,\mathrm d\nu
+   \partial_t\left( \int_{\nu_{\omega,L}}^{\nu_{\omega,R}} \Enu\,\mathrm d\nu\right)
    =
    \partial_{t} E_{\omega}, \\
  \label{eq:multigroup_diffusion}
@@ -533,7 +564,7 @@ downward.  Although our multi-group radiation approximation is no
 longer continuous as a function of frequency, rendering the partial
 derivative $\partial_\nu\Enu$ undefined, we have used integration by
 parts to instead consider this term as a radiation flux from
-higher-frequency groups downward.  Furthermore, the first and last
+higher-frequency groups downward.  In addition, the first and last
 radiation groups deserve special attention since they cannot have
 left and right neighbors, respectively (as well as any other groups
 that have a non-contiguous frequency band with a lower/higher group).
@@ -794,7 +825,8 @@ $\Eunit$ and canceling like terms, the multi-frequency equation
 comoving, normalized radiation energy density: 
 \begin{align}
   \label{eq:mgfld_multifrequency_Ecomoving}
-  \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla \tE_{\omega}) 
+  \partial_{t} \tE_{\omega} - \nabla\cdot(D_{\omega}\,\nabla
+  \tE_{\omega}) + \frac{\adot}{a}\tE_{\omega}
     = \frac{\eta_{\omega}}{\Eunit} - c \kappa_{\omega} \tE_{\omega}, \qquad \omega=0,\ldots,N_f.
 \end{align}
 Similarly, the multi-group equation \eqref{eq:mgfld_multigroup} can be
@@ -851,7 +883,7 @@ Resultingly, upon converting \eqref{eq:mgfld_multifrequency_Ecomoving}
 to comoving, normalized units, we have the multi-frequency equation
 \begin{align}
   \label{eq:mgfld_multifrequency_comoving}
-  \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
+  \partial_{t} \tE_{\omega} - \frac{1}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\) + \frac{\adot}{a}\tE_{\omega}
     = \frac{\eta_{\omega}}{\Eunit} - c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
 and converting \eqref{eq:mgfld_multigroup_Ecomoving} we obtain the
@@ -874,7 +906,7 @@ Inserting this into \eqref{eq:mgfld_multifrequency_comoving} we have
 the multi-frequency equations
 \begin{align}
   \label{eq:mgfld_multifrequency_tnormalized}
-  \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
+  \partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\) + \frac{\Tunit\,\adot}{a}\tE_{\omega}
     = \frac{\Tunit\eta_{\omega}}{\Eunit} - \Tunit c\kappa_{\omega} \tE_{\omega}, \quad \omega=0,\ldots,N_f,
 \end{align}
 and inserting into \eqref{eq:mgfld_multigroup_comoving} we have the
@@ -893,8 +925,13 @@ $\tK_{\omega}$.  To this end, we expand each variable in terms of its
 normalized value and unit factor.  We begin with the multi-frequency
 equations: 
 \begin{align}
+  \notag
+  &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\) + \frac{\Tunit\,\tAdot\,\Aunit}{\Tunit\,\tA\,\Aunit}\tE_{\omega}
+    = \frac{\Tunit\,\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}, \quad
+    \omega=0,\ldots,N_f,\\
+\Leftrightarrow \quad & \\
   \label{eq:mgfld_multifrequency_comoving_normalized}
-  &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
+  &\partial_{\tT} \tE_{\omega} - \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\) + \frac{\tAdot}{\tA}\tE_{\omega}
     = \frac{\Tunit\,\eta_{\omega}}{\Eunit} - \Tunit\, \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}, \quad
     \omega=0,\ldots,N_f,
 \end{align}
@@ -981,7 +1018,7 @@ notation
 \[
    \mD_{\omega}(\tE_{\omega},\tK_{\omega},\eta_{\omega},\tA,\tAdot) = 
    \frac{\Tunit}{\Lunit^2}\tnabla\cdot\(D_{\omega}\,\tnabla \tE_{\omega}\)
-    + \frac{\Tunit\eta_{\omega}}{\Eunit} 
+    - \frac{\tAdot}{\tA}\tE_{\omega} + \frac{\Tunit\eta_{\omega}}{\Eunit}
     - \Tunit \Kunit\, c\, \tK_{\omega}\, \tE_{\omega}
 \]
 for the multi-frequency equation
@@ -1036,7 +1073,7 @@ where for the multi-frequency equations
   \notag
     &+ \frac{\Tunit}{\Lunit^2 \Delta z^2}\(D_{\omega,i,j,k+1/2}\(\tE_{\omega,i,j,k+1} - \tE_{\omega,i,j,k}\) - D_{\omega,i,j,k-1/2}\(\tE_{\omega,i,j,k} - \tE_{\omega,i,j,k-1}\)\) \\
   \notag
-    &+ \frac{\Tunit \eta_{\omega,i,j,k}}{\Eunit} 
+    &- \frac{\tAdot}{\tA}\tE_{\omega,i,j,k} + \frac{\Tunit \eta_{\omega,i,j,k}}{\Eunit} 
      - \Tunit \Kunit\, c\, \tK_{\omega,i,j,k} \tE_{\omega,i,j,k},
 \end{align}
 and for the multi-group equations
