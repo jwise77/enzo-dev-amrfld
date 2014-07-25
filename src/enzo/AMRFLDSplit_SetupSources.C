@@ -18,6 +18,7 @@
 ************************************************************************/
 #ifdef TRANSFER
 #include "AMRFLDSplit.h"
+#include "SED.h"
 #include "BlackbodySED.h"
 #include "MonochromaticSED.h"
 
@@ -26,18 +27,17 @@
 float SED_integral(SED &sed, float a, float b, bool convertHz);
 
 
-// SED type for computing radiation energy contribution integrals
-class Blackbody_Moment : public virtual SED {
+// SED "moment" class for computing radiation field contributions
+class SED_Moment : public virtual SED {
  private:
-  BlackbodySED *baseSED;     // base SED
+  SED *baseSED;     // base SED
  public:
-  Blackbody_Moment(BlackbodySED &base) { this->baseSED = &base; };
+  SED_Moment(SED &base) { this->baseSED = &base; };
   bool monochromatic() { return this->baseSED->monochromatic(); };
   float lower_bound() { return this->baseSED->lower_bound(); };
   float upper_bound() { return this->baseSED->upper_bound(); };
   float value(float hnu) { return this->baseSED->value(hnu)*hnu*ev2erg/hplanck; };
 };
-
 
 
 int AMRFLDSplit::SetupSources(HierarchyEntry *RootGrid,
@@ -69,43 +69,53 @@ int AMRFLDSplit::SetupSources(HierarchyEntry *RootGrid,
   // fill SourceGroupEnergy for sources that are specified by type/energy
   for (isrc=0; isrc<NumSources; isrc++) {
 
-    // monochromatic source at hnu = 13.6 eV
-    if (SourceType[isrc] == 0) {
-      MonochromaticSED tmp_src(13.6);
-      for (ibin=0; ibin<NumRadiationFields; ibin++) {
-	if (FieldMonochromatic[ibin]) {   // skip monochromatic fields
-	  SourceGroupEnergy[isrc][ibin] = 0.0;
-	  continue;
-	}
-	SourceGroupEnergy[isrc][ibin] = SourceEnergy[isrc] * hplanck * nu0
-	  * SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true);
-      }
-      if (debug) {
-	printf("AMRFLDSplit::Initialize monochromatic source %"ISYM" has group energies", isrc);
-	for (ibin=0; ibin<NumRadiationFields; ibin++)  printf(" %g", SourceGroupEnergy[isrc][ibin]);
-	printf("\n");
-      }
+    // skip sources with SourceType of -1 (indicates alternate source strategy)
+    if (SourceType[isrc] == -1)  continue;
+
+    // set up source SED
+    SED *tmp_src;
+    switch (SourceType[isrc]) {
+    case 0:      // monochromatic source at hnu = 13.6 eV
+      tmp_src = new MonochromaticSED(13.6);
+      break;
+    case 1:      // blackbody spectrum at T = 1e5 K
+      tmp_src = new BlackbodySED(1.0e5);
+      break;
+    default:
+      ENZO_VFAIL("AMRFLDSplit::SetupSources error, source type %"ISYM" does not exist\n", 
+		 SourceType[isrc]);
     }
 
-    // blackbody spectrum at T = 1e5 K
-    if (SourceType[isrc] == 1) {
-      BlackbodySED bSED(1.0e5);
-      Blackbody_Moment bSED_M(bSED);
-      float total_integral = SED_integral(bSED, 13.6, -1.0, true);
-      for (ibin=0; ibin<NumRadiationFields; ibin++) {
-	if (FieldMonochromatic[ibin]) {   // skip monochromatic fields
-	  SourceGroupEnergy[isrc][ibin] = 0.0;
-	  continue;
-	}
-	SourceGroupEnergy[isrc][ibin] = SourceEnergy[isrc] * hplanck / total_integral
-	  * SED_integral(bSED_M, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true);
+    // set up source SED moment
+    SED_Moment tmp_src_m(*tmp_src);
+
+    // compute integral of SED over all ionizing frequencies
+    float total_integral = SED_integral(*tmp_src, hnu0, -1.0, true);
+
+    // iterate over radiation fields
+    for (ibin=0; ibin<NumRadiationFields; ibin++) {
+
+      // skip monochromatic fields
+      if (FieldMonochromatic[ibin]) {
+	SourceGroupEnergy[isrc][ibin] = 0.0;
+	continue;
       }
-      if (debug) {
-	printf("AMRFLDSplit::Initialize blackbody source %"ISYM" has group energies", isrc);
-	for (ibin=0; ibin<NumRadiationFields; ibin++)  printf(" %g", SourceGroupEnergy[isrc][ibin]);
-	printf("\n");
-      }
+
+      // computing source contributions to this radiation field
+      SourceGroupEnergy[isrc][ibin] = SourceEnergy[isrc] * hplanck / total_integral
+	* SED_integral(tmp_src_m, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true);
     }
+
+    // report results to stdout
+    if (debug) {
+      printf("AMRFLDSplit::Initialize source %"ISYM" has group energies", isrc);
+      for (ibin=0; ibin<NumRadiationFields; ibin++)  
+	printf(" %g", SourceGroupEnergy[isrc][ibin]);
+      printf("\n");
+    }
+
+    // clean up
+    delete tmp_src;
 
   }   // end isrc loop
 
