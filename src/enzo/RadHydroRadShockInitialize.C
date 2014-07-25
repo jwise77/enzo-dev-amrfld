@@ -45,7 +45,7 @@ int RadHydroRadShockInitialize(FILE *fptr, FILE *Outfptr,
 
   char *DensName  = "Density";
   char *TEName    = "TotalEnergy";
-  char *IEName    = "Internal_Energy";
+  char *IEName    = "GasEnergy";
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
   char *Vel2Name  = "z-velocity";
