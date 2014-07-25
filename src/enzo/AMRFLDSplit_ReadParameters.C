@@ -300,7 +300,7 @@ int AMRFLDSplit::ReadParameters(TopGridData &MetaData,
       } else {
 	sourceOK = true;
 	if (debug) 
-	  printf("AMRFLDSplit::ReadParameters source %"ISYM" has type %"ISYM" and energy %g\n", 
+	  printf("AMRFLDSplit::ReadParameters source %"ISYM": type %"ISYM", %g photons/sec\n", 
 		 isrc, SourceType[isrc], SourceEnergy[isrc]);
       }
     }
