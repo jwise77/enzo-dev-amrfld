@@ -79,7 +79,7 @@ float SED_integral(SED &sed, float a, float b, bool convertHz) {
     } else if ((b > 0) && (sed.lower_bound() > b)) {
       R = 0.0;
     } else {
-      R = 1.0;
+      R = sed.value(sed.lower_bound());
     }
     return R;
   }
