@@ -28,6 +28,18 @@
 float SED_integral(SED &sed, float a, float b, bool convertHz);
  
 
+// SED "moment" class for computing radiation field contributions
+class BB_Moment : public virtual SED {
+ private:
+  SED *baseSED;     // base SED
+ public:
+  BB_Moment(SED &base) { this->baseSED = &base; };
+  bool monochromatic() { return this->baseSED->monochromatic(); };
+  float lower_bound() { return this->baseSED->lower_bound(); };
+  float upper_bound() { return this->baseSED->upper_bound(); };
+  float value(float hnu) { return this->baseSED->value(hnu)*hnu*ev2erg/hplanck; };
+};
+
 
 int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[], 
 				 int level, float time)
@@ -127,11 +139,20 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 	      // place ionization sources along left wall (if on this subdomain)
 	      if (x0L == 0.0) {
 
-		// determine this group's portion of total blackbody emissivity
+		// set up source SED and the "moment" SED
 		BlackbodySED tmp_src(1.0e5);
-		float wall_energy = 1e6 * 13.6 * ev2erg  / dx[0] / lUn
-		  * SED_integral(tmp_src, FrequencyBand[ibin][0], FrequencyBand[ibin][1], true) 
-		  / SED_integral(tmp_src, 13.6, -1.0, true);
+		BB_Moment tmp_src_m(tmp_src);
+
+		// compute integral of SED over all ionizing frequencies
+		float total_integral = SED_integral(tmp_src, 13.6, -1.0, true);
+
+		// compute integral of moment SED over this band
+		float band_integral = SED_integral(tmp_src_m, FrequencyBand[ibin][0], 
+						   FrequencyBand[ibin][1], true);
+
+		// determine this group's portion of total blackbody emissivity
+		float wall_energy = 1e6 * hplanck * band_integral 
+		                    / total_integral / dx[0] / lUn;
 
 		// place along wall (i=ghXl)
 		for (k=ghZl; k<n3[2]+ghZl; k++)
