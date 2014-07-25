@@ -192,6 +192,10 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float intHeating_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII*(1-nuHeII/nu) d nu
 
   // private computation routines
+  int ReadParameters(TopGridData &MetaData, int SourceType[MAX_FLD_SOURCES], 
+		     float SourceEnergy[MAX_FLD_SOURCES]);
+  int SetupSources(HierarchyEntry *RootGrid, int SourceType[MAX_FLD_SOURCES], 
+		   float SourceEnergy[MAX_FLD_SOURCES]);
   int UpdateUnits(FLOAT Told, FLOAT Tnew);
   int ScaleFields(LevelHierarchyEntry *LevelArray[], int level, bool Rescale);
   int ResetEmissivityFields(LevelHierarchyEntry *LevelArray[], int level);
@@ -207,6 +211,16 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
 	      AMRsolve_Hierarchy *hierarchy, float Etyp, 
 	      float Emax, Eflt64 *Echange);
 #endif
+  float* AccessRadiationField(int ibin, HierarchyEntry *ThisGrid);
+  float* AccessEmissivityField(int ibin, HierarchyEntry *ThisGrid);
+
+  // Problem Boundary Condition setup (called once or at each time step, 
+  //    must be called for each locally-owned external face separately)
+  int SetupBoundary(int Bin, int Dimension, int Face, int BdryConst, float *BdryData);
+
+  // Return the maximum rad-hydro time step size
+  float ComputeTimeStep(Eflt64 CurError);
+
 
  public:
 
@@ -214,7 +228,7 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   Eint32 BdryType[3][2];
 
   ///////////////////////////////////////
-  // FLD-Specific Routines
+  // Required Routines
 
   // Constructor
   AMRFLDSplit();
@@ -237,18 +251,6 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   
   // Write module parameters to file
   int WriteParameters(FILE *fptr);
-
-  // Problem Boundary Condition setup (called once or at each time step, 
-  //    must be called for each locally-owned external face separately)
-  int SetupBoundary(int Bin, int Dimension, int Face, int BdryConst, float *BdryData);
-
-  // Return the maximum rad-hydro time step size
-  float ComputeTimeStep(Eflt64 CurError);
-
- private:
-
-  float* AccessRadiationField(int ibin, HierarchyEntry *ThisGrid);
-  float* AccessEmissivityField(int ibin, HierarchyEntry *ThisGrid);
 
 };
 

@@ -92,25 +92,6 @@ Eint32 main(Eint32 argc, char* argv[]) {
   cout << "  integral [13.6,1000] = " << SED_integral(b1, 13.6, 1000.0, true) << endl;
   cout << "  integral [13.6,infty] = " << SED_integral(b1, 13.6, -1.0, true) << endl << endl;
 
-  Blackbody_Moment b1M(b1);
-  float nu0 = 13.6 * ev2erg / hplanck;
-  cout << "Blackbody spectrum moment at T=1e5 K:\n";
-  cout << "  monochromatic = " << b1M.monochromatic() << endl;
-  cout << "  lower_bound = " << b1M.lower_bound() << endl;
-  cout << "  upper_bound = " << b1M.upper_bound() << endl;
-  cout << "  integral [1,infty] = " 
-       << SED_integral(b1M, 1.0, -1.0, false) / SED_integral(b1, 1.0, -1.0, false) / nu0
-       << endl;
-  cout << "  integral [1,1e5] = " 
-       << SED_integral(b1M, 1.0, 1.e5, false) / SED_integral(b1, 1.0, 1.e5, false) / nu0
-       << endl;
-  cout << "  integral [13.6,1000] = " 
-       << SED_integral(b1M, 13.6, 1000.0, false) / SED_integral(b1, 13.6, 1000.0, false) / nu0
-       << endl;
-  cout << "  integral [13.6,infty] = " 
-       << SED_integral(b1M, 13.6, -1.0, false) / SED_integral(b1, 13.6, -1.0, false) / nu0
-       << endl << endl;
-
   BlackbodySED b2(2.0e5);
   cout << "Blackbody spectrum at T=2e5 K:\n";
   cout << "  monochromatic = " << b2.monochromatic() << endl;
@@ -203,6 +184,15 @@ Eint32 main(Eint32 argc, char* argv[]) {
   cout << "  integral [1,infty] = " << SED_integral(c2H, 1.0, -1.0, true) << endl;
   cout << "  integral [1,1e5] = " << SED_integral(c2H, 1.0, 1.e5, true) << endl;
   cout << "  integral [20,100] = " << SED_integral(c2H, 20.0, 100.0, true) << endl << endl;
+
+
+  Blackbody_Moment b1M(b1);
+  float nu0 = 13.6 * ev2erg / hplanck;
+  cout << "Blackbody scaling factors?:\n";
+  cout << "  test 1 = " 
+       << SED_integral(b1M, 1.0, -1.0, true) / SED_integral(b1, 13.6, -1.0, true) / nu0
+       << endl;
+
 
   
   return 0;
