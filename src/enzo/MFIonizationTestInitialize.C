@@ -58,8 +58,8 @@ int MFIonizationTestInitialize(FILE *fptr, FILE *Outfptr,
   char *gammaName    = "PhotoGamma";
   char *kdissH2IName = "H2I_kdiss";
   char *DensName  = "Density";
-  char *TEName    = "Total_Energy";
-  char *IEName    = "Internal_Energy";
+  char *TEName    = "TotalEnergy";
+  char *IEName    = "GasEnergy";
   char *Vel0Name  = "x-velocity";
   char *Vel1Name  = "y-velocity";
   char *Vel2Name  = "z-velocity";
