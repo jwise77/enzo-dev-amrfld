@@ -1229,15 +1229,26 @@ the AMR-FLD solver for Enzo simulations.
 
 We have two mechanisms for specifying the emission strength of each
 source via input parameters: \\
-{\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy} or
-{\tt AMRFLDSourceGroupEnergy}.  The former of these only works for
-radiation groups and not for monochromatic radiation fields.  If the
-former mechanism is used, both values must be specified for the
-source; if the latter is used it must specify a non-negative energy
-for that source's contribution to {\em all} radiation fields.  One of
-these two approaches must be employed for each of the 
-{\tt AMRFLDNumSources} sources.
+{\tt AMRFLDSourceGroupEnergy} or 
+{\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy}.  The former of these
+works for all possible radiation fields and source types.  The latter
+approach only works for radiation groups and not for monochromatic
+radiation fields.  If the former is used it must specify a
+non-negative energy for that source's contribution to {\em all}
+radiation fields.  If the latter mechanism is used, both values must
+be specified for each source.  One of these two approaches must be
+employed for each of the {\tt AMRFLDNumSources} sources.
 \begin{itemize}
+\item {\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point value for
+  the total emissivity rate of ionizing radiation for a specific
+  source over a specific frequency/group (in physical units of ergs
+  s$^{-1}$).  The first index is the source index, the second is the
+  frequency/group index. 
+
+  We note that this is the only mechanism to specify sources
+  for monochromatic radiation fields via the parameter file.
+
+  If a value is supplied, it must be non-negative.
 \item {\tt AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
   SED to use for all emissivity from a given source.  Two are
   currently implemented:
@@ -1246,16 +1257,19 @@ these two approaches must be employed for each of the
   \item[1] Blackbody source at temperature $10^5$ K.
   \end{itemize}
   If a value is supplied, it {\em must} correspond to one of the above
-  integers. 
+  integers.  Additional SED types may be defined and incorporated
+  within the routine {\tt AMRFLD\_SetupSources.C}.
 \item {\tt AMRFLDSourceEnergy[:]} -- floating-point value specifying
-  the total emissivity rate of ionizing radiation (i.e.~only
-  frequencies within $[13.6,\infty)$ eV), over for a given source (in
-  CGS units of ergs s$^{-1}$).
+  the total emissivity rate of ionizing photons (i.e.~only photons
+  with frequencies above 13.6 eV), for a given source.  The value
+  should be specified in units of photon number per second.
 
   Must be used in combination with {\tt AMRFLDSourceType[:]}.  At
   solver initialization, the SED will be numerically integrated over
   each radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
-  group's fraction of the {\tt AMRFLDSourceEnergy[:]} for the source.
+  group's fraction of the total number of emitted photons for the
+  source.  These values are automatically converted into energy
+  emission rates for each source/group.
 
   We note that this does not make sense unless using a purely
   multi-group solver (i.e. no monochromatic radiation fields), since
@@ -1263,20 +1277,11 @@ these two approaches must be employed for each of the
   no width.  As such, monochromatic fields are skipped.
 
   If a value is supplied, it must be non-negative.
-\item {\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point value for
-  the total emissivity rate of ionizing radiation for a specific
-  source over a specific frequency/group (in physical units of ergs
-  s$^{-1}$).  The first index is the source index, the second is the
-  frequency/group index. 
 
   If both {\tt AMRFLDSourceGroupEnergy} and 
-  {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy} are specified, the
-  values provided by {\tt AMRFLDSourceGroupEnergy} are used.
-
-  We note that this is the only mechanism to specify sources
-  for monochromatic radiation fields via the parameter file.
-
-  If a value is supplied, it must be non-negative.
+  {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy} are specified for a
+  given source, the values provided by {\tt AMRFLDSourceGroupEnergy}
+  are used.
 \end{itemize}
 
 
