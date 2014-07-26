@@ -52,7 +52,7 @@ def _logT(field, data):
     mp = 1.67262171e-24
     kb = 1.3806504e-16
     gamma = 5.0/3.0
-    tmp = (data["Total_Energy"] * data["Density"] / 
+    tmp = (data["TotalEnergy"] * data["Density"] / 
            (2.0*data["Density"] - data["HI_Density"]))
     return ((gamma - 1.0)*mp/kb * tmp)
 add_field("logT", take_log=True, function=_logT, 
