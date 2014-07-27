@@ -8,6 +8,10 @@
 \usepackage{color}
 \usepackage{amsmath,amsfonts,amssymb}
 
+\usepackage{quoting}
+\usepackage[threshold=5, thresholdtype=words]{csquotes}
+\SetBlockEnvironment{quoting}
+
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \author{Daniel R. Reynolds}
@@ -71,8 +75,8 @@
 \addtolength{\oddsidemargin}{-0.25in}
 \addtolength{\evensidemargin}{-0.25in}
 \addtolength{\topmargin}{-0.5in}
-\setlength{\parindent}{0em}
 \setlength{\parskip}{2ex}
+\setlength{\parindent}{0in}
 
 
 \begin{document}
@@ -1163,8 +1167,12 @@ write the time-evolved solution for a given field as
   \tE_{\omega}^{n+1} = \tE_{p} + \delta\tE,
 \]
 where $\tE_p$ is the predicted solution, and $\delta\tE$ the the
-corrector.  We then solve the linear system $A \delta\tE = b$, where
-the matrix $A$ corresponds to the linearization
+corrector.  We then solve the linear system 
+\begin{equation}
+\label{eq:linear_system}
+   A \delta\tE = b,
+\end{equation}
+where the matrix $A$ corresponds to the linearization
 \[
    A = \frac{\partial}{\partial\tE_{\omega}} \left(\tE_{\omega} - \theta\Delta \tT \mD_{\omega}\right)
 \]
@@ -1186,152 +1194,452 @@ $\tE_{\omega}^{n+1}$ via
 \section{Enzo User Interface}
 \label{sec:user_interface}
 
-We anticipate to offer the following user interface for control over
-the AMR-FLD solver for Enzo simulations.
+In this section we describe the user interface for control over the
+AMR-FLD solver for Enzo simulations.  We begin with description of the
+supported input parameters, for use of existing AMR-FLD
+functionality.  We follow this with discussion on how to extend the
+AMR-FLD functionality to admit new physical processes.
 
-{\bf Physics input parameters:}
-\begin{itemize}
-\item {\tt AMRFLDNumRadiationFields} -- integer denoting the number of
-  radiation fields, $E_{\omega}$.  Must be non-negative and at most
-  10.  Default: 0.
-\item {\tt AMRFLDFrequencyBand[:]}  -- pair of floating-point values
+
+\subsection{AMR-FLD Input Parameters:}
+\label{sec:input_parameters}
+
+
+We break apart the basic set of AMR-FLD input parameters into two
+groups, the first addresses parameters to control the physics
+performed within the AMR-FLD module, and the second group contains
+parameters to control the inner-workings of the AMR-FLD solver
+algorithms themselves.
+
+
+\subsubsection{Physics input parameters}
+\label{sec:physics_input_parameters}
+
+In order to specify how many radiation frequencies and/or groups are
+desired in a calculation, the following parameter must be included in
+the AMR-FLD input parameter file:
+%
+\blockquote{{\tt AMRFLDNumRadiationFields} -- integer denoting the
+  number of radiation fields, $N_f$.  This value must be non-negative
+  and cannot exceed {\tt MAX\_FLD\_FIELDS} (stored within {\tt
+  macros\_and\_parameters.h}, currently 10).  Default: 0.} 
+%
+For each of the radiation fields specified above, the user must
+describe the frequency-space characteristics of each field using the
+following input parameter:
+%
+\blockquote{{\tt AMRFLDFrequencyBand[:]}  -- pair of floating-point values
   denoting the frequency band for the specified radiation group.  If
   the upper limit is less than or equal to the lower limit, then the
   field is considered monochromatic at the lower bound frequency.  For
-  example,
-  \begin{verbatim}
-     AMRFLDFrequencyBand[0] = 13.6 24.4
-     AMRFLDFrequencyBand[1] = 54.4 54.4
-     AMRFLDFrequencyBand[2] = 100.0 99.0  \end{verbatim}
-  specifies three frequency bands:
-  \begin{itemize}
-  \item[0:] this radiation field spans the frequencies 13.6 to 24.4 eV,
-  \item[1:] this radiation field is monochromatic, at the frequency
-    54.4 eV,
-  \item[2:] this radiation field is monochromatic, at the frequency
-    100.0 eV.
-  \end{itemize}
-  A user must supply {\tt AMRFLDNumRadiationFields} of these pairs,
-  and they must be ordered by increasing frequencies (i.e we could
-  not reorder the fields in the above example).  Additionally, the
-  fields may not overlap (although neighboring non-monochromatic group
-  bands may share a boundary).  The first value specified for each
-  field must be strictly positive.
-\item {\tt AMRFLDNumSources} -- integer specifying the number of
+  example, to specify three frequency bands: $E_0$ spans the
+  frequencies 13.6 to 24.4 eV, $E_1$ is monochromatic at the frequency
+  54.4 eV, and $E_2$ is monochromatic at the frequency 100.0 eV, we
+  could use the inputs:
+
+  \hspace{2.0cm}{\tt AMRFLDFrequencyBand[0] = 13.6 24.4}
+
+  \vspace{-0.25cm}
+  \hspace{2.0cm}{\tt AMRFLDFrequencyBand[1] = 54.4 54.4}
+
+  \vspace{-0.25cm}
+  \hspace{2.0cm}{\tt AMRFLDFrequencyBand[2] = 100.0 99.0}}
+%
+A user must supply {\tt AMRFLDNumRadiationFields} of these frequency
+band pairs, and they must be ordered by increasing frequencies (i.e we
+could not reorder the fields in the above example).  Additionally, the
+fields may not overlap (although neighboring non-monochromatic group
+bands may share a boundary).  The first value specified for each field
+must be strictly positive. 
+
+
+
+In order to specify radiation sources for a simulation, the AMR-FLD
+module provides a simple interface for user specification of sources
+known at run-time.  First, a user must specify the number of radiation
+sources to be applied with the parameter:
+%
+\blockquote{{\tt AMRFLDNumSources} -- integer specifying the number of
   ionization sources to be specified in the input file (as opposed to
-  on-the-fly by star-maker or other routines).  Must be non-negative.
-  Default: 0. 
-\item {\tt AMRFLDSourceLocation[:]} -- set of three floating-point
-  values specifying the location of each source (in normalized code
-  units).  Must be within the simulation domain, and must be provided
-  for each source.
-\end{itemize}
+  on-the-fly by star-maker or other routines).  Must be
+  non-negative. Default: 0.}
+%
+The maximum number of allowed sources is given by {\tt
+MAX\_FLD\_SOURCES}, set in {\tt AMRFLDSplit.h} (currently 100).
+
+For each radiation source, AMR-FLD requires knowledge of the source
+location and how to apply the source to each radiation field.  To
+describe the spatial location of each source, the following parameter
+must be supplied:
+%
+\blockquote{{\tt AMRFLDSourceLocation[:]} -- set of three
+  floating-point values specifying the location of each source (in
+  normalized code units).  Must be within the simulation domain.}
+%
+Each source is assumed to have a ``radius'' of one cell, meaning that
+for each source, we scan through the simulation domain, and every
+computational cell whose center is within one cell of the specified
+location will receive an equal share of the source's energy.
 
 We have two mechanisms for specifying the emission strength of each
-source via input parameters: \\
-{\tt AMRFLDSourceGroupEnergy} or 
-{\tt AMRFLDSourceType}+{\tt AMRFLDSourceEnergy}.  The former of these
-works for all possible radiation fields and source types.  The latter
-approach only works for radiation groups and not for monochromatic
-radiation fields.  If the former is used it must specify a
-non-negative energy for that source's contribution to {\em all}
-radiation fields.  If the latter mechanism is used, both values must
-be specified for each source.  One of these two approaches must be
-employed for each of the {\tt AMRFLDNumSources} sources.
-\begin{itemize}
-\item {\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point value for
-  the total emissivity rate of ionizing radiation for a specific
-  source over a specific frequency/group (in physical units of ergs
-  s$^{-1}$).  The first index is the source index, the second is the
-  frequency/group index. 
+source.  The first, and more convenient, approach only works for
+supplying emission to radiation groups ({\em not} for monochromatic
+radiation fields).  Within this approach, a user must first specify
+both the {\em type} of radiation emission using the parameter:
+%
+\blockquote{{\tt AMRFLDSourceType[:]} -- integer flag denoting a
+  pre-defined SED to use for all emissivity from a given source.  Two
+  are currently implemented: 0 indicates a monochromatic source at
+  frequency $h\nu=13.6$ eV, and 1 indicates a blackbody source having 
+  temperature $10^5$ K. 
 
-  We note that this is the only mechanism to specify sources
-  for monochromatic radiation fields via the parameter file.
-
-  If a value is supplied, it must be non-negative.
-\item {\tt AMRFLDSourceType[:]} -- integer flag denoting a pre-defined
-  SED to use for all emissivity from a given source.  Two are
-  currently implemented:
-  \begin{itemize}
-  \item[0] Monochromatic source at frequency $h\nu=13.6$ eV.
-  \item[1] Blackbody source at temperature $10^5$ K.
-  \end{itemize}
   If a value is supplied, it {\em must} correspond to one of the above
-  integers.  Additional SED types may be defined and incorporated
-  within the routine {\tt AMRFLD\_SetupSources.C}.
-\item {\tt AMRFLDSourceEnergy[:]} -- floating-point value specifying
-  the total emissivity rate of ionizing photons (i.e.~only photons
-  with frequencies above 13.6 eV), for a given source.  The value
-  should be specified in units of photon number per second.
+  integers.  Additional SED types may be easily defined, as will be
+  described in Section \ref{sec:extensions}.}
+%
+Then, the user must specify the {\em strength} of the emission source
+via the parameter:
+\blockquote{{\tt AMRFLDSourceEnergy[:]} -- floating-point value
+  specifying the total emissivity rate of ionizing photons (i.e.~only
+  photons with frequencies above 13.6 eV), for a given source.  The
+  value should be specified in units of photon number per second.
 
   Must be used in combination with {\tt AMRFLDSourceType[:]}.  At
   solver initialization, the SED will be numerically integrated over
   each radiation frequency band $[\nu_i, \nu_{i+1}]$ to determine each
   group's fraction of the total number of emitted photons for the
   source.  These values are automatically converted into energy
-  emission rates for each source/group.
+  emission rates for each source/group.  Further details on this
+  process are described in equation \eqref{eq:emission_integral}.
 
-  We note that this does not make sense unless using a purely
-  multi-group solver (i.e. no monochromatic radiation fields), since
-  the ``frequency band'' for a monochromatic field by definition has
-  no width.  As such, monochromatic fields are skipped.
+  If a value is supplied, it must be non-negative.}
+%
+If this approach for setting the emission strength of a source is
+used, both values ({\tt AMRFLDSourceType} and {\tt AMRFLDSourceEnergy}) 
+{\em must} be specified for each source.  We further note that this
+approach does not make sense unless using a multi-group solver
+(i.e.~not multi-frequency), since the ``frequency band'' for a
+monochromatic field by definition has no width.  As such, any
+monochromatic fields in use will be skipped, and will not receive any
+emissivity from sources described in this manner.
 
-  If a value is supplied, it must be non-negative.
+Our second approach for input parameter specification of radiation
+sources requires the user to manually determine the amount of energy
+that should be injected into each radiation field.  This approach
+makes use of the parameter:
+%
+\blockquote{{\tt AMRFLDSourceGroupEnergy} -- floating-point value for
+  the total emissivity rate of ionizing radiation for a specific
+  source over a specific frequency/group (in physical units of ergs 
+  s$^{-1}$).  The first index is the source index, the second is the
+  frequency/group index. 
 
-  If both {\tt AMRFLDSourceGroupEnergy} and 
-  {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy} are specified for a
-  given source, the values provided by {\tt AMRFLDSourceGroupEnergy}
-  are used.
-\end{itemize}
+  We note that this is the only mechanism to specify sources
+  for monochromatic radiation fields via the parameter file.
+
+  If a value is supplied, it must be non-negative.}
+%
+When this approach is used it must specify a non-negative energy value
+for that source's contribution to {\em all} radiation fields; i.e.~if
+such a source does not contribute to certain radiation fields, it must
+specify an {\tt AMRFLDSourceGroupEnergy} of 0.0.
+
+When manually specifying these values for a source with spectral
+energy distribution $\sigma(\nu)$ and strength $\dot{N}_{\gamma}$
+photons/sec, the correct formula to compute the radiation contribution
+to a radiation group with frequency band $\left[\nu_L, \nu_R\right]$ is
+\begin{equation}
+  \label{eq:emission_integral}
+  h \dot{N}_{\gamma} 
+  \frac{\int_{\nu_L}^{\nu_R}\left[\nu \sigma(\nu)\right]\,\mathrm d\nu}
+       {\nu_0 \int_{\nu_0}^{\infty}\sigma(\nu)\,\mathrm d\nu},
+\end{equation}
+where $h$ is Planck's constant, $\nu_0$ is the ionization threshold of
+Hydrogen, and all frequency-related values are in units of Hz.
+
+We note that one of these two approaches must be employed for
+each of the {\tt AMRFLDNumSources} sources.  If any of the 
+{\tt AMRFLDNumSources} emission sources is improperly specified, Enzo
+will return with an error.
+
+Alternately, if {\em both} approaches are specified for a given source
+(i.e.~both {\tt AMRFLDSourceGroupEnergy} \underline{and} 
+{\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy}), the values provided by
+{\tt AMRFLDSourceGroupEnergy} are used.
 
 
-{\bf User requirements:}
-\begin{itemize}
-\item Fields -- the problem initializer or provided restart file must
-  allocate radiation and emissivity fields for each frequency or
-  group.  These are expected to reside in the Enzo baryon fields 
-  {\tt RadiationFreq0} $\to$ {\tt RadiationFreq9} and {\tt Emissivity0} 
-  $\to$ {\tt Emissivity9}.  Of course, in actuality only \\
-  {\tt 2*AMRFLDNumRadiationFields} of these fields needs to be
-  allocated, so simulations with fewer frequencies/groups can allocate
-  only what they will need.
-
-  In addition, the user must allocate the baryon fields {\tt kphHI,
-  kphHeI, kphHeII, PhotoGamma} and {\tt kdissH2I} to enable communication 
-  of photo-ionization and photo-heating rates from the AMR-FLD solver and 
-  Enzo's chemistry and cooling routines.
-
-\item Emissivities -- For problems in which the set of emission
-  sources is unknown at run-time and cannot be specified in the input
-  parameter file, the user is responsible for filling the emissivity
-  fields {\tt Emissivity0} $\to$ {\tt Emissivity9}.  These should be
-  filled in accordance with formulas
-  \eqref{eq:multifrequency_emissivity} for multi-frequency
-  simulations, or \eqref{eq:multigroup_emissivity} for multi-group
-  simulations.  These fields should be filled using standard CGS units
-  of ergs cm$^{-3}$ s$^{-1}$.
-
-  We are considering the possibility of allowing a user-specified SED
-  function, that at solver initialization will be numerically
-  integrated over each radiation frequency band, with the resulting
-  fractional areas of each band returned to the user.  This would
-  allow for simplified on-the-fly decomposition of stellar energy into
-  separate emissivities for each radiation group.
-\end{itemize}
 
 
-{\bf Solver input parameters:}
-\begin{itemize}
-\item {\tt AMRFLDLimiterRmin} -- floating point value specifying the
-  dimensionless constant in the definition of $R_{\text{min}}$ in
-  equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
-    risk.}  This value must be non-negative.  Default: $10^{-2}$.
-\item {\tt AMRFLDLimiterDmax} -- floating point value specifying the
+\subsubsection{Solver input parameters}
+\label{sec:solver_input_parameters}
+
+
+We break the set of solver input parameters into four main groups:
+those that help describe the simulation, those that help control time
+step adaptivity, and those that control the behavior of the underlying
+numerical methods.  Within these, there are some parameters that we do
+not recommend users modify unless they are fully aware of their
+ramifications.  These are listed at the end of each group, and are
+marked by $\dagger$.
+
+
+{\bf General problem definition:}
+
+\blockquote{{\tt AMRFLDRadiationScaling[:]} -- scaling factor to be
+  applied to each radiation field to help non-dimensionalize within
+  solver.  This is primarily useful if Enzo's default unit
+  normalization factors are insufficient in normalizing the radiation
+  fields.  Default: 1.
+
+  The easiest way to set this is after performing a test run
+  (preferrably on a coarser mesh), if the ``normalized'' values for
+  each radiation field do not have unit magnitude, then set this input
+  parameter to be the magnitude of the values resulting from the
+  initial run (we divide by the scaling factor).}
+%
+\blockquote{{\tt AMRFLDRadiationBoundaryX0} -- separate boundary
+  conditions may be applied to the radiation fields than to Enzo's
+  other solution variables.  Three types of conditions are currently
+  implemented: 0 periodic, 1 Dirichlet, and 2 Neumann.  This input
+  provides a pair of conditions to apply to the lower and upper faces
+  in the first spatial dimension; a pair of integers must be supplied.
+  Default: 0 0.
+
+  By default, if the Dirichlet or Neumann boundary condition types are
+  selected, they will use zero-valued (homogeneous) values.  Nonzero
+  values may be specified if desired, as discussed in Section
+  \ref{sec:extensions}.
+}
+%
+\blockquote{{\tt AMRFLDRadiationBoundaryX1} -- same as 
+  {\tt AMRFLDRadiationBoundaryX1}, but apply in the second spatial
+  dimension.} 
+%
+\blockquote{{\tt AMRFLDRadiationBoundaryX2} -- same as 
+  {\tt AMRFLDRadiationBoundaryX1}, but apply in the second spatial
+  dimension.}
+%
+\blockquote{{\tt AMRFLDIsothermal} -- flag to denote that all
+  chemistry rates should be frozen to their values at the initial
+  temperature in the lower-left corner of each processor.  This is
+  typically used when specifying an initially uniform temperature
+  field, to simulate isothermal test problems.  Nonzero values will
+  enable the isothermal model.  Default: 0 (off).}
+%
+\blockquote{{\tt AMRFLDWeakScaling} -- flag to denote that all
+  radiation sources specified by the input file should be replicated
+  within each root grid tile.  The locations are shifted so that the
+  specified values are given in relation to each root grid tile.  This
+  flag is useful for allowing non-trivial emission fields for
+  large weak-scaling tests.  Nonzero values will enable the option.
+  Default: 0 (off).}
+
+
+
+{\bf Timestep adaptivity:}
+
+\blockquote{{\tt AMRFLDMaxDt} -- this parameter sets the maximum
+  normalized time step size allowed within the AMR-FLD solver.  Any
+  supplied value must be greater than 0.  This value must be given in
+  {\em scaled} time units, i.e.~$\dt_{\text{physical}} \le
+  \dt_{\text{max}}*\text{TimeUnits}$, where TimeUnits is Enzo's
+  internal time scaling factor for the simulation. Default: $10^{20}$
+  (hydro time step size).}
+%
+\blockquote{{\tt AMRFLDMinDt} -- this parameter sets the minimum
+  normalized time step size allowed within the AMR-FLD solver.  Any
+  supplied value must be non-negative.  This value must also be given
+  in scaled time units. Default: 0 (no minimum).}
+%
+\blockquote{{\tt AMRFLDInitDt} -- this parameter sets the initial
+  normalized time step size for the FLD solver module.  Default:
+  $\infty$ (hydro time step size).}
+%
+\blockquote{{\tt AMRFLDDtGrowth} -- this parameter gives the maximum
+  growth factor in the AMR-FLD time step size from one step to the
+  next.  Default: 1.1 (10\% growth per step).}
+%
+\blockquote{{\tt AMRFLDTimeAccuracy} -- this parameter gives the
+  maximum desired relative change in the solution from one step to the
+  next.  A floor is applied within estimating the relative change to
+  account for the early phases of simulations when the radiation has
+  not built up (or stars have not yet ignited).  Any supplied value
+  must be positive.  Default: $10^{20}$ (no accuracy tolerance).}
+%
+\blockquote{{\tt AMRFLDTheta}$\dagger$ -- this parameter determines
+  the value of $\theta$ used within equation \eqref{eq:mgfld_theta}.
+  Typical values are 1 (backward Euler) and 0.5 (trapezoidal or
+  Crank-Nicholson).  Default: 1.}
+%
+\blockquote{{\tt AMRFLDDtControl}$\dagger$ -- this parameter controls
+  the time step adaptivity algorithm.  Allowed values are -1 (original
+  controller), 0 (I, or ``deadbeat'' controller), 1 (PI controller), 2
+  (PID controller).  Default: 2.}
+%
+\blockquote{{\tt AMRFLDDtNorm}$\dagger$ -- this parameter dictates the
+  the type of norm used in determining the ``relative change'' for
+  time step adaptivity.  Any supplied value must be non-negative.  A
+  value of 0 indicates the maximum or $\infty$-norm.  A value of 2
+  indicates the standard RMS-norm.  Default: 2.}
+%
+\blockquote{{\tt AMRFLDMaxSubcycles}$\dagger$ -- this parameter allows
+  the AMR-FLD solver to subcycle at a faster rate than the
+  hydrodynamics solver.  The input value corresponds to the desired
+  number of AMR-FLD steps per hydro step.  {\em Warning: this also
+  further decouples the radiation from the chemistry, which may be a
+  terrible idea since these two processes are intimately coupled
+  through the opacity and photo-ionization}.  Default: 1 (no subcycling).}
+
+
+
+{\bf Numerical solver modification:}
+
+\blockquote{{\tt AMRFLDSolType} -- this integer flag indicates the
+  type of linear solver to use on each radiation system.  Allowed
+  values include 0 (FAC), 1 (BiCGStab), 2 (BiCGStab-BoomerAMG), 3
+  (GMRES), 4 (PFMG, unigrid only).  Default: 1.}
+%
+\blockquote{{\tt AMRFLDSolTolerance} -- this floating-point input
+  indicates the desired relative error in solving the linear system
+  \eqref{eq:linear_system}.  Default: $10^{-5}$.}
+%
+\blockquote{{\tt AMRFLDMaxMGIters} -- this integer indicates maximum
+  number of outer linear solver iterations taken on each radiation
+  field at each time step.  the Default: 200.}
+%
+\blockquote{{\tt AMRFLDMGRelaxType} -- when using the {\tt
+    AMRFLDSolType} 4 (PFMG), this integer parameter indicates the 
+  relaxation/smoother algorithm to use in the multigrid cycle.  Allowed values
+  include: 0 (Jacobi), 1 (weighted Jacobi), 2 (red-black Gauss-Seidel,
+  symmetric), 3 (red-black Gauss-Seidel, nonsymmetric).  Default: 1.}
+%
+\blockquote{{\tt AMRFLDPreRelax} -- when using the {\tt
+    AMRFLDSolType} 4 (PFMG), this integer parameter indicates the
+  number of relaxation sweeps to use before coarsening/restriction.
+  Default: 1.} 
+%
+\blockquote{{\tt AMRFLDPostRelax} -- when using the {\tt
+    AMRFLDSolType} 4 (PFMG), this integer parameter indicates the
+  number of relaxation sweeps to use after interpolation/prolongation.
+  Default: 1.}
+%
+\blockquote{{\tt AMRFLDSolPrec} -- when using either of the {\tt
+    AMRFLDSolType} values 1 (BiCGStab) or 3 (GMRES), this integer
+  indicates whether to use our Enzo-specific multi-level
+  preconditioner.  Nonzero values indicate use of the preconditioner.
+  Default: 1 (on).}
+%
+\blockquote{{\tt AMRFLDSol\_precmaxit} -- when using {\tt
+    AMRFLDSolPrec}, this indicates the maximum number of
+  preconditioner iterations.  Default: 1.}
+%
+\blockquote{{\tt AMRFLDSol\_precJacit}$\dagger$ -- when using {\tt
+    AMRFLDSolPrec}, this indicates the number of Jacobi relaxation
+  iterations to use on the full Enzo AMR hierarchy.  Default: 2.}
+%
+\blockquote{{\tt AMRFLDSol\_precrelax}$\dagger$ --  when using {\tt
+    AMRFLDSolPrec}, this integer parameter indicates the
+  relaxation/smoother algorithm to use within the coarse grid PFMG solver.
+  Allowed values include: 0 (Jacobi), 1 (weighted Jacobi), 2 (red-black Gauss-Seidel,
+  symmetric), 3 (red-black Gauss-Seidel, nonsymmetric).  Default: 1.}
+%
+\blockquote{{\tt AMRFLDSol\_precnpre}$\dagger$ -- when using {\tt
+    AMRFLDSolPrec}, this indicates the number of relaxation sweeps to
+  use before coarsening/restriction within the coarse grid PFMG
+  solver.  Default: 1.} 
+%
+\blockquote{{\tt AMRFLDSol\_precnpost}$\dagger$ -- when using {\tt
+    AMRFLDSolPrec}, this indicates the number of relaxation sweeps to
+  use after interpolation/prolongation within the coarse grid PFMG
+  solver.  Default: 1.}
+%
+\blockquote{{\tt AMRFLDSol\_precrestol}$\dagger$ -- when using {\tt
+    AMRFLDSolPrec}, this floating-point parameter indicates the
+  relative residual tolerance to use in stopping the preconditioner.
+  Default: 0 (off, preconditioner stops based on iteration count).}
+%
+\blockquote{{\tt AMRFLDLimiterRmin}$\dagger$ -- floating point value
+  specifying the dimensionless constant in the definition of
+  $R_{\text{min}}$ in equation \eqref{eq:discrete_limiter}.  This
+  value must be non-negative.  Default: $10^{-2}$.} 
+%
+\blockquote{{\tt AMRFLDLimiterDmax}$\dagger$ -- floating point value specifying the
   dimensionless constant in the definition of $D_{\text{max}}$ in
-  equation \eqref{eq:discrete_limiter}.  {\em Modify at your own
-    risk.}  This value must be strictly positive.  Default: $10^{-2}$.
-\item to be continued...
-\end{itemize}
+  equation \eqref{eq:discrete_limiter}.  This value must be strictly
+  positive.  Default: $10^{-2}$.}
+
+
+
+
+
+
+
+
+\subsection{Extending AMR-FLD}
+\label{sec:extensions}
+
+(to be added...)
+
+%% New SED emission types, but with locations and energy handled by
+%% AMR-FLD, which will perform integration to decompose among radiation
+%% groups and fill emissivity arrays.
+
+%% Additional radiation and emissivity fields, in case 10 radiation
+%% fields is insufficient for a specific problem.
+
+
+%% Finally, we note that the following existing {\tt ProblemTypes}
+%% already support use of the AMR-FLD solver module:
+%% \begin{itemize}
+%% \item 
+%% \item 
+%% \item 
+%% \end{itemize}
+
+%% However, extension of other problem types to allow use of the AMR-FLD
+%% solver module requires only a few steps.
+
+%% Fields -- the problem initializer or provided restart file must
+%%   allocate radiation and emissivity fields for each frequency or
+%%   group.  These are expected to reside in the Enzo baryon fields 
+%%   {\tt RadiationFreq0} $\to$ {\tt RadiationFreq9} and {\tt Emissivity0} 
+%%   $\to$ {\tt Emissivity9}.  Of course, in actuality only \\
+%%   {\tt 2*AMRFLDNumRadiationFields} of these fields needs to be
+%%   allocated, so simulations with fewer frequencies/groups can allocate
+%%   only what they will need.
+
+%%   In addition, the user must allocate the baryon fields {\tt kphHI,
+%%   kphHeI, kphHeII, PhotoGamma} and {\tt kdissH2I} to enable communication 
+%%   of photo-ionization and photo-heating rates from the AMR-FLD solver and 
+%%   Enzo's chemistry and cooling routines.
+
+
+%% Radiation boundary conditions --
+
+
+
+%% Fully user-supplied emissivities, in which the set of emission sources
+%% is unknown at run-time and cannot be specified in the input parameter
+%% file, but is determined on-the-fly based on the current physics.  The
+%% most notable example of this is in using Enzo's existing star-maker
+%% recipes to seed the radiaton solver.  At present, none of the
+%% star-maker recipes have been updated to interface with the AMR-FLD
+%% solver, so it is currently the user's responsibility for filling the
+%% emissivity fields {\tt Emissivity0} $\to$ {\tt Emissivity9}.  These should be
+%%   filled in accordance with formulas
+%%   \eqref{eq:multifrequency_emissivity} for multi-frequency
+%%   simulations, or \eqref{eq:multigroup_emissivity} for multi-group
+%%   simulations.  These fields should be filled using standard CGS units
+%%   of ergs cm$^{-3}$ s$^{-1}$.
+
+%%   We are considering the possibility of allowing a user-specified SED
+%%   function, that at solver initialization will be numerically
+%%   integrated over each radiation frequency band, with the resulting
+%%   fractional areas of each band returned to the user.  This would
+%%   allow for simplified on-the-fly decomposition of stellar energy into
+%%   separate emissivities for each radiation group.
+
+
 
 
 
