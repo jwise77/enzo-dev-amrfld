@@ -73,10 +73,10 @@
 #define NUM_FLD_DT_CONTROLLERS  4
 
 // HYPRE is hard-coded with four relaxation algorithms:
-//    0 -> weighted Jacobi
+//    0 -> Jacobi
 //    1 -> weighted Jacobi
-//    2 -> red-black Gauss-Seidel
-//    3 -> red-black Gauss-Seidel
+//    2 -> red-black Gauss-Seidel (symmetric)
+//    3 -> red-black Gauss-Seidel (nonsymmetric)
 #define NUM_HYPRE_RLX_TYPES  4
 
 
