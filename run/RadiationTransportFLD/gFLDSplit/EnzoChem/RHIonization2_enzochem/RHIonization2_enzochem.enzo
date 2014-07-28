@@ -15,7 +15,6 @@ RadiativeCooling           = 1             // use Enzo chemistry
 HydrogenFractionByMass     = 1.0           // hydrogen only
 RateDataCaseBRecombination = 1             // use case-B rates
 UseHydro                   = 0             // no hydro
-Unigrid                    = 1             // unigrid run
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
 RadHydroParamfile = RHIonization2_enzochem.gfld
 #
