@@ -1,0 +1,71 @@
+#
+#  Iliev et al. dynamic ionization test
+#
+#  Daniel R. Reynolds, reynolds@smu.edu
+#
+#############################
+# 
+# problem and general modules 
+# 
+ProblemType                = 411           // RHIonizationTestInitialize init
+RadiativeTransferFLD       = 2             // use FLD solver for radiation
+ImplicitProblem            = 6             // use AMRFLDSplit module
+MultiSpecies               = 1             // use Enzo chemistry
+RadiativeCooling           = 1             // use Enzo cooling
+HydrogenFractionByMass     = 1.0           // hydrogen only
+RateDataCaseBRecombination = 1             // use case-B rates
+RadiativeTransferHydrogenOnly = 1          // hydrogen only
+RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
+RadHydroParamfile = RHIonization5_AMRdynamic.amrfld
+#
+# hydrodynamics parameters
+#
+UseHydro               = 1
+Theta_Limiter          = 1.5
+RiemannSolver          = 5
+ReconstructionMethod   = 1
+SmallRho               = 1e-30
+SmallP                 = 1e-35
+SmallT                 = 1e-10
+HydroMethod            = 0
+Gamma                  = 1.66666666666667
+CourantSafetyNumber    = 0.5
+PPMFlatteningParameter = 0
+PPMDiffusionParameter  = 0
+PPMSteepeningParameter = 0
+DualEnergyFormalism    = 1
+#
+# grid and boundary 
+#
+TopGridRank                = 3
+TopGridDimensions          = 32 32 32
+LeftFaceBoundaryCondition  = 0 0 0         // reflecting
+RightFaceBoundaryCondition = 0 0 0
+DomainLeftEdge             = -1.0 -1.0 -1.0   // (scaled units)
+DomainRightEdge            =  1.0  1.0  1.0
+#
+# AMR parameters
+#
+StaticHierarchy            = 0
+RefineBy                   = 2
+#CellFlaggingMethod         = 20    // broken
+#MinimumSlopeForRefinement  = 0.0 1.2 0.0 0.0 0.0 0.0 0.0 
+CellFlaggingMethod         = 21
+MinimumSlopeForRefinement  = 0.0 0.0 1.25 0.0 0.0 0.0 0.0 
+MaximumRefinementLevel     = 2
+#
+# runtime and I/O
+#
+StopTime                   = 1.0           // 500 Myr
+dtDataDump                 = 0.02          // 10 Myr
+StopCycle                  = 999999
+ParallelRootGridIO         = 1
+OutputTemperature          = 1
+# 
+# units
+#
+DensityUnits               = 1.0e-27
+LengthUnits                = 4.62855e22    // 15 kpc
+TimeUnits                  = 1.57788e16    // 500 Myr
+
+#############################

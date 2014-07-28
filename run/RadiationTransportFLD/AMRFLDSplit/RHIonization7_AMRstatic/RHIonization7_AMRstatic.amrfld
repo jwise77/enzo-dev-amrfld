@@ -1,0 +1,74 @@
+#
+# AMRFLDSplit Parameter File:
+#   Iliev et al. dynamic photoevaporation of a clump test
+#
+#  Daniel R. Reynolds, reynolds@smu.edu
+#
+#############################
+#
+# Specify radiation field(s) to use in solver
+#
+AMRFLDNumRadiationFields = 3
+AMRFLDFrequencyBand[0] = 13.6 24.6
+AMRFLDFrequencyBand[1] = 24.6 54.4
+AMRFLDFrequencyBand[2] = 54.4 200.0
+AMRFLDRadiationScaling[0] = 1.0e1       // solver scaling factor 
+AMRFLDRadiationScaling[1] = 1.0e1       // solver scaling factor 
+AMRFLDRadiationScaling[2] = 1.0e1       // solver scaling factor 
+#
+# Specify radiation source(s) to use in solver
+#
+AMRFLDNumSources = 0                    // source built-in for ProblemType
+#
+# Problem-specific initialization parameters
+# 
+RadHydroVelocity             = 0.0 0.0 0.0
+RadHydroNumDensityIn         = 4.0e-2
+RadHydroNumDensityOut        = 2.0e-4
+RadHydroChemistry            = 1
+RadHydroTemperatureIn        = 40.0
+RadHydroTemperatureOut       = 8000.0
+RadHydroRadiationEnergy      = 1.0e-35
+RadHydroHFraction            = 1.0
+RadHydroInitialFractionHII   = 0.0
+RadHydroInitialFractionHeII  = 0.0
+RadHydroInitialFractionHeIII = 0.0
+ClumpCenter = 5.0 3.3 3.3
+ClumpRadius = 0.8
+#
+# Radiation boundary conditions
+# 
+AMRFLDRadiationBoundaryX0 = 2 1         // Neumann/Dirichlet
+AMRFLDRadiationBoundaryX1 = 0 0         // periodic
+AMRFLDRadiationBoundaryX2 = 0 0
+#
+# General module and solver parameters
+# 
+AMRFLDAutomaticScaling = 0              // disable automatic scaling
+AMRFLDLimiterRmin      = 1.0e-2         // module default
+AMRFLDLimiterDmax      = 1.0e-2         // module default
+AMRFLDMaxDt            = 1.0e-2         // largest normalized time step
+AMRFLDMinDt            = 1.0e-6         // smallest normalized time step
+AMRFLDInitDt           = 1.0e-6         // first time step
+AMRFLDDtControl        = 2              // module default
+AMRFLDMaxSubcycles     = 1.0            // module default
+AMRFLDDtNorm           = 2.0            // module default
+AMRFLDDtGrowth         = 1.1            // module default
+AMRFLDTimeAccuracy     = 0.01           // desired relative change/step
+AMRFLDTheta            = 1.0            // module default
+AMRFLDSolType          = 1              // module default
+AMRFLDSolTolerance     = 1.0e-5         // module default
+AMRFLDMaxMGIters       = 200            // module default
+AMRFLDMGRelaxType      = 1              // module default
+AMRFLDMGPreRelax       = 2              // 2 MG pre-relaxation sweeps
+AMRFLDMGPostRelax      = 2              // 2 MG post-relaxation sweeps
+AMRFLDSolPrec          = 1              // module default
+AMRFLDSol_precmaxit    = 1              // module default
+AMRFLDSol_precnpre     = 1              // module default
+AMRFLDSol_precnpost    = 1              // module default
+AMRFLDSol_precJacit    = 2              // module default
+AMRFLDSol_precrelax    = 1              // module default
+AMRFLDSol_precrestol   = 0.0            // module default
+AMRFLDWeakScaling      = 0              // module default
+
+#############################
