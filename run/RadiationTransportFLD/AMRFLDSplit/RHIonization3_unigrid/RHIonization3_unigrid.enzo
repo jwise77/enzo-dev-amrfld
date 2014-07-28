@@ -1,0 +1,46 @@
+#
+#  Iliev et al. clump ionization test
+#
+#  Daniel R. Reynolds, reynolds@smu.edu
+#
+#############################
+# 
+# problem and general modules 
+# 
+ProblemType                = 412           // RHIonizationClumpInitialize init
+RadiativeTransferFLD       = 2             // use FLD solver for radiation
+ImplicitProblem            = 6             // use AMRFLDSplit module
+MultiSpecies               = 1             // use Enzo chemistry
+RadiativeCooling           = 1             // use Enzo cooling
+HydrogenFractionByMass     = 1.0           // hydrogen only
+RateDataCaseBRecombination = 1             // use case-B rates
+UseHydro                   = 0             // no hydro
+RadiativeTransferHydrogenOnly = 1          // hydrogen only
+RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
+RadHydroParamfile = RHIonization3_unigrid.amrfld
+#
+# grid and boundary 
+#
+TopGridRank                = 3
+#TopGridDimensions          = 128 128 128
+TopGridDimensions          = 32 32 32
+LeftFaceBoundaryCondition  = 1 1 1         // outflow
+RightFaceBoundaryCondition = 1 1 1
+DomainLeftEdge             = 0.0 0.0 0.0   // (scaled units)
+DomainRightEdge            = 6.6 6.6 6.6
+#
+# runtime and I/O
+#
+StopTime                   = 1.0           // 50 Myr
+dtDataDump                 = 0.02          // 1 Myr
+StopCycle                  = 999999
+ParallelRootGridIO         = 1
+OutputTemperature          = 1
+# 
+# units
+#
+DensityUnits               = 1.0e-27
+LengthUnits                = 3.0857e21     // 1 kpc
+TimeUnits                  = 1.57788e15    // 50 Myr
+
+#############################

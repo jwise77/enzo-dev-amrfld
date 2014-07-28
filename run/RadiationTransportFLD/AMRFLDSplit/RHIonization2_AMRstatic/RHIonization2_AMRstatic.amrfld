@@ -8,35 +8,62 @@
 #
 # Specify radiation field(s) to use in solver
 #
-RadHydroNumBins = 1                  // one radiation field
-#   bin 0
-RadHydroESpectrum[0] = 1             // T=1e5 blackbody
-NGammaDot[0] = 5.0e48                // emissivity source strength
-EtaRadius[0] = 1.0                   // emissivity source radius [cells]
-EtaCenter[0] = 0.0 0.0 0.0           // emissivity source location
+AMRFLDNumRadiationFields = 3
+AMRFLDFrequencyBand[0] = 13.6 24.6
+AMRFLDFrequencyBand[1] = 24.6 54.4
+AMRFLDFrequencyBand[2] = 54.4 200.0
+AMRFLDRadiationScaling[0] = 1.0        // solver variable scaling factor
+AMRFLDRadiationScaling[1] = 10.0       // solver variable scaling factor
+AMRFLDRadiationScaling[2] = 1.0        // solver variable scaling factor
+#
+# Specify radiation source(s) to use in solver
+#
+AMRFLDNumSources = 1                   // one ionization source
+AMRFLDSourceType[0] = 1                // T=1e5 blackbody source
+AMRFLDSourceLocation[0] = 0.0 0.0 0.0  // emissivity source location
+AMRFLDSourceEnergy[0] = 5.0e48         // 5e48 photons/s
 #
 # Problem-specific initialization parameters
 # 
 RadHydroVelocity = 0.0 0.0 0.0       // initial velocity [cm/s]
 RadHydroDensity = 1.67262171e-27     // initial density [g] (desired nH=1e-3)
 RadHydroTemperature = 1.0e2          // initial temperature [K]
-RadHydroRadiationEnergy = 1.0e-20    // initial radiation energy [erg/cm^3]
+RadHydroRadiationEnergy = 1.0e-35    // initial radiation energy [erg/cm^3]
 RadHydroInitialFractionHII = 0.0012  // initial 0.12% HII fraction
-RadiationBoundaryX0Faces = 2 2       // Neumann
-RadiationBoundaryX1Faces = 2 2       // Neumann
-RadiationBoundaryX2Faces = 2 2       // Neumann
+#
+# Radiation boundary conditions
+# 
+AMRFLDRadiationBoundaryX0 = 2 2        // Neumann
+AMRFLDRadiationBoundaryX1 = 2 2        // Neumann
+AMRFLDRadiationBoundaryX2 = 2 2        // Neumann
 #
 # General module and solver parameters
 # 
-RadHydroMaxDt        = 1.0e-2
-RadHydroMinDt        = 1.0e-8
-RadHydroInitDt       = 1.0e-8
-RadHydroDtRadFac     = 0.0001        // 0.01% desired change/step
-AutomaticScaling     = 0
-RadHydroSolType      = 1             // BiCGStab
-RadHydroSolTolerance = 1.e-5
-RadHydroSolPrec      = 0             // no preconditioning
-RadHydroMGPreRelax   = 2             // MG pre-relaxation sweeps
-RadHydroMGPostRelax  = 2             // MG post-relaxation sweeps
+AMRFLDAutomaticScaling = 0              // disable automatic scaling
+AMRFLDLimiterRmin      = 1.0e-2         // module default
+AMRFLDLimiterDmax      = 1.0e-2         // module default
+AMRFLDMaxDt            = 1.0e-2         // largest normalized time step
+AMRFLDMinDt            = 1.0e-8         // smallest normalized time step
+AMRFLDInitDt           = 1.0e-8         // first time step
+AMRFLDDtControl        = 2              // module default
+AMRFLDMaxSubcycles     = 1.0            // module default
+AMRFLDDtNorm           = 2.0            // module default
+AMRFLDDtGrowth         = 1.1            // module default
+AMRFLDTimeAccuracy     = 0.0005         // desired relative change/step
+AMRFLDTheta            = 1.0            // module default
+AMRFLDSolType          = 1              // module default
+AMRFLDSolTolerance     = 1.0e-5         // module default
+AMRFLDMaxMGIters       = 200            // module default
+AMRFLDMGRelaxType      = 1              // module default
+AMRFLDMGPreRelax       = 2              // 2 MG pre-relaxation sweeps
+AMRFLDMGPostRelax      = 2              // 2 MG post-relaxation sweeps
+AMRFLDSolPrec          = 1              // module default
+AMRFLDSol_precmaxit    = 1              // module default
+AMRFLDSol_precnpre     = 1              // module default
+AMRFLDSol_precnpost    = 1              // module default
+AMRFLDSol_precJacit    = 2              // module default
+AMRFLDSol_precrelax    = 1              // module default
+AMRFLDSol_precrestol   = 0.0            // module default
+AMRFLDWeakScaling      = 0              // module default
 
 #############################

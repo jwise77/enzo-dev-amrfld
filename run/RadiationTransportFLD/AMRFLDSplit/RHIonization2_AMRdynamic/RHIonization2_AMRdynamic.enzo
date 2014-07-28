@@ -15,8 +15,7 @@ RadiativeCooling           = 1             // use Enzo chemistry
 HydrogenFractionByMass     = 1.0           // hydrogen only
 RateDataCaseBRecombination = 1             // use case-B rates
 UseHydro                   = 0             // no hydro
-SelfGravity                = 0             // no gravity
-ComovingCoordinates        = 0             // fixed-space
+RadiativeTransferHydrogenOnly = 1          // hydrogen only
 RadiativeTransferOpticallyThinH2 = 0       // no 1/r^2 LW background
 RadHydroParamfile = RHIonization2_AMRdynamic.amrfld
 #
@@ -33,23 +32,23 @@ DomainRightEdge            =  1.2  1.2  1.2
 #
 StaticHierarchy            = 0
 RefineBy                   = 2
-#CellFlaggingMethod         = 21
-#MinimumSlopeForRefinement  = 0.0 0.0 1.2 0.0 0.0 0.0 0.0 
-CellFlaggingMethod         = 20
-MinimumSlopeForRefinement  = 0.0 1.2 0.0 0.0 0.0 0.0 0.0 
+#CellFlaggingMethod         = 20    // broken
+#MinimumSlopeForRefinement  = 0.0 1.2 0.0 0.0 0.0 0.0 0.0 
+CellFlaggingMethod         = 21
+MinimumSlopeForRefinement  = 0.0 0.0 1.25 0.0 0.0 0.0 0.0 
 MaximumRefinementLevel     = 2
 #
 # runtime and I/O
 #
-StopTime                   = 1.57788e0     // 500 Myr
-StopCycle                  = 99999
-dtDataDump                 = 3.15576e-2    // 10 Myr
-ParallelRootGridIO         = 0
+StopTime                   = 1.0           // 500 Myr
+dtDataDump                 = 0.02          // 10 Myr
+StopCycle                  = 999999
+ParallelRootGridIO         = 1
 # 
 # units
 #
 DensityUnits               = 1.0e-27
 LengthUnits                = 2.036562e22   // 6.6 kpc
-TimeUnits                  = 1.0e16
+TimeUnits                  = 1.57788e16    // 500 Myr
 
 #############################
