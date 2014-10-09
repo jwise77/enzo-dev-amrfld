@@ -1328,11 +1328,11 @@ sources requires the user to manually determine the amount of energy
 that should be injected into each radiation field.  This approach
 makes use of the parameter:
 %
-\blockquote{{\tt AMRFLDSourceGroupEnergy} -- floating-point value for
-  the total emissivity rate of ionizing radiation for a specific
-  source over a specific frequency/group (in physical units of ergs 
-  s$^{-1}$).  The first index is the source index, the second is the
-  frequency/group index. 
+\blockquote{{\tt AMRFLDSourceGroupEnergy[:][:]} -- floating-point
+  value for the total emissivity rate of ionizing radiation for a
+  specific source over a specific frequency/group (in physical units
+  of ergs s$^{-1}$).  The first index is the source index, the second
+  is the frequency/group index. 
 
   We note that this is the only mechanism to specify sources
   for monochromatic radiation fields via the parameter file.
@@ -1365,7 +1365,8 @@ will return with an error.
 Alternately, if {\em both} approaches are specified for a given source
 (i.e.~both {\tt AMRFLDSourceGroupEnergy} \underline{and} 
 {\tt AMRFLDSourceType}/{\tt AMRFLDSourceEnergy}), the values provided by
-{\tt AMRFLDSourceGroupEnergy} are used.
+{\tt AMRFLDSourceGroupEnergy} take precedence.
+
 
 
 
