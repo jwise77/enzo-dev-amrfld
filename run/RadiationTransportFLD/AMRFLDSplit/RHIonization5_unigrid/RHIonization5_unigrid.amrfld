@@ -8,10 +8,11 @@
 #
 # Specify radiation field(s) to use in solver
 #
-AMRFLDNumRadiationFields = 3
-AMRFLDFrequencyBand[0] = 13.6 24.6
-AMRFLDFrequencyBand[1] = 24.6 54.4
-AMRFLDFrequencyBand[2] = 54.4 200.0
+AMRFLDNumRadiationFields = 4
+AMRFLDFrequencyBand[0] = 13.6  19.88
+AMRFLDFrequencyBand[1] = 19.88 29.42
+AMRFLDFrequencyBand[2] = 29.42 39.56
+AMRFLDFrequencyBand[3] = 39.56 64.56
 #
 # Specify radiation source(s) to use in solver
 #
