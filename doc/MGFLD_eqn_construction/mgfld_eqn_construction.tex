@@ -7,6 +7,8 @@
 \usepackage{epstopdf}
 \usepackage{color}
 \usepackage{amsmath,amsfonts,amssymb}
+\usepackage{framed,color}
+\definecolor{shadecolor}{gray}{0.95}
 
 \usepackage{quoting}
 \usepackage[threshold=5, thresholdtype=words]{csquotes}
@@ -1352,7 +1354,8 @@ to a radiation group with frequency band $\left[\nu_L, \nu_R\right]$ is
   \label{eq:emission_integral}
   h \dot{N}_{\gamma} 
   \frac{\int_{\nu_L}^{\nu_R}\left[\nu \sigma(\nu)\right]\,\mathrm d\nu}
-       {\nu_0 \int_{\nu_0}^{\infty}\sigma(\nu)\,\mathrm d\nu},
+       {\int_{\nu_0}^{\infty}\sigma(\nu)\,\mathrm d\nu},
+%       {\nu_0 \int_{\nu_0}^{\infty}\sigma(\nu)\,\mathrm d\nu},
 \end{equation}
 where $h$ is Planck's constant, $\nu_0$ is the ionization threshold of
 Hydrogen, and all frequency-related values are in units of Hz.
@@ -1368,6 +1371,83 @@ Alternately, if {\em both} approaches are specified for a given source
 {\tt AMRFLDSourceGroupEnergy} are used.
 
 
+\begin{shaded}
+{\bf Example 1:  Three group approximation of a $T=10^5$ K blackbody
+  spectrum (simple)}
+
+The spectrum for a blackbody radiation source at a prescribed
+temperature is 
+\[
+   \sigma(\nu) = \frac{8\pi h \left(\frac{\nu}{c}\right)^3}{\exp\left(\frac{h\nu}{k_b T}\right)-1},
+\]
+where $\nu$ is the frequency in Hz, $k_b$ is the Boltzmann constant,
+and $T$ is the temperature in K.  Suppose that we wish to have a
+single source at the location $(0,0,0)$ with energy of $10^{50}$
+photon/s.  Suppose further that we wish to use three radiation bins,
+having frequency bands $[13.6, 24.6]$, $[24.6, 54.4]$ and $[54.4, 100]$. 
+
+Since the $T=10^5$ blackbody spectrum is already built into the
+solver, you would only need the following parameters to set up this
+discretization of frequency space and this source: 
+\begin{verbatim}
+  AMRFLDNumRadiationFields = 3
+  AMRFLDFrequencyBand[0] = 13.6 24.6
+  AMRFLDFrequencyBand[1] = 24.6 54.4
+  AMRFLDFrequencyBand[2] = 54.4 100.0
+  AMRFLDNumSources = 1
+  AMRFLDSourceType[0] = 1
+  AMRFLDSourceLocation[0] = 0.0 0.0 0.0
+  AMRFLDSourceEnergy[0] = 1e50
+\end{verbatim}
+\end{shaded}
+
+
+\begin{shaded}
+{\bf Example 2:  Three group approximation of a $T=10^5$ K blackbody
+  spectrum (manual)}
+
+Suppose now that we wanted to set up the same problem as in Example 1,
+but where we specify the ionization source strength separately for
+each radiation group.  Here, we must instead use the second approach
+outlined above.  Here, we first manually compute the integrals that
+form the \eqref{eq:emission_integral} for each group:
+\begin{align*}
+  I_1 &= \int_{3.288465\times10^{15}}^{5.948254\times10^{15}}\nu\, \sigma(\nu)\,\mathrm d\nu = 9.023462\times10^{20}, \\
+  I_2 &= \int_{5.948254\times10^{15}}^{1.315386\times10^{16}}\nu\, \sigma(\nu)\,\mathrm d\nu = 3.519211\times10^{21}, \\
+  I_3 &= \int_{1.315386\times10^{16}}^{2.417989\times10^{16}}\nu\, \sigma(\nu)\,\mathrm d\nu = 1.372126\times10^{21}, \\
+  I_4 &=  \int_{3.288465\times10^{15}}^{\infty}\sigma(\nu)\,\mathrm d\nu = 6.757934\times10^{5},
+\end{align*}
+where $\sigma(\nu)$ is the $T=10^5$ K blackbody spectrum (since 13.6 eV
+equals 3.288465e15 Hz, 24.6 eV equals 5.948254e15 Hz, 54.4 eV equals
+1.315386e16 Hz, 100 eV equals 2.417989e16 Hz). 
+
+With these integrals, we then follow the formula
+\eqref{eq:emission_integral} for each group, converting the results
+into erg/s:
+\begin{align*}
+  &(6.6260693\times10^{-27})(1.60217653\times10^{-12})(10^{50}) \frac{I_1}{I_4} = 8.847391\times10^{38}, \\
+  &(6.6260693\times10^{-27})(1.60217653\times10^{-12})(10^{50}) \frac{I_2}{I_4} = 3.450542\times10^{39}, \\
+  &(6.6260693\times10^{-27})(1.60217653\times10^{-12})(10^{50}) \frac{I_3}{I_4} = 1.345352\times10^{39},
+\end{align*}
+\begin{verbatim}
+  AMRFLDNumRadiationFields = 3
+  AMRFLDFrequencyBand[0] = 13.6 24.6
+  AMRFLDFrequencyBand[1] = 24.6 54.4
+  AMRFLDFrequencyBand[2] = 54.4 100.0
+  AMRFLDNumSources = 1
+  AMRFLDSourceLocation[0] = 0.0 0.0 0.0
+  AMRFLDSourceGroupEnergy[0][0] = 8.847391e38
+  AMRFLDSourceGroupEnergy[0][1] = 3.450542e39
+  AMRFLDSourceGroupEnergy[0][2] = 1.345352e39
+\end{verbatim}
+\end{shaded}
+
+{\em Note: A Python utility script named {\tt energy\_partitioning.py}
+is included in the Enzo run directory \\
+{\tt run/RadiationTransportFLD/AMRFLDSplit/}, that can be used to
+determine this manual partitioning scheme automatically for a given 
+source SED.  Instructions are embedded within the comments in that
+file.}
 
 
 \subsubsection{Solver input parameters}
