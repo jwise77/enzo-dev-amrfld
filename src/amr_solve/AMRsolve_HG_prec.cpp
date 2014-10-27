@@ -222,7 +222,7 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   if (ierr != 0)  ERROR("could not convert b into AMRsolve grid u vectors\n");
   
   // restrict u onto coarse grid
-  ierr = restrict(hierarchy_->num_levels()-1, 0);
+  ierr = restrict_(hierarchy_->num_levels()-1, 0);
   if (ierr != 0)  ERROR("could not restrict u to coarse grid\n");
   
   // copy coarse grid u into Bc_ vector
@@ -246,7 +246,7 @@ int AMRsolve_HG_prec::Solve_(HYPRE_SStructMatrix A,
   ierr = HYPRE_to_AMRsolve_coarse_(Xc_, 1);
 
   // prolong u onto full hierarchy
-  ierr = prolong(0, hierarchy_->num_levels()-1, 0);
+  ierr = prolong_(0, hierarchy_->num_levels()-1, 0);
   if (ierr != 0)  ERROR("could not prolong u to hierarchy\n");
 
   // copy u into output vector x
@@ -512,16 +512,16 @@ int AMRsolve_HG_prec::HYPRE_to_AMRsolve_coarse_(HYPRE_StructVector *V, int u_vs_
 /** Restricts all grid's u_ data arrays from level_fine through 
   * level_coarse, using the requested restriction operator; returns
   *  integer denoting pass (0) or fail (1) */
-int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
+int AMRsolve_HG_prec::restrict_(int level_fine, int level_coarse) throw()
 {
   // check for legal input arguments
   if (level_coarse < 0) {
-    printf("AMRsolve_HG_prec::restrict error -- illegal level_coarse (%i < 0)\n",
+    printf("AMRsolve_HG_prec::restrict_ error -- illegal level_coarse (%i < 0)\n",
 	   level_coarse);
     return 1;
   }
   if (level_fine > hierarchy_->num_levels()-1) {
-    printf("AMRsolve_HG_prec::restrict error -- illegal level_fine (%i > %i)\n",
+    printf("AMRsolve_HG_prec::restrict_ error -- illegal level_fine (%i > %i)\n",
 	   level_fine, hierarchy_->num_levels()-1);
     return 1;
   }
@@ -620,7 +620,7 @@ int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
 	    int ovsize[3] = { g2_ihi[0] - g2_ilo[0] + 1, 
 			      g2_ihi[1] - g2_ilo[1] + 1, 
 			      g2_ihi[2] - g2_ilo[2] + 1};
-	    do_restrict(mydata, rbuffs[ibuff], nx, g1_ilo, g1_ihi, ovsize);
+	    do_restrict_(mydata, rbuffs[ibuff], nx, g1_ilo, g1_ihi, ovsize);
 
 	    // delete this receive buffer
 	    delete[] rbuffs[ibuff];
@@ -690,9 +690,9 @@ int AMRsolve_HG_prec::restrict(int level_fine, int level_coarse) throw()
   * size ovsize[3]) into the local data array mydata (of size mysize[3]), 
   * where the overlap data should be placed into the region defined by 
   * g1_ilo[3] nad g1_ihi[3]. */
-void AMRsolve_HG_prec::do_restrict(Scalar *mydata, Scalar *overlap, 
-				     int *mysize, int *g1_ilo, 
-				     int *g1_ihi, int *ovsize) throw()
+void AMRsolve_HG_prec::do_restrict_(Scalar *mydata, Scalar *overlap, 
+				    int *mysize, int *g1_ilo, 
+				    int *g1_ihi, int *ovsize) throw()
 {
 
   // ensure that overlap region fits within mydata
@@ -726,18 +726,18 @@ void AMRsolve_HG_prec::do_restrict(Scalar *mydata, Scalar *overlap,
 /** Prolongs all grid's u_ data arrays from level_coarse up to 
   * level_fine, using the requested prolongation operator; returns 
   * integer denoting pass (0) or fail (1) */
-int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine, 
-				int method) throw()
+int AMRsolve_HG_prec::prolong_(int level_coarse, int level_fine, 
+			       int method) throw()
 {
 
   // check for legal input arguments
   if (level_coarse < 0) {
-    printf("AMRsolve_HG_prec::prolong error -- illegal level_coarse (%i < 0)\n",
+    printf("AMRsolve_HG_prec::prolong_ error -- illegal level_coarse (%i < 0)\n",
 	   level_coarse);
     return 1;
   }
   if (level_fine > hierarchy_->num_levels()-1) {
-    printf("AMRsolve_HG_prec::prolong error -- illegal level_fine (%i > %i)\n",
+    printf("AMRsolve_HG_prec::prolong_ error -- illegal level_fine (%i > %i)\n",
 	   level_fine,hierarchy_->num_levels()-1);
     return 1;
   }
@@ -845,7 +845,7 @@ int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine,
 	  int ovsize[3] = { g2_ihi[0] - g2_ilo[0] + 1, 
 			    g2_ihi[1] - g2_ilo[1] + 1, 
 			    g2_ihi[2] - g2_ilo[2] + 1};
-	  do_prolong(mydata, rbuffs[ibuff], nx, g1_ilo, g1_ihi, ovsize, method);
+	  do_prolong_(mydata, rbuffs[ibuff], nx, g1_ilo, g1_ihi, ovsize, method);
 	  
 	  // delete this receive buffer
 	  delete[] rbuffs[ibuff];
@@ -910,10 +910,10 @@ int AMRsolve_HG_prec::prolong(int level_coarse, int level_fine,
   * size ovsize[3]) into the local data array mydata (of size mysize[3]), 
   * where the overlap data should be placed into the region defined by 
   * g1_ilo[3] and g1_ihi[3]. */
-void AMRsolve_HG_prec::do_prolong(Scalar *mydata, Scalar *overlap, 
-				    int *mysize, int *g1_ilo, 
-				    int *g1_ihi, int *ovsize, 
-				    int method) throw()
+void AMRsolve_HG_prec::do_prolong_(Scalar *mydata, Scalar *overlap, 
+				   int *mysize, int *g1_ilo, 
+				   int *g1_ihi, int *ovsize, 
+				   int method) throw()
 {
 
   // ensure that overlap region fits within mydata
