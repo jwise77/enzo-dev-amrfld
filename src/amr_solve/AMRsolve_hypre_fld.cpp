@@ -892,13 +892,21 @@ Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2,
   Scalar Rmin = Rmin_ / lUn_;
   Rmin = MIN(Rmin, 1.e-20);    // 1st is astro/cosmo, 2nd is lab frame
   Scalar Emin = 1.0e-30;
+  Scalar Kmin = 1.0e-20;
   Scalar Dmax = Dmax_ * c * lUn_;
   Dmax = MAX(Dmax, 1.e20);     // 1st is astro/cosmo, 2nd is lab frame
 
   Scalar Eavg = MAX((E1 + E2)*0.5, Emin);
+  k1 = MAX(k1, Kmin);
+  k2 = MAX(k2, Kmin);
   Scalar kap = 2.0*k1*k2/(k1+k2)*nUn_;   // harmonic mean
   Scalar R = MAX(dxi*ABS(E1 - E2)/Eavg, Rmin);
-  return MIN(c/sqrt(9.0*kap*kap + R*R), Dmax);
+
+  Scalar D = MIN(c/sqrt(9.0*kap*kap + R*R), Dmax);
+  if (isinf(D) || isnan(D))
+    fprintf(stderr,"limiter_ ERROR: illegal value (%g)\n   E = %g %g, k = %g %g, Eavg = %g, kap = %g, R = %g, nUn = %g, lUn = %g, dxi = %g\n\n",
+	    D, E1, E2, k1, k2, Eavg, kap, R, nUn, lUn, dxi);
+  return D;
 
 } // limiter_()
 
@@ -1042,8 +1050,9 @@ void AMRsolve_Hypre_FLD::init_elements_rhs_()
 
 	  // check that value is legal, otherwise output an error message
 	  if (isinf(values[i]) || isnan(values[i])) {
-	    fprintf(stderr,"init_elements_rhs_ ERROR: encountered illegal value (%g)\n   eta = %g, E = %g, dtfac = %g, dtfac0 = %g, kap = %g\n   D* = %g, %g, %g, %g, %g, %g\n   Ed* = %g %g %g %g %g %g\n\n",
-		    values[i], eta[k_000], E[k_000], dtfac, dtfac0, kap, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, Ed_xl, Ed_xr, Ed_yl, Ed_yr, Ed_zl, Ed_zr);
+	    fprintf(stderr,"init_elements_rhs_ ERROR: illegal value (%g)\n   proc = %i, i* = %i %i %i %i, n3 = %i %i %i, eta = %g, E = %g %g %g %g %g %g %g, dtfac = %g, dtfac0 = %g, kap = %g %g %g %g %g %g %g\n   D* = %g, %g, %g, %g, %g, %g\n   Ed* = %g %g %g %g %g %g\n\n",
+		    values[i], grid->ip(), i, i0, i1, i2, n0, n1, n2, eta[k_000], E[k_000], E[k_00l], E[k_0l0], E[k_l00], E[k_r00], E[k_0r0], E[k_00r], dtfac, dtfac0, 
+		    kappa[k_000], kappa[k_00l], kappa[k_0l0], kappa[k_l00], kappa[k_r00], kappa[k_0r0], kappa[k_00r], D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, Ed_xl, Ed_xr, Ed_yl, Ed_yr, Ed_zl, Ed_zr);
 	    ERROR("NaN error in init_elements_rhs_\n");
 	  }
 
@@ -1354,37 +1363,44 @@ void AMRsolve_Hypre_FLD::init_matrix_stencil_(AMRsolve_Grid& grid)
 	badvalue = 0;
 	vtmp = v1[2][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dzi = %g, D_zl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dzi = %g, D_zl = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dzi, D_zl, E[k_000], E[k_00l], kappa[k_000], kappa[k_00l], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v1[1][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dyi = %g, D_yl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dyi = %g, D_yl = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dyi, D_yl, E[k_000], E[k_0l0], kappa[k_000], kappa[k_0l0], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v1[0][0][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dxi = %g, D_xl = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xl, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dxi = %g, D_xl = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dxi, D_xl, E[k_000], E[k_l00], kappa[k_000], kappa[k_l00], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v1[0][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dxi = %g, D_xr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dxi, D_xr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dxi = %g, D_xr = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dxi, D_xr, E[k_000], E[k_r00], kappa[k_000], kappa[k_r00], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v1[1][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dyi = %g, D_yr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dyi, D_yr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dyi = %g, D_yr = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dyi, D_yr, E[k_000], E[k_0r0], kappa[k_000], kappa[k_0r0], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v1[2][1][i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, dzi = %g, D_zr = %g, i* = %i %i %i %i\n\n", vtmp, dtfac, dzi, D_zr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, dzi = %g, D_zr = %g, E = %g %g, kap = %g %g, i* = %i %i %i %i, n3 = %i %i %i\n\n", 
+		  vtmp, grid.ip(), dtfac, dzi, D_zr, E[k_000], E[k_00r], kappa[k_000], kappa[k_00r], i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	vtmp = v0[i];
 	if (isinf(vtmp) || isnan(vtmp)) {
-	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   dtfac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i \n\n", vtmp, dtfac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2);
+	  fprintf(stderr,"init_matrix_stencil_ ERROR: illegal value (%g)\n   proc = %i, dtfac = %g, kap = %g, d*i = %g %g %g, D* = %g %g %g %g %g %g, i* = %i %i %i %i, n3 = %i %i %i \n\n", 
+		  vtmp, grid.ip(), dtfac, kap, dxi, dyi, dzi, D_xl, D_xr, D_yl, D_yr, D_zl, D_zr, i, i0, i1, i2, n3[0], n3[1], n3[2]);
 	  badvalue = 1;
 	}
 	if (badvalue == 1)
@@ -2411,7 +2427,7 @@ void AMRsolve_Hypre_FLD::tester()
   AMRsolve_HG_prec *precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
 
   // perform restriction
-  if (precond->restrict(numlevels-1, 0) != 0)
+  if (precond->restrict_(numlevels-1, 0) != 0)
     printf("ERROR: restriction failed\n");
 
   // delete HG_prec object
@@ -2466,7 +2482,7 @@ void AMRsolve_Hypre_FLD::tester()
   AMRsolve_HG_prec *precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
 
   // perform prolongation, method 0 (piecewise constant)
-  if (precond->prolong(0, numlevels-1, 0) != 0)
+  if (precond->prolong_(0, numlevels-1, 0) != 0)
     printf("ERROR: prolongation failed\n");
 
   // delete HG_prec object
@@ -2520,11 +2536,11 @@ void AMRsolve_Hypre_FLD::tester()
   AMRsolve_HG_prec *precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
 
   // perform restriction (piecewise constant)
-  if (precond->restrict(numlevels-1, 0) != 0)
+  if (precond->restrict_(numlevels-1, 0) != 0)
     printf("ERROR: restriction failed\n");
 
   // perform prolongation, method 0 (piecewise constant)
-  if (precond->prolong(0, numlevels-1, 0) != 0)
+  if (precond->prolong_(0, numlevels-1, 0) != 0)
     printf("ERROR: prolongation failed\n");
 
   // delete HG_prec object
@@ -2576,11 +2592,11 @@ void AMRsolve_Hypre_FLD::tester()
   AMRsolve_HG_prec *precond = new AMRsolve_HG_prec(*hierarchy_, BdryType_);
   
   // perform prolongation, method 0 (piecewise constant)
-  if (precond->prolong(0, numlevels-1, 0) != 0)
+  if (precond->prolong_(0, numlevels-1, 0) != 0)
     printf("ERROR: prolongation failed\n");
   
   // perform restriction (piecewise constant)
-  if (precond->restrict(numlevels-1, 0) != 0)
+  if (precond->restrict_(numlevels-1, 0) != 0)
     printf("ERROR: restriction failed\n");
 
   // delete HG_prec object

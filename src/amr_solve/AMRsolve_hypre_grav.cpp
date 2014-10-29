@@ -1863,7 +1863,7 @@ void AMRsolve_Hypre_Grav::solve_bicgstab_(int itmax, double restol)
   if (use_prec_) {
     ierr = precond->HYPRE_to_AMRsolve_(&X_, 1); // copy X_ to AMRsolve's u_
     if (ierr != 0)  ERROR("could not copy X_ to u_\n");
-    ierr = precond->restrict(hierarchy_->num_levels()-1, 0);  // restriction
+    ierr = precond->restrict_(hierarchy_->num_levels()-1, 0);  // restriction
     if (ierr != 0)  ERROR("could not restrict u_ to coarse levels\n");
     ierr = precond->AMRsolve_to_HYPRE_(&X_, 1); // copy u_ to X_
     if (ierr != 0)  ERROR("could not copy u_ to X_\n");
@@ -2084,7 +2084,7 @@ void AMRsolve_Hypre_Grav::solve_gmres_(int itmax, double restol)
   if (use_prec_) {
     ierr = precond->HYPRE_to_AMRsolve_(&X_, 1); // copy X_ to AMRsolve's u_
     if (ierr != 0)  ERROR("could not copy X_ to u_\n");
-    ierr = precond->restrict(hierarchy_->num_levels()-1, 0);  // restriction
+    ierr = precond->restrict_(hierarchy_->num_levels()-1, 0);  // restriction
     if (ierr != 0)  ERROR("could not restrict u_ to coarse levels\n");
     ierr = precond->AMRsolve_to_HYPRE_(&X_, 1); // copy u_ to X_
     if (ierr != 0)  ERROR("could not copy u_ to X_\n");
