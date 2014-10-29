@@ -56,7 +56,7 @@ MACH_LD_NOMPI  = CC
 # Machine-dependent defines
 #-----------------------------------------------------------------------
 
-MACH_DEFINES   = -DNO_IO_LOG -DH5_USE_16_API -DLINUX_CRAY_X86_64 -DUSE_MPI -DMPICH_IGNORE_CXX_SEEK -DMEM_TRACE 
+MACH_DEFINES   = -DNO_IO_LOG -DH5_USE_16_API -DLINUX -DUSE_MPI -DMPICH_IGNORE_CXX_SEEK -DMEM_TRACE -DUSE_FFTE_FFT
 
 #-----------------------------------------------------------------------
 # Compiler flag settings
