@@ -7,7 +7,8 @@
 # AUTHOR:      Matthew Turk
 #
 # DATE:        2012-03-16
-# MODIFIED1:   
+# MODIFIED1:   2014-10-27, Daniel R. Reynolds
+# MODIFIED2:   
 #
 #=======================================================================
 
@@ -15,7 +16,9 @@ MACH_TEXT  = NCSA Blue Waters
 MACH_VALID = 1
 MACH_FILE  = Make.mach.ncsa-bluewaters-gnu
 
-MACHINE_NOTES = "Building on NCSA's Blue Waters requires PrgEnv-gnu, not PrgEnv-cray"
+MACHINE_NOTES = "\nBuilding on NCSA's Blue Waters requires PrgEnv-gnu,\
+ not PrgEnv-cray.\nTo use HYPRE you should load the hypre\
+ module:\n   module load hypre\n"
 
 #-----------------------------------------------------------------------
 # Commands to run test executables
@@ -27,9 +30,8 @@ MACHINE_NOTES = "Building on NCSA's Blue Waters requires PrgEnv-gnu, not PrgEnv-
 #-----------------------------------------------------------------------
 
 LOCAL_MPI_INSTALL    = 
-LOCAL_HDF5_INSTALL   = $(HOME)/yt-x86_64/
-LOCAL_HYPRE_INSTALL  = 
-LOCAL_PYTHON_INSTALL = $(HOME)/yt-x86_64/
+LOCAL_HDF5_INSTALL   = ~mturk/yt-x86_64/
+LOCAL_PYTHON_INSTALL = ~mturk/yt-x86_64/
 
 #-----------------------------------------------------------------------
 # Compiler settings
@@ -57,7 +59,7 @@ MACH_LD_NOMPI  = CC
 # Machine-dependent defines
 #-----------------------------------------------------------------------
 
-MACH_DEFINES   = -DNO_IO_LOG -DSYSCALL -DH5_USE_16_API -DLINUX
+MACH_DEFINES   = -DNO_IO_LOG -DSYSCALL -DH5_USE_16_API -DLINUX -DMPICH_IGNORE_CXX_SEEK
 
 #-----------------------------------------------------------------------
 # Compiler flag settings
@@ -94,14 +96,13 @@ MACH_OPT_AGGRESSIVE  = -O3
 
 LOCAL_INCLUDES_MPI    = 
 LOCAL_INCLUDES_HDF5   = -I$(LOCAL_HDF5_INSTALL)/include
-LOCAL_INCLUDES_HYPRE  = 
 LOCAL_INCLUDES_PYTHON = -I$(LOCAL_PYTHON_INSTALL)/include/python2.7/ \
                         -I$(LOCAL_PYTHON_INSTALL)/lib/python2.7/site-packages/numpy/core/include
 
 MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5)
 MACH_INCLUDES_PYTHON  = $(LOCAL_INCLUDES_PYTHON)
 MACH_INCLUDES_MPI     = $(LOCAL_INCLUDES_MPI)
-MACH_INCLUDES_HYPRE   = $(LOCAL_INCLUDES_HYPRE)
+MACH_INCLUDES_HYPRE   = $(HYPRE_INC)
 
 #-----------------------------------------------------------------------
 # Libraries
@@ -111,11 +112,10 @@ MACH_INCLUDES_HYPRE   = $(LOCAL_INCLUDES_HYPRE)
 LOCAL_LIBS_MPI    = 
 LOCAL_LIBS_HDF5   = -L$(LOCAL_HDF5_INSTALL)/lib -lhdf5 -lz
 LOCAL_LIBS_PYTHON = -L$(LOCAL_PYTHON_INSTALL)/lib -lpython2.7 -ldl -lutil
-LOCAL_LIBS_HYPRE  = 
 
 LOCAL_LIBS_MACH   = 
 
 MACH_LIBS         = $(LOCAL_LIBS_HDF5) $(LOCAL_LIBS_MACH)
 MACH_LIBS_PYTHON  = $(LOCAL_LIBS_PYTHON)
 MACH_LIBS_MPI     = $(LOCAL_LIBS_MPI)
-MACH_LIBS_HYPRE   = $(LOCAL_LIBS_HYPRE)
+MACH_LIBS_HYPRE   = $(HYPRE_LIB)
