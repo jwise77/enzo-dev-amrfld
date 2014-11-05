@@ -17,9 +17,14 @@ te = 50
 pictype = 'png'
 
 # set some constants
+Ngammadot = 5.0e48     # ionization source strength [photons/sec]
+aHII = 2.52e-13        # recombination rate coefficient
 mp = 1.67262171e-24    # proton mass [g]
 kpc = 3.0857e21        # 1 kpc in cm
 megayear = 3.15576e13  # 1 Myr in sec
+nH = 1.0e-3            # input hydrogen number density [cm^(-3)]
+trec = 1.0/(aHII*nH)   # recombination time [sec]
+rs0 = (3.0*Ngammadot/4/pi/aHII/nH/nH)**(1.0/3.0)   # Stromgren radius
 
 
 # Define some derived fields
@@ -125,14 +130,19 @@ for tstep in range(0,te+1):
     rdata[1][tstep] = radius
     
     # generate slice/profile plots at certain times
-    if (tstep == 1) or (tstep == 20) or (tstep == 50):
+    if (tstep == 1) or (tstep == 10) or (tstep == 20) or (tstep == 50):
         
         # set time label
         if (tstep == 1):
-            Myr  = '1'
-            Myr2 = '001'
+            Myr  = '10'
+            Myr2 = '010'
             style = 'r:'
             lab = '10 Myr'
+        elif (tstep == 10):
+            Myr  = '100'
+            Myr2 = '100'
+            style = 'g-.'
+            lab = '100 Myr'
         elif (tstep == 20):
             Myr  = '200'
             Myr2 = '200'
@@ -152,7 +162,6 @@ for tstep in range(0,te+1):
 
         # increase the standard font sizes for the following plot
         plt.rcParams.update({'font.size': 20})
-
 
         fig = plt.figure(tstep)
 
@@ -191,6 +200,8 @@ for tstep in range(0,te+1):
         plt.savefig('slices_' + Myr + 'Myr.' + pictype % pf)
 
 
+        if (tstep == 10):
+            continue
 
         # generate profile plots by averaging results from multiple rays
         rays = np.array( ((1.0,0.0,0.0), (0.0,1.0,0.0), (0.0,0.0,1.0), 
@@ -264,7 +275,7 @@ for tstep in range(0,te+1):
         plt.rcParams.update({'font.size': 20})
 
         # generate stored profile plots
-        fig = plt.figure(1)
+        fig = plt.figure(100)
         plt.subplot(221)
         plt.semilogy(rvals,dProfile,style,hold=True)
         plt.ylabel('Density [g cm$^{-3}$]', fontsize=20)
@@ -307,7 +318,7 @@ for tstep in range(0,te+1):
 plt.rcParams.update({'font.size': 12})
 
 # save accumulated profile plot
-fig = plt.figure(1)
+fig = plt.figure(100)
 plt.subplot(223)
 plt.legend( loc=3 )
 plt.subplot(221).tick_params(axis='both', labelsize=20)
@@ -328,13 +339,13 @@ plt.rcParams.update({'font.size': 22})
 # I-front radius/velocity
 tdata = 0.5*(rdata[0,1:]+rdata[0,:-1])
 vdata = (rdata[1,1:]-rdata[1,:-1])/(rdata[0,1:]-rdata[0,:-1])*(kpc/1e5/megayear)
-fig = plt.figure(2)
+fig = plt.figure(101)
 plt.subplot(211)
-plt.plot(rdata[0],rdata[1]/kpc,'b-')
-plt.ylabel('$r_I$ [kpc]', fontsize=20)
+plt.plot(rdata[0],rdata[1]/rs0,'b-')
+plt.ylabel('$r_I/r_{s,0}$', fontsize=20)
 ax = gca()
 ax.xaxis.set_ticklabels([])
-plt.axis([ 0.0, 500.0, 0.0, 12.0 ])
+plt.axis([ 0.0, 500.0, 0.0, 1.6 ])
 plt.grid()
 plt.subplot(212)
 plt.semilogy(tdata,vdata/kpc,'b-')
