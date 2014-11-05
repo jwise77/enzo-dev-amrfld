@@ -92,11 +92,11 @@ int AMRFLDSplit::RadiationSource(LevelHierarchyEntry *LevelArray[],
 
 	    // all sources have radius of one cell; count number of cells to receive source
 	    int num_cells = 0;
-	    for (k=ghZl; k<n3[2]+ghZl; k++) {
+	    for (k=0; k<n3[2]+2*ghZl; k++) {
 	      cellZc = x2L + (k-ghZl+0.5)*dx[2];	      // z-center (comoving) for this cell
-	      for (j=ghYl; j<n3[1]+ghYl; j++) {
+	      for (j=0; j<n3[1]+2*ghYl; j++) {
 		cellYc = x1L + (j-ghYl+0.5)*dx[1];      // y-center (comoving) for this cell
-		for (i=ghXl; i<n3[0]+ghXl; i++) {
+		for (i=0; i<n3[0]+2*ghXl; i++) {
 		  cellXc = x0L + (i-ghXl+0.5)*dx[0];    // x-center (comoving) for this cell
 		  if ( (fabs(cellXc-SourceLocation[ibin][0]) < dx[0]) &&
 		       (fabs(cellYc-SourceLocation[ibin][1]) < dx[1]) &&
