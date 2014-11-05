@@ -1,24 +1,22 @@
 #=======================================================================
 #
-# FILE:        Make.mach.ncsa-bluewaters-gnu
+# FILE:        Make.mach.ncsa-bluewaters-cray
 #
 # DESCRIPTION: Makefile settings for NCSA's Blue Waters w/GNU
 #
-# AUTHOR:      Matthew Turk
+# AUTHOR:      Daniel R. Reynolds
 #
-# DATE:        2012-03-16
-# MODIFIED1:   2014-10-27, Daniel R. Reynolds
-# MODIFIED2:   
+# DATE:        2014-10-27
+# MODIFIED1:   
 #
 #=======================================================================
 
 MACH_TEXT  = NCSA Blue Waters
 MACH_VALID = 1
-MACH_FILE  = Make.mach.ncsa-bluewaters-gnu
+MACH_FILE  = Make.mach.ncsa-bluewaters-cray
 
-MACHINE_NOTES = "\nBuilding on NCSA's Blue Waters requires PrgEnv-gnu,\
- not PrgEnv-cray.\nTo use HYPRE you should load the hypre\
- module:\n   module load hypre\n"
+MACHINE_NOTES = "\nIn addition to the default modules, you should\
+ also load cray-hdf5 and hypre:\n   module load cray-hdf5 hypre\n"
 
 #-----------------------------------------------------------------------
 # Commands to run test executables
@@ -30,8 +28,7 @@ MACHINE_NOTES = "\nBuilding on NCSA's Blue Waters requires PrgEnv-gnu,\
 #-----------------------------------------------------------------------
 
 LOCAL_MPI_INSTALL    = 
-LOCAL_HDF5_INSTALL   = ~mturk/yt-x86_64/
-LOCAL_PYTHON_INSTALL = ~mturk/yt-x86_64/
+LOCAL_HDF5_INSTALL   = ${HDF5_DIR}
 
 #-----------------------------------------------------------------------
 # Compiler settings
@@ -59,27 +56,27 @@ MACH_LD_NOMPI  = CC
 # Machine-dependent defines
 #-----------------------------------------------------------------------
 
-MACH_DEFINES   = -DNO_IO_LOG -DSYSCALL -DH5_USE_16_API -DLINUX -DMPICH_IGNORE_CXX_SEEK
+MACH_DEFINES   = -DNO_IO_LOG -DH5_USE_16_API -DLINUX -DUSE_MPI -DMPICH_IGNORE_CXX_SEEK -DMEM_TRACE -DUSE_FFTE_FFT
 
 #-----------------------------------------------------------------------
 # Compiler flag settings
 #-----------------------------------------------------------------------
 
-MACH_CPPFLAGS = -P -traditional
-MACH_CFLAGS   = 
-MACH_CXXFLAGS = 
-MACH_FFLAGS   = -fno-second-underscore -m64
-MACH_F90FLAGS = -fno-second-underscore -m64
-MACH_LDFLAGS  = -Bdynamic
+MACH_CPPFLAGS = -traditional
+MACH_CFLAGS   = -h noomp
+MACH_CXXFLAGS = -h noomp
+MACH_FFLAGS   = -h noomp -N 132
+MACH_F90FLAGS = -h noomp
+MACH_LDFLAGS  = 
 
 #-----------------------------------------------------------------------
 # Precision-related flags
 #-----------------------------------------------------------------------
 
-MACH_FFLAGS_INTEGER_32 = 
-MACH_FFLAGS_INTEGER_64 = -fdefault-integer-8
-MACH_FFLAGS_REAL_32    = 
-MACH_FFLAGS_REAL_64    = -fdefault-real-8 -fdefault-double-8 
+MACH_FFLAGS_INTEGER_32 = -s integer32
+MACH_FFLAGS_INTEGER_64 = -s integer64
+MACH_FFLAGS_REAL_32    = -s real32
+MACH_FFLAGS_REAL_64    = -s real32
 
 #-----------------------------------------------------------------------
 # Optimization flags
@@ -96,13 +93,11 @@ MACH_OPT_AGGRESSIVE  = -O3
 
 LOCAL_INCLUDES_MPI    = 
 LOCAL_INCLUDES_HDF5   = -I$(LOCAL_HDF5_INSTALL)/include
-LOCAL_INCLUDES_PYTHON = -I$(LOCAL_PYTHON_INSTALL)/include/python2.7/ \
-                        -I$(LOCAL_PYTHON_INSTALL)/lib/python2.7/site-packages/numpy/core/include
+LOCAL_INCLUDES_HYPRE  = 
 
 MACH_INCLUDES         = $(LOCAL_INCLUDES_HDF5)
-MACH_INCLUDES_PYTHON  = $(LOCAL_INCLUDES_PYTHON)
 MACH_INCLUDES_MPI     = $(LOCAL_INCLUDES_MPI)
-MACH_INCLUDES_HYPRE   = $(HYPRE_INC)
+MACH_INCLUDES_HYPRE   = ${HYPRE_INC}
 
 #-----------------------------------------------------------------------
 # Libraries
@@ -111,11 +106,10 @@ MACH_INCLUDES_HYPRE   = $(HYPRE_INC)
 
 LOCAL_LIBS_MPI    = 
 LOCAL_LIBS_HDF5   = -L$(LOCAL_HDF5_INSTALL)/lib -lhdf5 -lz
-LOCAL_LIBS_PYTHON = -L$(LOCAL_PYTHON_INSTALL)/lib -lpython2.7 -ldl -lutil
+LOCAL_LIBS_HYPRE  = 
 
 LOCAL_LIBS_MACH   = 
 
 MACH_LIBS         = $(LOCAL_LIBS_HDF5) $(LOCAL_LIBS_MACH)
-MACH_LIBS_PYTHON  = $(LOCAL_LIBS_PYTHON)
 MACH_LIBS_MPI     = $(LOCAL_LIBS_MPI)
 MACH_LIBS_HYPRE   = $(HYPRE_LIB)

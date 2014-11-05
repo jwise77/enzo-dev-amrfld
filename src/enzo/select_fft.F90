@@ -68,6 +68,12 @@
 #define GOT_FFT_2
 #endif
 
+#ifdef USE_FFTE_FFT
+!       choice = "acml"
+        choice = "ffte"
+#define GOT_FFT_2
+#endif
+
 #ifdef MKL
 !       choice = "mkl"
         choice = "ffte" 
