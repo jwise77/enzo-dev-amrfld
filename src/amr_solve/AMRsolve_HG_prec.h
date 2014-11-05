@@ -55,12 +55,12 @@ public:
   int HYPRE_to_AMRsolve_coarse_(HYPRE_StructVector *V, int u_vs_f);
 
   // Restriction/Prolongation operators over hierarchy
-  int restrict(int level_fine, int level_coarse) throw();
-  void do_restrict(Scalar *mydata, Scalar *overlap, int *mysize, int *g1_ilo, 
-		   int *g1_ihi, int *ovsize) throw();
-  int prolong(int level_coarse, int level_fine, int method) throw();
-  void do_prolong(Scalar *mydata, Scalar *overlap, int *mysize, int *g1_ilo, 
-		  int *g1_ihi, int *ovsize, int method) throw();
+  int restrict_(int level_fine, int level_coarse) throw();
+  void do_restrict_(Scalar *mydata, Scalar *overlap, int *mysize, int *g1_ilo, 
+		    int *g1_ihi, int *ovsize) throw();
+  int prolong_(int level_coarse, int level_fine, int method) throw();
+  void do_prolong_(Scalar *mydata, Scalar *overlap, int *mysize, int *g1_ilo, 
+		   int *g1_ihi, int *ovsize, int method) throw();
 
   // Jacobi smoother on full hierarchy
   int Jacobi_smooth_(HYPRE_SStructMatrix A,
