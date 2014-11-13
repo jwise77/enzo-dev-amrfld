@@ -121,28 +121,27 @@ int AMRFLDSplit::FillRates(LevelHierarchyEntry *LevelArray[], int level)
 	    ENZO_FAIL("AMRFLDSplit_FillRates ERROR: missing radiation array!");
 
 	  // fill HI photo-ionization rate
-	  float pHIconst = clight*TimeUnits/hplanck*intIonizing_HI[ibin];
-	  for (i=0; i<size; i++)  phHI[i] += Enew[i]*ErUn*pHIconst;
+	  float pHIconst = clight*TimeUnits*ErUn/hplanck*intIonizing_HI[ibin];
+	  for (i=0; i<size; i++)  phHI[i] += Enew[i]*pHIconst;
 
 	  // fill HeI and HeII photo-ionization rates
-	  float pHeIconst  = clight*TimeUnits/hplanck*intIonizing_HeI[ibin];
-	  float pHeIIconst = clight*TimeUnits/hplanck*intIonizing_HeII[ibin];
+	  float pHeIconst  = clight*TimeUnits*ErUn/hplanck*intIonizing_HeI[ibin];
+	  float pHeIIconst = clight*TimeUnits*ErUn/hplanck*intIonizing_HeII[ibin];
 	  if (RadiativeTransferHydrogenOnly == FALSE) {
-	    for (i=0; i<size; i++)  phHeI[i]  += Enew[i]*ErUn*pHeIconst;
-	    for (i=0; i<size; i++)  phHeII[i] += Enew[i]*ErUn*pHeIIconst;
+	    for (i=0; i<size; i++)  phHeI[i]  += Enew[i]*pHeIconst;
+	    for (i=0; i<size; i++)  phHeII[i] += Enew[i]*pHeIIconst;
 	  }
    
 	  // fill photo-heating rate
 	  float phScale    = clight*TimeUnits/VelUnits/VelUnits/mh/rtunits;
-	  float GHIconst   = phScale*intHeating_HI[ibin];
-	  float GHeIconst  = phScale*intHeating_HeI[ibin];
-	  float GHeIIconst = phScale*intHeating_HeII[ibin];
+	  float GHIconst   = phScale*ErUn*intHeating_HI[ibin];
+	  float GHeIconst  = phScale*ErUn*intHeating_HeI[ibin];
+	  float GHeIIconst = phScale*ErUn*intHeating_HeII[ibin];
 	  if (RadiativeTransferHydrogenOnly) {
-	    for (i=0; i<size; i++)  photogamma[i] += Enew[i]*ErUn*GHIconst;
+	    for (i=0; i<size; i++)  photogamma[i] += Enew[i]*GHIconst;
 	  } else {
 	    for (i=0; i<size; i++)  
-	      photogamma[i] += Enew[i]*ErUn *
-		(GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
+	      photogamma[i] += Enew[i] * (GHIconst*HI[i] + GHeIconst*HeI[i] + GHeIIconst*HeII[i])/HI[i];
 	  }
 
 	}  // end loop over bins
