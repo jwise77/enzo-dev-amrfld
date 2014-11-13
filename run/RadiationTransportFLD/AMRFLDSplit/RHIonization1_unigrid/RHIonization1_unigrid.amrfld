@@ -15,7 +15,7 @@ AMRFLDFrequencyBand[0] = 13.6 13.6     // monochromatic at HI threshold [eV]
 #
 AMRFLDNumSources = 1                   // one ionization source
 AMRFLDSourceLocation[0] = 0.0 0.0 0.0  // emissivity source location
-AMRFLDSourceGroupEnergy[0][0] = 1.3618500505e+37  // 1/8*5e48 photons/s [ergs/s] (1/8 for domain corner)
+AMRFLDSourceGroupEnergy[0][0] = 1.0894800404e+38  // 5e48 photons/s [converted to ergs/s]
 #
 # Problem-specific initialization parameters
 # 
