@@ -263,11 +263,10 @@ int AMRFLDSplit::ReadParameters(TopGridData &MetaData,
     for (dim=0; dim<rank; dim++) 
       if ((SourceLocation[isrc][dim] < DomainLeftEdge[dim]) || 
 	  (SourceLocation[isrc][dim] > DomainRightEdge[dim])) {
-	ENZO_VFAIL("AMRFLDSplit_ReadParameters: source %"ISYM" is outside the computational domain. Halting run\n",
-		   dim);
+	ENZO_VFAIL("AMRFLDSplit_ReadParameters: source %"ISYM" is outside the computational domain. Halting run\n", isrc);
       }
     if (debug) {
-      printf("AMRFLDSplit::ReadParameters sources %"ISYM" at location ", isrc);
+      printf("AMRFLDSplit::ReadParameters source %"ISYM" at location ", isrc);
       for (dim=0; dim<rank; dim++)  printf(" %g", SourceLocation[isrc][dim]);
       printf("\n");
     }

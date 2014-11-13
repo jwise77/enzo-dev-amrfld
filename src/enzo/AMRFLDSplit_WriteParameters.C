@@ -109,7 +109,7 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   fprintf(fptr, "AMRFLDSol_precrestol = %g\n", sol_precrestol);
 
   // flag for setting up weak-scaling runs
-  fprintf(fptr, "AMRFLDWeakScaling = %"ISYM"\n", &WeakScaling);    
+  fprintf(fptr, "AMRFLDWeakScaling = %"ISYM"\n", WeakScaling);
 
   // output relevant units: although these aren't required for restart, 
   // cosmology runs never output the units (why?), making data analysis tough
