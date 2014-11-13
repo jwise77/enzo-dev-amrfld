@@ -247,6 +247,15 @@ int AMRFLDSplit::Initialize(HierarchyEntry &TopGrid, TopGridData &MetaData) {
     sprintf(numstr, "%"ISYM, sol_precrelax);
     amrsolve_params->set_parameter("prec_rlxtype", numstr);
   }
+
+#define NO_PRINT_HYPRE_MATRICES
+#ifdef PRINT_HYPRE_MATRICES
+  // dump HYPRE matrices to disk
+  amrsolve_params->set_parameter("dump_a","true");
+  amrsolve_params->set_parameter("dump_b","true");
+  amrsolve_params->set_parameter("dump_x","true");
+#endif  
+
  
   if (debug) {
     printf("AMRFLDSplit::Initialize, customized amrsolve parameters:\n");
