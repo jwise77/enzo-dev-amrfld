@@ -96,23 +96,20 @@ int AMRFLDSplit::ComputeRadiationIntegrals() {
     // radiation frequency
     if (FieldMonochromatic[ibin]) {
 
-      float hnu = FrequencyBand[ibin][0];   // eV
-      float nu  = hnu * ev2erg / hplanck;   // Hz
-
       // sigma(nu_freq)
-      intOpacity_HI[ibin]   = sHI.value(hnu);
-      intOpacity_HeI[ibin]  = sHeI.value(hnu);
-      intOpacity_HeII[ibin] = sHeII.value(hnu);
+      intOpacity_HI[ibin]   = sHI.value(FrequencyBand[ibin][0]);
+      intOpacity_HeI[ibin]  = sHeI.value(FrequencyBand[ibin][0]);
+      intOpacity_HeII[ibin] = sHeII.value(FrequencyBand[ibin][0]);
 
       // sigma(nu_freq) / nu_freq
-      intIonizing_HI[ibin]   = sHI_i.value(hnu);
-      intIonizing_HeI[ibin]  = sHeI_i.value(hnu);
-      intIonizing_HeII[ibin] = sHeII_i.value(hnu);
+      intIonizing_HI[ibin]   = sHI_i.value(FrequencyBand[ibin][0]);
+      intIonizing_HeI[ibin]  = sHeI_i.value(FrequencyBand[ibin][0]);
+      intIonizing_HeII[ibin] = sHeII_i.value(FrequencyBand[ibin][0]);
 
       // sigma(nu_freq) * (1 - nu_species / nu_freq)
-      intHeating_HI[ibin]   = sHI_h.value(hnu);
-      intHeating_HeI[ibin]  = sHeI_h.value(hnu);
-      intHeating_HeII[ibin] = sHeII_h.value(hnu);
+      intHeating_HI[ibin]   = sHI_h.value(FrequencyBand[ibin][0]);
+      intHeating_HeI[ibin]  = sHeI_h.value(FrequencyBand[ibin][0]);
+      intHeating_HeII[ibin] = sHeII_h.value(FrequencyBand[ibin][0]);
       
     // radiation group
     } else {
@@ -120,7 +117,6 @@ int AMRFLDSplit::ComputeRadiationIntegrals() {
       float hnu_L = FrequencyBand[ibin][0];  // eV
       float hnu_R = FrequencyBand[ibin][1];  // eV
       float binwidth = (hnu_R-hnu_L) * ev2erg / hplanck;   // Hz
-      float IntVal;
 
       // 1/|binwidth| * int_{bin} sigmaHI(nu) d nu
       intOpacity_HI[ibin] = SED_integral(sHI, hnu_L, hnu_R, true) / binwidth;
