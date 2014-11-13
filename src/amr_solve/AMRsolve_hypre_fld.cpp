@@ -900,7 +900,8 @@ Scalar AMRsolve_Hypre_FLD::limiter_(Scalar E1, Scalar E2, Scalar k1, Scalar k2,
   k1 = MAX(k1, Kmin);
   k2 = MAX(k2, Kmin);
   Scalar kap = 2.0*k1*k2/(k1+k2)*nUn_;   // harmonic mean
-  Scalar R = MAX(dxi*ABS(E1 - E2)/Eavg, Rmin);
+  Scalar Ediff = fabs(E1 - E2);
+  Scalar R = MAX(dxi*Ediff/Eavg, Rmin);
 
   Scalar D = MIN(c/sqrt(9.0*kap*kap + R*R), Dmax);
   if (isinf(D) || isnan(D))
