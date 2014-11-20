@@ -192,6 +192,9 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
   float intHeating_HeII[MAX_FLD_FIELDS];   // 1/|binwidth| * int_{bin} sigmaHeII*(1-nuHeII/nu) d nu
 
   // private computation routines
+  int SetupSystem(HierarchyEntry *ThisGrid, int iRad, HYPRE_StructMatrix &P, 
+		  HYPRE_StructVector &rhsvec, HYPRE_StructVector &solvec, float &rhsnorm);
+  float Limiter(float E1, float E2, float k1, float k2, float nUn, float lUn, float dxi);
   int ReadParameters(TopGridData &MetaData, int SourceType[MAX_FLD_SOURCES], 
 		     float SourceEnergy[MAX_FLD_SOURCES]);
   int SetupSources(HierarchyEntry *RootGrid, int SourceType[MAX_FLD_SOURCES], 
@@ -209,8 +212,9 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
 #ifdef AMR_SOLVE
   int RadStep(int Bin, LevelHierarchyEntry *LevelArray[], int level, 
 	      AMRsolve_Hierarchy *hierarchy, float Etyp, 
-	      float Emax, Eflt64 *Echange);
+	      float Emax, Eflt64 &Echange);
 #endif
+  int RadStepUnigrid(int Bin, LevelHierarchyEntry *LevelArray[], Eflt64 &Echange);
   float* AccessRadiationField(int ibin, HierarchyEntry *ThisGrid);
   float* AccessEmissivityField(int ibin, HierarchyEntry *ThisGrid);
 
