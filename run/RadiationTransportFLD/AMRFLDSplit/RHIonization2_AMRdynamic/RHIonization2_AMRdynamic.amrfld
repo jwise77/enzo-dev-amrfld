@@ -8,13 +8,15 @@
 #
 # Specify radiation field(s) to use in solver
 #
-AMRFLDNumRadiationFields = 3
+AMRFLDNumRadiationFields = 4
 AMRFLDFrequencyBand[0] = 13.6 24.6
-AMRFLDFrequencyBand[1] = 24.6 54.4
-AMRFLDFrequencyBand[2] = 54.4 200.0
-AMRFLDRadiationScaling[0] = 1.0        // solver variable scaling factor
-AMRFLDRadiationScaling[1] = 10.0       // solver variable scaling factor
-AMRFLDRadiationScaling[2] = 1.0        // solver variable scaling factor
+AMRFLDFrequencyBand[1] = 24.6 39.5
+AMRFLDFrequencyBand[2] = 39.5 54.4
+AMRFLDFrequencyBand[3] = 54.4 150.0
+AMRFLDRadiationScaling[0] = 1.0e1       // solver scaling factor 
+AMRFLDRadiationScaling[1] = 1.0e1
+AMRFLDRadiationScaling[2] = 1.0e1
+AMRFLDRadiationScaling[3] = 1.0e1
 #
 # Specify radiation source(s) to use in solver
 #
@@ -25,11 +27,11 @@ AMRFLDSourceEnergy[0] = 5.0e48         // 5e48 photons/s
 #
 # Problem-specific initialization parameters
 # 
-RadHydroVelocity = 0.0 0.0 0.0       // initial velocity [cm/s]
-RadHydroDensity = 1.67262171e-27     // initial density [g] (desired nH=1e-3)
-RadHydroTemperature = 1.0e2          // initial temperature [K]
-RadHydroRadiationEnergy = 1.0e-35    // initial radiation energy [erg/cm^3]
-RadHydroInitialFractionHII = 0.0012  // initial 0.12% HII fraction
+RadHydroVelocity = 0.0 0.0 0.0         // initial velocity [cm/s]
+RadHydroDensity = 1.67262171e-27       // initial density [g] (desired nH=1e-3)
+RadHydroTemperature = 1.0e2            // initial temperature [K]
+RadHydroRadiationEnergy = 1.0e-35      // initial radiation energy [erg/cm^3]
+RadHydroInitialFractionHII = 0.0012    // initial 0.12% HII fraction
 #
 # Radiation boundary conditions
 # 

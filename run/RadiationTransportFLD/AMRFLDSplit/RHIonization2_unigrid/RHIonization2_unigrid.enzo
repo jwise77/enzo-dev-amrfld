@@ -22,11 +22,11 @@ RadHydroParamfile = RHIonization2_unigrid.amrfld
 # grid and boundary 
 #
 TopGridRank                = 3
-TopGridDimensions          = 16 16 16
+TopGridDimensions          = 64 64 64
 LeftFaceBoundaryCondition  = 3 3 3         // periodic
 RightFaceBoundaryCondition = 3 3 3
-DomainLeftEdge             = 0.0 0.0 0.0   // (scaled units)
-DomainRightEdge            = 1.0 1.0 1.0
+DomainLeftEdge             = -1.2 -1.2 -1.2   // (scaled units)
+DomainRightEdge            =  1.2  1.2  1.2
 #
 # runtime and I/O
 #

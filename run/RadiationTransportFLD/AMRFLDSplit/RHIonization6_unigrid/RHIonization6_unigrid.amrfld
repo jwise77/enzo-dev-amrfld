@@ -19,7 +19,8 @@ AMRFLDFrequencyBand[3] = 39.56 64.56
 AMRFLDNumSources = 1                   // one ionization source
 AMRFLDSourceType[0] = 1                // T=1e5 blackbody source
 AMRFLDSourceLocation[0] = 0.0 0.0 0.0  // emissivity source location
-AMRFLDSourceEnergy[0] = 1.25e49        // 1/8*1e50 photons/s (1/8 for domain corner)
+#AMRFLDSourceEnergy[0] = 1.25e49        // 1/8*1e50 photons/s (1/8 for domain corner)
+AMRFLDSourceEnergy[0] = 1e50           // photons/s
 #
 # Problem-specific initialization parameters
 # 
