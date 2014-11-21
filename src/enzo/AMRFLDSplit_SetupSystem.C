@@ -42,6 +42,7 @@
 
 int AMRFLDSplit::SetupSystem(HierarchyEntry *ThisGrid, 
 			     int ibin, 
+			     int SolvIndices[3][2],
 			     HYPRE_StructMatrix &P, 
 			     HYPRE_StructVector &rhsvec, 
 			     HYPRE_StructVector &solvec, 
@@ -323,7 +324,7 @@ int AMRFLDSplit::SetupSystem(HierarchyEntry *ThisGrid,
 	    
 	    
 	// insert matrix, rhs and initial solution entries into HYPRE objects
-	Eint32 iloc[] = {i0, i1, i2};
+	Eint32 iloc[] = {SolvIndices[0][0]+i0, SolvIndices[1][0]+i1, SolvIndices[2][0]+i2};
 	float zero=0.0;
 	HYPRE_StructVectorSetBoxValues(rhsvec, iloc, iloc, &rhs);
 	HYPRE_StructVectorSetBoxValues(solvec, iloc, iloc, &zero);
