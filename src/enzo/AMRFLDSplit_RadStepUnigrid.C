@@ -52,8 +52,10 @@ int AMRFLDSplit::RadStepUnigrid(int ibin, LevelHierarchyEntry *LevelArray[], Efl
   // find this MPI task's root-grid tile
   HierarchyEntry* ThisGrid=NULL;
   for (LevelHierarchyEntry* Temp=LevelArray[0]; Temp; Temp=Temp->NextGridThisLevel)
-    if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber())
+    if (MyProcessorNumber == Temp->GridHierarchyEntry->GridData->ReturnProcessorNumber()) {
       ThisGrid = Temp->GridHierarchyEntry;
+      break;
+    }
   if (ThisGrid == NULL) {
     ENZO_VFAIL("AMRFLDSplit::RadStepUnigrid: MPI task %i failed to find root-grid tile",
 	       MyProcessorNumber);
@@ -224,7 +226,7 @@ int AMRFLDSplit::RadStepUnigrid(int ibin, LevelHierarchyEntry *LevelArray[], Efl
 
   // fill in the radiation system (assembles matrix and vectors)
   float rhsnorm;
-  if (this->SetupSystem(ThisGrid, ibin, P, rhsvec, solvec, rhsnorm) != SUCCESS) 
+  if (this->SetupSystem(ThisGrid, ibin, SolvIndices, P, rhsvec, solvec, rhsnorm) != SUCCESS) 
     ENZO_FAIL("AMRFLDSplit::RadStepUnigrid: SetupSystem Error!!");
 
 
