@@ -108,6 +108,22 @@ int AMRFLDSplit::WriteParameters(FILE *fptr)
   fprintf(fptr, "AMRFLDSol_precrelax = %"ISYM"\n", sol_precrelax);
   fprintf(fptr, "AMRFLDSol_precrestol = %g\n", sol_precrestol);
 
+  // analytical opacity parameters
+  if (AnalyticOpacity) {
+    fprintf(fptr, "AMRFLDAnalyticOpacity = %"ISYM"\n", AnalyticOpacity);
+    for (ibin=0; ibin<NumRadiationFields; ibin++)
+      fprintf(fptr, "AMRFLDOpacityC0[%"ISYM"] = %22.16e\n", 
+	      ibin, OpacityC0[ibin]);
+      fprintf(fptr, "AMRFLDOpacityC1[%"ISYM"] = %22.16e\n", 
+	      ibin, OpacityC1[ibin]);
+      fprintf(fptr, "AMRFLDOpacityC2[%"ISYM"] = %22.16e\n", 
+	      ibin, OpacityC2[ibin]);
+      fprintf(fptr, "AMRFLDOpacityC3[%"ISYM"] = %22.16e\n", 
+	      ibin, OpacityC3[ibin]);
+      fprintf(fptr, "AMRFLDOpacityC4[%"ISYM"] = %22.16e\n", 
+	      ibin, OpacityC4[ibin]);
+  }
+
   // flag for setting up weak-scaling runs
   fprintf(fptr, "AMRFLDWeakScaling = %"ISYM"\n", WeakScaling);
 
