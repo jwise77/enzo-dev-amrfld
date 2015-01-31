@@ -110,6 +110,16 @@ AMRFLDSplit::AMRFLDSplit()
       SourceGroupEnergy[src][bin] = -1.0;
   }
   WeakScaling = 0;         // standard run, do not replicate input sources
+
+  // initialize analytical opacity flag and constants
+  AnalyticOpacity = 0;
+  for (bin=0; bin<MAX_FLD_FIELDS; bin++) {
+    OpacityC0[bin] = 1.0;
+    OpacityC1[bin] = 1.0;
+    OpacityC2[bin] = 0.0;
+    OpacityC3[bin] = 1.0;
+    OpacityC4[bin] = 0.0;
+  }
   
   // initialize cosmology and scaling constants
   a              = 1.0;

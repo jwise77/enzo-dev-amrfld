@@ -28,78 +28,134 @@ int AMRFLDSplit::Opacity(int Bin, LevelHierarchyEntry *LevelArray[],
 			 int level, float time)
 {
 
-  // initialize local variables to be reused
-  int i, j, k;
-  float HIconst   = intOpacity_HI[Bin];
-  float HeIconst  = intOpacity_HeI[Bin] / 4.0;
-  float HeIIconst = intOpacity_HeII[Bin] / 4.0;
+  // compute either chemistry-dependent opacity (default), or 
+  // analytical opacity based on input parameters
+  if (AnalyticOpacity) {  // analytical
+
+    // initialize local variables to be reused
+    int i, j, k;
   
-  // iterate over grids owned by this processor (this level down)
-  for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
-    for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
-	 Temp=Temp->NextGridThisLevel)
-      if (MyProcessorNumber == Temp->GridData->ReturnProcessorNumber()) {
+    // iterate over grids owned by this processor (this level down)
+    for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
+      for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
+	   Temp=Temp->NextGridThisLevel)
+	if (MyProcessorNumber == Temp->GridData->ReturnProcessorNumber()) {
 	
-	// set dimension information
-	int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
-	int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
-	int ghXl = DEFAULT_GHOST_ZONES;
-	int n3[] = {1, 1, 1};
-	for (int dim=0; dim<rank; dim++)
-	  n3[dim] = Temp->GridData->GetGridEndIndex(dim)
-  	          - Temp->GridData->GetGridStartIndex(dim) + 1;
-	int x0len = n3[0] + 2*ghXl;
-	int x1len = n3[1] + 2*ghYl;
-	int x2len = n3[2] + 2*ghZl;
+	  // set dimension information
+	  int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghXl = DEFAULT_GHOST_ZONES;
+	  int n3[] = {1, 1, 1};
+	  for (int dim=0; dim<rank; dim++)
+	    n3[dim] = Temp->GridData->GetGridEndIndex(dim)
+	      - Temp->GridData->GetGridStartIndex(dim) + 1;
+	  int x0len = n3[0] + 2*ghXl;
+	  int x1len = n3[1] + 2*ghYl;
+	  int x2len = n3[2] + 2*ghZl;
 
-	// access chemistry fields
-	float *HI=NULL, *HeI=NULL, *HeII=NULL;
-	HI   = Temp->GridData->AccessHIDensity();
-	HeI  = Temp->GridData->AccessHeIDensity();
-	HeII = Temp->GridData->AccessHeIIDensity();
+	  // access density field
+	  float *rho=NULL;
+	  rho = Temp->GridData->AccessDensity();
 
-	// access photo-heating field to store opacity
-	float *kap=NULL;
-	kap = Temp->GridData->AccessPhotoGamma();
+	  // access photo-heating field to store temperature & opacity
+	  float *kap=NULL;
+	  kap = Temp->GridData->AccessPhotoGamma();
 
-	// check that required field data exists
-	if (HI==NULL)
-	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HI array!");
-	if (kap==NULL)
-	  ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no PhotoGamma array!");
-	if (RadiativeTransferHydrogenOnly == FALSE) {
-	  if (HeI==NULL)
-	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeI array!");
-	  if (HeII==NULL)
-	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeII array!");
-	}
+	  // check that required field data exists
+	  if (rho==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no density array!");
+	  if (kap==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no PhotoGamma array!");
 
-	/////////////
-	// compute opacity field based on ProblemType
-	switch (ProblemType) {
+	  // fill kap with the temperature on this grid
+	  if (Temp->GridData->ComputeTemperatureField(kap) != SUCCESS)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: ComputeTemperatureField failure!");
 
-	// Insert user-defined opacity fields here (don't forget to "break")...
+	  // fill in the opacity field: kap = C0 * (rho/C1)^C2 * (Temp/C3)^C4
+	  // Note: we must scale density to physical units for the formula 
+	  //       to work, and we must scale the result back to solver units
+	  for (i=0; i<x0len*x1len*x2len; i++) 
+	    kap[i] = OpacityC0[Bin] / NiUnits
+                   * pow(rho[i]*DenUnits/OpacityC1[Bin], OpacityC2[Bin])
+                   * pow(kap[i]/OpacityC3[Bin], OpacityC4[Bin]);
 
+	}  // end iteration over grids on this processor
 
-	// Standard chemistry-dependent opacity field
-	default:
+  } else {                  // chemistry-dependent
 
-	  // Hydrogen-only calculation
-	  if (RadiativeTransferHydrogenOnly) {
-	    for (i=0; i<x0len*x1len*x2len; i++) 
-	      kap[i] = HI[i]*HIconst;
+    // initialize local variables to be reused
+    int i, j, k;
+    float HIconst   = intOpacity_HI[Bin];
+    float HeIconst  = intOpacity_HeI[Bin] / 4.0;
+    float HeIIconst = intOpacity_HeII[Bin] / 4.0;
+  
+    // iterate over grids owned by this processor (this level down)
+    for (int thislevel=level; thislevel<MAX_DEPTH_OF_HIERARCHY; thislevel++)
+      for (LevelHierarchyEntry* Temp=LevelArray[thislevel]; Temp; 
+	   Temp=Temp->NextGridThisLevel)
+	if (MyProcessorNumber == Temp->GridData->ReturnProcessorNumber()) {
+	
+	  // set dimension information
+	  int ghZl = (rank > 2) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghYl = (rank > 1) ? DEFAULT_GHOST_ZONES : 0;
+	  int ghXl = DEFAULT_GHOST_ZONES;
+	  int n3[] = {1, 1, 1};
+	  for (int dim=0; dim<rank; dim++)
+	    n3[dim] = Temp->GridData->GetGridEndIndex(dim)
+	      - Temp->GridData->GetGridStartIndex(dim) + 1;
+	  int x0len = n3[0] + 2*ghXl;
+	  int x1len = n3[1] + 2*ghYl;
+	  int x2len = n3[2] + 2*ghZl;
 
-	  // Hydrogen + Helium calculation
-	  } else {
-	    for (i=0; i<x0len*x1len*x2len; i++) 
-	      kap[i] = HI[i]*HIconst + HeI[i]*HeIconst + HeII[i]*HeIIconst;
+	  // access chemistry fields
+	  float *HI=NULL, *HeI=NULL, *HeII=NULL;
+	  HI   = Temp->GridData->AccessHIDensity();
+	  HeI  = Temp->GridData->AccessHeIDensity();
+	  HeII = Temp->GridData->AccessHeIIDensity();
+
+	  // access photo-heating field to store opacity
+	  float *kap=NULL;
+	  kap = Temp->GridData->AccessPhotoGamma();
+
+	  // check that required field data exists
+	  if (HI==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HI array!");
+	  if (kap==NULL)
+	    ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no PhotoGamma array!");
+	  if (RadiativeTransferHydrogenOnly == FALSE) {
+	    if (HeI==NULL)
+	      ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeI array!");
+	    if (HeII==NULL)
+	      ENZO_FAIL("AMRFLDSplit_Opacity ERROR: no HeII array!");
 	  }
-	  break;
 
-	}
+	  /////////////
+	  // compute opacity field based on ProblemType
+	  switch (ProblemType) {
+
+	    // Insert user-defined opacity fields here (don't forget to "break")...
+
+
+	    // Standard chemistry-dependent opacity field
+	  default:
+
+	    // Hydrogen-only calculation
+	    if (RadiativeTransferHydrogenOnly) {
+	      for (i=0; i<x0len*x1len*x2len; i++) 
+		kap[i] = HI[i]*HIconst;
+
+	      // Hydrogen + Helium calculation
+	    } else {
+	      for (i=0; i<x0len*x1len*x2len; i++) 
+		kap[i] = HI[i]*HIconst + HeI[i]*HeIconst + HeII[i]*HeIIconst;
+	    }
+	    break;
+
+	  }
 	
-      }  // end iteration over grids on this processor
+	}  // end iteration over grids on this processor
 
+  } // end if (AnalyticOpacity)
 
   return SUCCESS;
 }
