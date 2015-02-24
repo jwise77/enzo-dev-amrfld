@@ -156,6 +156,44 @@ int AMRFLDSplit::ReadParameters(TopGridData &MetaData,
 	ret += sscanf(line, "AMRFLDSol_precrelax = %"ISYM, &sol_precrelax);
 	ret += sscanf(line, "AMRFLDSol_precrestol = %"FSYM"", &sol_precrestol);
 
+	// analytical opacity parameters
+	ret += sscanf(line, "AMRFLDAnalyticOpacity = %"ISYM, &AnalyticOpacity);
+	if (sscanf(line, "AMRFLDOpacityC0[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDOpacityC0 field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  OpacityC0[ibin] = fval;
+	}
+	if (sscanf(line, "AMRFLDOpacityC1[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDOpacityC1 field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  OpacityC1[ibin] = fval;
+	}
+	if (sscanf(line, "AMRFLDOpacityC2[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDOpacityC2 field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  OpacityC2[ibin] = fval;
+	}
+	if (sscanf(line, "AMRFLDOpacityC3[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDOpacityC3 field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  OpacityC3[ibin] = fval;
+	}
+	if (sscanf(line, "AMRFLDOpacityC4[%"ISYM"] = %"FSYM, &ibin, &fval) == 2) {
+	  ret++;  
+	  if (ibin >= MAX_FLD_FIELDS) {
+	    ENZO_VFAIL("AMRFLDOpacityC4 field %"ISYM" > maximum allowed.\n", ibin);
+	  }
+	  OpacityC4[ibin] = fval;
+	}
+
 	// flag for setting up weak-scaling runs
 	ret += sscanf(line, "AMRFLDWeakScaling = %"ISYM, &WeakScaling);
 
