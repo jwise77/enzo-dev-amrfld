@@ -7,6 +7,13 @@ January 9, 2012
 =======================================================
 
 
+**** NOTE ****
+The most up-to-date documentation on the AMRFLD solver is located in
+docs/MGFLD_eqn_construction (type "make" in that folder to generate a
+PDF).
+**************
+
+
 Warnings:
 ---------
 
