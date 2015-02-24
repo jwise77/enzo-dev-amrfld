@@ -275,7 +275,7 @@ with the AMRFLD solver:
 To set up a new problem type, I recommend that you should follow one
 of these files as an example.  However, if you wish to add AMRFLD to
 an existing problem type, here are a few pointers:
- (a) You will need a BaryonField for RadiationFreq0.
+ (a) You will need a BaryonField for RadiationFreq0 and Emissivity0.
  (b) To couple with Hydrogen-only chemistry/cooling, you'll need to
      have BaryonFields for kphHI nad PhotoGamma.
  (c) To coupling with Hydrogen+Helium chemistry/cooling, you'll need
