@@ -152,6 +152,12 @@ class AMRFLDSplit : public virtual ImplicitProblemABC {
                                             // groups may have lower/upper neighbors
                                             // if their frequency bands touch
   int   Isothermal;                         // flag denoting temperature-dependence of run
+  int   AnalyticOpacity;                    // use input parameters for the opacity on each field
+  float OpacityC0[MAX_FLD_FIELDS];          // analytical opacity constants for each field
+  float OpacityC1[MAX_FLD_FIELDS];
+  float OpacityC2[MAX_FLD_FIELDS];
+  float OpacityC3[MAX_FLD_FIELDS];
+  float OpacityC4[MAX_FLD_FIELDS];
 
   // ionization source parameters
   int   NumSources;                          // number of input ionization sources
