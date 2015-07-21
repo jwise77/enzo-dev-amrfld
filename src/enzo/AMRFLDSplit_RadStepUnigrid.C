@@ -232,14 +232,24 @@ int AMRFLDSplit::RadStepUnigrid(int ibin, LevelHierarchyEntry *LevelArray[], Efl
 
   // skip solve if ||rhs|| is small enough  (i.e. old solution is fine)
   if (rhsnorm < 0.01*sol_tolerance) {
+
     if (debug)
       printf("   no solve required: |rhs| = %.1e  <  tol = %.1e\n", rhsnorm, sol_tolerance);
-    // set small error value, rescale dt, told, tnew, adot back 
-    // to normalized values, return with a successful step
+
+    // set small error value, rescale dt, told, tnew, adot back to normalized values
     Echange = 1e-16;
     dt   /= TimeUnits;
     told /= TimeUnits;
     tnew /= TimeUnits;
+
+    // destroy HYPRE structures
+    HYPRE_StructVectorDestroy(rhsvec);
+    HYPRE_StructVectorDestroy(solvec);
+    HYPRE_StructMatrixDestroy(P);
+    HYPRE_StructStencilDestroy(stencil);
+    HYPRE_StructGridDestroy(grid);
+
+    // return with a successful step
     return 0;
   }
 
